@@ -1,4 +1,16 @@
 ﻿# Read launcher catalogues; never crawl entire disks or start games during discovery.
+function GetFusionInstallState([string]$Store,[string]$Game){
+ $gamePath=[IO.Path]::GetFullPath($Game).TrimEnd('\')
+ foreach($file in Get-ChildItem (Join-Path $Store 'Games') -Filter manifest.json -Recurse -File -ErrorAction SilentlyContinue){
+  try{$m=Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8|ConvertFrom-Json;if([IO.Path]::GetFullPath($m.Game).TrimEnd('\') -ne $gamePath){continue}
+   if($m.Status -eq 'Installed'){if($m.Downloads -eq 'Pending'){return 'Installed - downloads pending'};return 'Installed'}
+   if($m.Status -eq 'Restored'){return 'Not installed (restored)'}
+   return 'Installation incomplete - repair required'
+  }catch{}
+ }
+ if(Test-Path -LiteralPath (Join-Path $Game 'ReShade64.dll')){return 'Graphics files detected - not tracked'}
+ return 'Not installed'
+}
 function FindFusionGames([string]$Store){
  $games=@{}
  function AddGame($name,$folder,$launcher){
@@ -40,7 +52,7 @@ function FindFusionGames([string]$Store){
    else{AddGame (Split-Path $m.Game -Leaf) $m.Game 'Added by you';$key=([IO.Path]::GetFullPath($m.Game).TrimEnd('\')).ToLowerInvariant();if($games.ContainsKey($key)){$games[$key].State=$m.Status;if($m.Status -eq 'Installed' -and $m.Downloads -eq 'Pending'){$games[$key].State='Installed - finish downloads'}}}
   }catch{}
  }
- foreach($game in $games.Values){$game.Label="$($game.Launcher) - OptiShade $($game.State)"}
+ foreach($game in $games.Values){$installPath=if($game.InstallFolder){$game.InstallFolder}elseif(Test-Path -LiteralPath (Join-Path $game.Folder 'Content/FlightSimulator2024.exe')){Join-Path $game.Folder 'Content'}else{$game.Folder};$game.State=GetFusionInstallState $Store $installPath;$game.Label="$($game.Launcher) - OptiShade $($game.State)"}
  @($games.Values|Sort-Object Name)
 }
 function FindFusionAntiCheat([string]$Game){

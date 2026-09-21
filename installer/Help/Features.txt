@@ -33,3 +33,13 @@ RECOVERY
 
 REQUIREMENTS
 This edition is for Microsoft Flight Simulator 2024 and NVIDIA graphics cards. Neural rendering requires compatible RTX hardware, a matching model and a supported game connection. Presets need their required shaders. Additional effects and neural passes can reduce frame rate; performance gains are not guaranteed.
+
+VERSION 0.19.18
+- INI and FX import browsers with drive selection and editable folder paths.
+- Clear import, rescan and shader recompilation actions.
+- Backed-up reinstall and repair, preserving saved looks.
+- Standard and SweetFX shaders bundled for offline setup.
+- Accurate installation status with separate unfinished-download reporting.
+- Stable-release notifications in setup and in game.
+- Verified self-update for the installer and recorded MSFS installations.
+- Optional Fusion Cinema addon and public REX preset instructions on GitHub.

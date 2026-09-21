@@ -2,6 +2,7 @@
 #include "../../../shared/EffectsBridge.h"
 #include <cctype>
 #include <unordered_set>
+#include "optishade_update_notice.inl"
 namespace OptiShadeUI {
 static osfx::Snapshot fx{};
 static char feedback[256]="";
@@ -21,8 +22,9 @@ static bool Send(osfx::Command command){
 }
 #include "optishade_preset_browser.inl"
 static bool startupDone=false;
-static bool NeedsStartupFrame(){return !startupDone;}
+static bool NeedsStartupFrame(){return !startupDone||OptiShadeUpdates::NeedsFrame();}
 static bool DrawStartup(bool menuRequested){
+ OptiShadeUpdates::Draw(menuRequested);
  if(startupDone)return true;
  static double started=-1,readyAt=-1;if(started<0)started=ImGui::GetTime();
  if((readyAt>=0&&ImGui::GetTime()-readyAt>3)||ImGui::GetTime()-started>13){startupDone=true;return true;}
@@ -68,7 +70,7 @@ static void DrawEffects(){
 
  ImGui::BeginDisabled(fx.loading!=0);
  bool enabled=fx.enabled!=0;if(ImGui::Checkbox("Image effects",&enabled)){osfx::Command c{};c.kind=osfx::Effects;c.enabled=enabled;Send(c);}
- ImGui::SameLine();if(ImGui::Button("Reload FX")){osfx::Command c{};c.kind=osfx::Reload;Send(c);}
+ ImGui::SameLine();if(ImGui::Button("Recompile installed FX")){osfx::Command c{};c.kind=osfx::Reload;Send(c);}if(ImGui::IsItemHovered())ImGui::SetTooltip("Reload shader code already installed in the game. This does not import or download files.");
 
  auto root=Util::DllPath().parent_path()/L"OptiShadeData";
  std::error_code error;
@@ -111,8 +113,9 @@ static void DrawEffects(){
  }
 
  DrawPresetBrowser(root);
+ ImGui::TextWrapped("Import INI / Install FX adds files. Saved looks below load an installed preset.");
  static char nextPreset[1024]="";static bool askSwitch=false,waitingSwitch=false;static uint64_t switchSaveSerial=0;
- ImGui::SameLine();ImGui::SetNextItemWidth(210);
+ ImGui::TextUnformatted("Saved look");ImGui::SameLine();ImGui::SetNextItemWidth(300);
  if(ImGui::BeginCombo("##Look presets",std::filesystem::path(fx.preset).filename().string().c_str())){
   for(std::filesystem::directory_iterator i(root/L"Presets",error),end;i!=end&&!error;i.increment(error)){
    if(i->path().extension()!=L".ini")continue;auto label=i->path().filename().string();if(ImGui::Selectable(label.c_str())){auto path=i->path().u8string();if(fx.dirty){strncpy_s(nextPreset,(const char*)path.c_str(),_TRUNCATE);askSwitch=true;}else{osfx::Command c{};c.kind=osfx::Preset;strncpy_s(c.path,(const char*)path.c_str(),_TRUNCATE);Send(c);}}
@@ -131,7 +134,7 @@ static void DrawEffects(){
  }
  if(fx.dirty){ImGui::TextColored(ImVec4(1.f,.3f,.4f,1.f),"Unsaved changes - your INI has not been overwritten.");ImGui::SameLine();}
  ImGui::BeginDisabled(!fx.dirty);if(ImGui::Button("Revert changes")){osfx::Command c{};c.kind=osfx::Discard;if(Send(c))preparing.clear();}ImGui::EndDisabled();
- if(ImGui::CollapsingHeader("Import an FX shader or INI preset")){
+ if(ImGui::CollapsingHeader("Advanced: import using a full file path")){
  static char importPath[1024]="";ImGui::InputTextWithHint("##import","Full path to an .fx shader or .ini preset",importPath,sizeof(importPath));ImGui::SameLine();
  if(ImGui::Button("Import")){
   if(fx.dirty){strcpy_s(feedback,"Save or discard your preset changes before importing another file.");}
@@ -144,9 +147,10 @@ static void DrawEffects(){
  if(feedback[0])ImGui::TextWrapped("%s",feedback);
  ImGui::Separator();
  static std::vector<std::filesystem::path> library;static bool indexed=false;
+ if(importedShader){indexed=false;importedShader=false;}
  bool libraryChanged=!indexed;
  if(!indexed){library.clear();for(std::filesystem::recursive_directory_iterator it(root/L"Shaders",error),end;it!=end&&!error;it.increment(error))if(it->is_regular_file(error)&&it->path().extension()==L".fx")library.push_back(it->path());std::sort(library.begin(),library.end());indexed=true;}
- ImGui::Text("%zu shaders | %s",library.size(),fx.loading?"Preparing...":fx.compileOK?"Ready":"Some shaders could not load");ImGui::SameLine();if(ImGui::Button("Refresh library"))indexed=false;
+ ImGui::Text("%zu installed shaders | %s",library.size(),fx.loading?"Preparing...":fx.compileOK?"Ready":"Some shaders could not load");ImGui::SameLine();if(ImGui::Button("Rescan installed FX list"))indexed=false;if(ImGui::IsItemHovered())ImGui::SetTooltip("Find files already in OptiShadeData/Shaders. Does not install files or change your look.");
  ImGui::SameLine();const bool moveActiveFirst=ImGui::Button("Active first");
  std::unordered_set<std::string> activeEffects,loadedEffects;for(uint32_t i=0;i<fx.techniques;i++){loadedEffects.insert(fx.technique[i].effect);if(fx.technique[i].enabled)activeEffects.insert(fx.technique[i].effect);}
  static std::vector<std::filesystem::path> ordered;

@@ -3,13 +3,13 @@
     "FileVersion": {
       "Major": 0,
       "Minor": 19,
-      "Patch": 17,
+      "Patch": 18,
       "Build": 0
     },
     "ProductVersion": {
       "Major": 0,
       "Minor": 19,
-      "Patch": 17,
+      "Patch": 18,
       "Build": 0
     }
   },
@@ -17,8 +17,8 @@
     "CompanyName": "created by gravy",
     "FileDescription": "Optishade - Microsoft Flight Simulator 2024 - Nvidia ONLY",
     "ProductName": "Optishade - Microsoft Flight Simulator 2024",
-    "FileVersion": "0.19.17.0",
-    "ProductVersion": "0.19.17.0"
+    "FileVersion": "0.19.18.0",
+    "ProductVersion": "0.19.18.0"
   },
   "IconPath": "OptiShade.ico"
 }
