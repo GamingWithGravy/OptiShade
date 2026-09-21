@@ -1,0 +1,20 @@
+﻿HOW OPTISHADE WORKS
+
+Optishade brings image effects and optional NVIDIA rendering features together in one custom interface for Microsoft Flight Simulator 2024.
+
+Created by gravy and powered by Fusion Engine, it combines modified open-source code from ReShade and OptiScaler, including colour-processing code derived from RenoDX, with a custom installer and interface. The underlying components retain their authors' credits and licences; matching source is supplied with the release.
+
+The installer finds your simulator, puts the required files in place and downloads selected components. Once setup finishes, you can close it. The in-game menu runs inside the simulator and opens with Insert.
+
+IMAGE EFFECTS
+FX files provide effects such as colour adjustments, sharpening and other visual changes. INI presets store which effects you use and their settings. A preset is a recipe: it still needs the matching FX files to work.
+
+PERFORMANCE AND NEURAL RENDERING
+These are separate from FX presets. Available features depend on NVIDIA hardware, the simulator's settings and the installed runtime files.
+
+Optional DLSS 5 setup adds NVIDIA files where supported. It does not make every NVIDIA card compatible or prove that neural rendering is running. A matching model and a supported game connection are still needed. Extra passes can reduce frame rate and change the image.
+
+Fusion Engine is the name for Optishade's integrated system connecting these components and controls. The underlying ReShade, OptiScaler and NVIDIA technologies belong to their respective authors.
+
+RESTORE AND UNINSTALL
+Optishade records the files it installs and backs up files it replaces. Restore uses that record to remove its changes and put backups back. Game settings, controls and saves are not installation targets.

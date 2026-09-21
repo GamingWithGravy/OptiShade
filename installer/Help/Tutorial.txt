@@ -1,0 +1,36 @@
+﻿OPTISHADE - GETTING STARTED
+Microsoft Flight Simulator 2024 | NVIDIA ONLY
+
+1. Close Microsoft Flight Simulator 2024 and open the Optishade installer.
+2. Open Setup. Your Steam or Xbox installation should be detected automatically. If both are installed, select your copy. Browse is available if detection misses your folder.
+3. Click Install Optishade.
+4. When asked whether to install DLSS 5, choose Yes to include optional NVIDIA files, or No for image effects and presets without those additional files. Yes does not automatically turn neural rendering on. Compatible RTX hardware, a matching model and a supported game connection are required.
+5. Wait for installation and downloads to finish. Use Finish downloads under Advanced options if a download fails.
+6. Close the installer and start your game. Optishade runs independently inside the simulator.
+7. Press Insert to open or close the in-game menu.
+
+BUILD YOUR LOOK
+Open Image effects. Search for an effect and switch it on to see its settings. Adjust the available controls. Active first moves enabled effects to the top when you press it.
+
+IMPORT A PRESET
+Select Browse presets, find your downloaded INI and choose Copy and load. The preset is copied into the game's presets folder; your original download stays in place. Required FX files must already be installed.
+
+SAVE YOUR PRESET
+Choose Save preset, enter a name and save your look. Existing names trigger a warning. Use a new name to keep both versions. Changes are not saved automatically. Revert changes returns to the saved look.
+
+CHANGE THE MENU COLOUR
+Open Settings & status, choose an overlay colour and press Save settings. Purple is the default.
+
+RESTORE
+Close the game, reopen the installer and select Restore. This removes Optishade's tracked files and restores its backups while keeping saved presets. Uninstall is in Settings and asks whether to keep your presets. It covers all installations recorded by Optishade, including earlier editions.
+
+WHERE YOUR INI PRESETS GO
+Xbox / Microsoft Store:
+<Microsoft Flight Simulator 2024 installation>\Content\OptiShadeData\Presets\Your look.ini
+
+Steam:
+<folder containing FlightSimulator2024.exe>\OptiShadeData\Presets\Your look.ini
+
+Use the game folder shown on Optishade's Setup page. Put look presets inside OptiShadeData\Presets, not directly in Content and not in the Community folder. Do not replace the game's own INI files, OptiScaler.ini or ReShade.ini with a downloaded look.
+
+Easiest method: open Image effects > Browse presets in game, select the downloaded INI and press Copy and load. Optishade copies it to the correct folder and loads it. If you copy it manually, choose it from the preset dropdown afterwards. Required FX and texture files must also be installed; copying an INI alone does not add them.

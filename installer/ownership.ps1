@@ -1,0 +1,161 @@
+﻿$ErrorActionPreference='Stop'
+function FullPath([string]$Path){[IO.Path]::GetFullPath($Path).TrimEnd('\','/')}
+function HashFile([string]$Path){if(Test-Path -LiteralPath $Path -PathType Leaf){(Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash}else{''}}
+function OwnedPath([string]$Root,[string]$Relative){
+    $base=FullPath $Root;$path=FullPath (Join-Path $base $Relative)
+    if(-not $path.StartsWith($base+'\',[StringComparison]::OrdinalIgnoreCase)){throw 'Path is outside the installation folder.'}
+    $check=$path
+    while($check){if(Test-Path -LiteralPath $check){if((Get-Item -LiteralPath $check -Force).Attributes -band [IO.FileAttributes]::ReparsePoint){throw "Linked folders are not supported: $check"}};$parent=Split-Path $check -Parent;if($parent -eq $check){break};$check=$parent}
+    $path
+}
+function AssertClosed([string]$Game){
+    foreach($p in Get-Process){try{if($p.Path -and ((FullPath (Split-Path $p.Path -Parent)) -eq (FullPath $Game))){throw "Close $($p.ProcessName) first."}}catch [System.ComponentModel.Win32Exception]{}}
+    if(Get-Process FlightSimulator2024 -ErrorAction SilentlyContinue){throw 'Close MSFS before changing installed files.'}
+}
+function ManifestPath([string]$StateRoot,[string]$Game){
+    $bytes=[Text.Encoding]::UTF8.GetBytes((FullPath $Game).ToLowerInvariant());$sha=[Security.Cryptography.SHA256]::Create();$id=[BitConverter]::ToString($sha.ComputeHash($bytes)).Replace('-','').Substring(0,16);$sha.Dispose()
+    OwnedPath $StateRoot ('Games/'+$id+'/manifest.json')
+}
+function WriteState($Manifest,[string]$Path){$tmp=$Path+'.tmp';$Manifest|ConvertTo-Json -Depth 8|Set-Content -LiteralPath $tmp -Encoding UTF8;Move-Item -LiteralPath $tmp -Destination $Path -Force}
+function FindFusionConflicts([string]$Game){
+ foreach($addon in Get-ChildItem -LiteralPath $Game -Filter '*.addon64' -File -ErrorAction SilentlyContinue|Where-Object Name -match '(?i)dlss5|renodx'){
+  [pscustomobject]@{Path=$addon.Name;Recognised=$true;Description='External neural-rendering/ReShade add-on';Hash=(HashFile $addon.FullName)}
+ }
+ foreach($name in @('dxgi.dll','d3d12.dll','d3d11.dll','d3d9.dll','opengl32.dll','OptiScaler.dll','ReShade64.dll','winmm.dll','version.dll','dbghelp.dll','wininet.dll','winhttp.dll','dinput8.dll','SpecialK64.dll','ReShade.asi','OptiScaler.asi')){
+  $file=Join-Path $Game $name
+  if(Test-Path -LiteralPath $file -PathType Leaf){
+   $info=[Diagnostics.FileVersionInfo]::GetVersionInfo($file);$description="$($info.ProductName) $($info.FileDescription) $($info.OriginalFilename)"
+   $recognised=$description -match '(?i)reshade|optiscaler|optishade|special.?k|enbseries'
+   [pscustomobject]@{Path=$name;Recognised=$recognised;Description=$description.Trim();Hash=(HashFile $file)}
+  }
+ }
+}
+function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string]$Installer,[string]$Proxy='winmm.dll',[object[]]$ReplaceMods=@()){
+    if($Proxy -notin @('winmm.dll','dxgi.dll','d3d12.dll','version.dll','dbghelp.dll','wininet.dll','winhttp.dll')){throw 'Unsupported installation method.'}
+    $Game=FullPath $Game;$Payload=FullPath $Payload;AssertClosed $Game
+    if(-not(Test-Path -LiteralPath $Game -PathType Container)){throw 'Choose the game folder first.'}
+    $mp=ManifestPath $StateRoot $Game
+    if(Test-Path -LiteralPath $mp){$old=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json;if($old.Status -ne 'Restored'){throw 'This game already has OptiShade installed. Restore it before installing again.'}}
+    $conflicts=@(FindFusionConflicts $Game)
+    foreach($conflict in $conflicts){
+        $approved=@($ReplaceMods|Where-Object {$_.Path -eq $conflict.Path -and $_.Hash -eq $conflict.Hash})
+        if(-not $approved.Count){throw "Approval is needed to back up and replace $($conflict.Path). The file was left untouched."}
+    }
+    $data=OwnedPath $Game 'OptiShadeData'
+    if(Test-Path -LiteralPath $data){
+        $presetRoot=OwnedPath $Game 'OptiShadeData/Presets'
+        foreach($entry in Get-ChildItem -LiteralPath $data -Force -Recurse){
+            if($entry.Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Linked OptiShade data was left untouched.'}
+            if(-not $entry.PSIsContainer -and -not($entry.FullName.StartsWith($presetRoot+'\',[StringComparison]::OrdinalIgnoreCase) -and $entry.Extension -eq '.ini')){throw 'OptiShadeData already contains installation files. Restore that installation first.'}
+        }
+    }
+    $catalog=Get-Content -LiteralPath (Join-Path $Payload 'files.json') -Raw|ConvertFrom-Json
+    $folder=Split-Path $mp;New-Item -ItemType Directory -Path (Join-Path $folder 'Backups') -Force|Out-Null
+    $files=@();$index=0
+    foreach($entry in $catalog){
+        $source=OwnedPath $Payload $entry.Path;$relative=if($entry.Path -eq 'winmm.dll'){$Proxy}else{$entry.Path};$dest=OwnedPath $Game $relative
+        if((HashFile $source) -ne $entry.Hash){throw "Installer payload is damaged: $($entry.Path)"}
+        # A returning user's saved default look is their preset, not disposable payload.
+        if($relative -match '^OptiShadeData[\\/]Presets[\\/].*\.ini$' -and (Test-Path -LiteralPath $dest)){continue}
+        $previous=HashFile $dest;$backup=''
+        if($previous){$backup='Backups/'+$index;Copy-Item -LiteralPath $dest -Destination (OwnedPath $folder $backup);if((HashFile (OwnedPath $folder $backup)) -ne $previous){throw 'Backup verification failed.'}}
+        $files+=@{Path=$relative;SourcePath=$entry.Path;Hash=$entry.Hash;PreviousHash=$previous;Backup=$backup;Mutable=($entry.Path -match '\.(ini|log)$')};$index++
+    }
+    foreach($conflict in $conflicts){
+        if($files.Path -contains $conflict.Path){continue}
+        $backup='Backups/mod-'+$index;$previous=$conflict.Hash;$source=OwnedPath $Game $conflict.Path
+        Copy-Item -LiteralPath $source -Destination (OwnedPath $folder $backup)
+        if((HashFile (OwnedPath $folder $backup)) -ne $previous){throw 'Existing mod backup verification failed.'}
+        $files+=@{Path=$conflict.Path;SourcePath='';Hash='';PreviousHash=$previous;Backup=$backup;Mutable=$false};$index++
+    }
+    $manifest=@{Version='P0.19.17-MSFS24';Game=$Game;Installer=(FullPath $Installer);Status='Installing';Files=$files;OwnedDirectories=@('OptiShadeData');Created=(Get-Date -Format o)}
+    WriteState $manifest $mp
+    try{
+        # The entry-point proxy is copied last so an incomplete install cannot start.
+        foreach($entry in ($files|Sort-Object @{Expression={$_.SourcePath -eq 'winmm.dll'}})){
+            $dest=OwnedPath $Game $entry.Path;New-Item -ItemType Directory -Path (Split-Path $dest) -Force|Out-Null
+            if(-not $entry.SourcePath){if((HashFile $dest) -ne $entry.PreviousHash){throw 'An existing mod changed during installation.'};Remove-Item -LiteralPath $dest -Force;continue}
+            Copy-Item -LiteralPath (OwnedPath $Payload $entry.SourcePath) -Destination $dest -Force
+            if((HashFile $dest) -ne $entry.Hash){throw 'Installed file verification failed.'}
+        }
+        $manifest.Status='Installed';WriteState $manifest $mp
+    }catch{$failure=$_;RestoreFusion $mp;throw $failure}
+    $mp
+}
+function RestoreFusion([string]$ManifestPath,[bool]$KeepPresets=$true){
+    $m=Get-Content -LiteralPath $ManifestPath -Raw|ConvertFrom-Json
+    if($m.Status -eq 'Restored'){
+        if(-not $KeepPresets){
+            AssertClosed $m.Game;$presets=OwnedPath $m.Game 'OptiShadeData/Presets'
+            if(Test-Path -LiteralPath $presets){
+                if(Get-ChildItem -LiteralPath $presets -Force -Recurse|Where-Object {$_.Attributes -band [IO.FileAttributes]::ReparsePoint}){throw 'Linked preset files were left untouched.'}
+                Get-ChildItem -LiteralPath $presets -Filter '*.ini' -File -Recurse | Remove-Item -Force
+                Get-ChildItem -LiteralPath $presets -Directory -Recurse | Sort-Object {$_.FullName.Length} -Descending | ForEach-Object {if(-not(Get-ChildItem -LiteralPath $_.FullName -Force)){Remove-Item -LiteralPath $_.FullName}}
+                if(-not(Get-ChildItem -LiteralPath $presets -Force)){Remove-Item -LiteralPath $presets}
+                $data=OwnedPath $m.Game 'OptiShadeData';if(-not(Get-ChildItem -LiteralPath $data -Force)){Remove-Item -LiteralPath $data}
+            }
+        }
+        return
+    }
+    AssertClosed $m.Game;$folder=Split-Path $ManifestPath
+    foreach($f in $m.Files){
+        $dest=OwnedPath $m.Game $f.Path;$actual=HashFile $dest
+        if($actual -and -not $f.Mutable -and $actual -ne $f.Hash -and $actual -ne $f.PreviousHash){throw "A file changed after installation: $($f.Path). Restore stopped before changing anything."}
+        if($f.Backup -and (HashFile (OwnedPath $folder $f.Backup)) -ne $f.PreviousHash){throw "Original backup failed verification: $($f.Path)"}
+    }
+    foreach($relative in $m.OwnedDirectories){
+        $dir=OwnedPath $m.Game $relative
+        if(Test-Path -LiteralPath $dir){if(Get-ChildItem -LiteralPath $dir -Force -Recurse|Where-Object {$_.Attributes -band [IO.FileAttributes]::ReparsePoint}){throw 'A linked item was found in OptiShade data. Cleanup stopped.'}}
+    }
+    $presets=OwnedPath $m.Game 'OptiShadeData/Presets'
+    foreach($f in $m.Files){$dest=OwnedPath $m.Game $f.Path;if($KeepPresets -and $dest.StartsWith($presets+'\',[StringComparison]::OrdinalIgnoreCase) -and [IO.Path]::GetExtension($dest) -eq '.ini'){continue};if($f.Backup){Copy-Item -LiteralPath (OwnedPath $folder $f.Backup) -Destination $dest -Force}elseif(Test-Path -LiteralPath $dest){Remove-Item -LiteralPath $dest -Force}}
+    foreach($relative in $m.OwnedDirectories){$dir=OwnedPath $m.Game $relative;if(Test-Path -LiteralPath $dir){
+        Get-ChildItem -LiteralPath $dir -Force -Recurse -File | Where-Object {-not($KeepPresets -and $_.FullName.StartsWith($presets+'\',[StringComparison]::OrdinalIgnoreCase) -and $_.Extension -eq '.ini')} | Remove-Item -Force
+        Get-ChildItem -LiteralPath $dir -Force -Recurse -Directory | Sort-Object {$_.FullName.Length} -Descending | ForEach-Object {if(-not(Get-ChildItem -LiteralPath $_.FullName -Force)){Remove-Item -LiteralPath $_.FullName}}
+        if(-not(Get-ChildItem -LiteralPath $dir -Force)){Remove-Item -LiteralPath $dir}
+    }}
+    $m.Status='Restored';WriteState $m $ManifestPath
+}
+function FindNrRuntime([string]$Installer){
+    # Only inspect known locations; never crawl drives for DLLs.
+    $candidates=@((Join-Path (Split-Path $Installer) 'nvngx_dlssnr.dll'),(Join-Path ([Environment]::GetFolderPath('Desktop')) 'DLSS5Installer/DLSS5Resources/Payload/Common/nvngx_dlssnr.dll'))
+    $cards=@(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue|ForEach-Object Name)
+    foreach($candidate in $candidates){$hash=HashFile $candidate
+        if($hash -eq 'E16BCF15E16E13F527491CDF7845B2FE6521A738D8F7C9C721866A8496E1FC8E' -and ($cards -match 'RTX\s*50')){return $candidate}
+        if($hash -eq 'E67DEE209320CDAFE0E93E45675D7AA34323A53ACC57A72B2E40A181581C989A' -and ($cards -match 'RTX\s*[2345]0')){return $candidate}
+    }
+    return $null
+}
+function ImportNrRuntime([string]$ManifestPath,[string]$Source){
+    $m=Get-Content -LiteralPath $ManifestPath -Raw|ConvertFrom-Json;if($m.Status -ne 'Installed'){throw 'Install OptiShade into a game first.'};AssertClosed $m.Game
+    $hash=HashFile $Source
+    $cards=@(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue|ForEach-Object Name)
+    if($cards.Count -and -not($cards -match 'RTX\s*[2345]0')){throw 'This neural-rendering runtime needs a supported NVIDIA RTX card. Use the included FSR/XeSS options on other compatible cards.'}
+    if($hash -eq 'E16BCF15E16E13F527491CDF7845B2FE6521A738D8F7C9C721866A8496E1FC8E' -and $cards.Count -and -not($cards -match 'RTX\s*50')){throw 'This is the RTX 50 model. RTX 20/30/40 needs the compatibility runtime listed in the notes.'}
+    if($hash -notin @('E16BCF15E16E13F527491CDF7845B2FE6521A738D8F7C9C721866A8496E1FC8E','E67DEE209320CDAFE0E93E45675D7AA34323A53ACC57A72B2E40A181581C989A')){throw 'Choose the original RTX 50 runtime or the exact 310.8 RTX 20/30/40 compatibility runtime listed in the included notes.'}
+    if($hash -eq 'E16BCF15E16E13F527491CDF7845B2FE6521A738D8F7C9C721866A8496E1FC8E' -and (Get-AuthenticodeSignature -LiteralPath $Source).Status -ne 'Valid'){throw 'NVIDIA runtime signature verification failed.'}
+    $relative='nvngx_dlssnr.dll';$dest=OwnedPath $m.Game $relative;$existing=@($m.Files|Where-Object Path -eq $relative)
+    if(-not $existing.Count){
+        $old=HashFile $dest;$backup='';if($old){$backup='Backups/nr-runtime';Copy-Item -LiteralPath $dest -Destination (OwnedPath (Split-Path $ManifestPath) $backup)}
+        $m.Files+=@{Path=$relative;Hash=$hash;PreviousHash=$old;Backup=$backup;Mutable=$false};WriteState $m $ManifestPath
+    }
+    Copy-Item -LiteralPath $Source -Destination $dest -Force
+    if((HashFile $dest) -ne $hash){throw 'Imported runtime verification failed.'}
+}
+function UninstallFusion([string]$StateRoot,[string]$Installer,[string]$ActiveSession='',[bool]$KeepPresets=$true){
+    $root=FullPath $StateRoot;$keep=FullPath $Installer
+    if(-not(Test-Path -LiteralPath $root)){return}
+    if((Split-Path $root -Leaf) -ne 'OptiShade'){throw 'Cleanup requires the dedicated OptiShade storage folder.'}
+    [void](OwnedPath $root 'cleanup-check')
+    foreach($m in Get-ChildItem -LiteralPath $root -Filter manifest.json -File -Recurse){RestoreFusion $m.FullName -KeepPresets $KeepPresets}
+    if(Get-ChildItem -LiteralPath $root -Force -Recurse | Where-Object {$_.Attributes -band [IO.FileAttributes]::ReparsePoint}){throw 'A linked item was found in OptiShade storage. Cleanup stopped.'}
+    # Delete only the dedicated application store; never search the PC by filename.
+    $session=''
+    if($ActiveSession){$candidate=FullPath $ActiveSession;if($candidate.StartsWith($root+'\Sessions\',[StringComparison]::OrdinalIgnoreCase)){$session=$candidate+'\'}}
+    if($session -or $keep.StartsWith($root+'\',[StringComparison]::OrdinalIgnoreCase)){
+        Get-ChildItem -LiteralPath $root -Force -Recurse -File|Where-Object {(FullPath $_.FullName) -ne $keep -and (-not $session -or -not $_.FullName.StartsWith($session,[StringComparison]::OrdinalIgnoreCase))}|Remove-Item -Force
+        Get-ChildItem -LiteralPath $root -Force -Recurse -Directory|Sort-Object FullName -Descending|ForEach-Object {if(-not(Get-ChildItem -LiteralPath $_.FullName -Force)){Remove-Item -LiteralPath $_.FullName}}
+    }else{Remove-Item -LiteralPath $root -Recurse -Force}
+}
+
+

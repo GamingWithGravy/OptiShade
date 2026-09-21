@@ -1,0 +1,93 @@
+﻿<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Title="Optishade | Microsoft Flight Simulator 2024" Width="1100" Height="780" MinWidth="1000" MinHeight="740" WindowStartupLocation="CenterScreen" WindowStyle="None" AllowsTransparency="True" Background="Transparent" FontFamily="Segoe UI" Foreground="#F3EFFB">
+ <Window.Resources>
+  <Style TargetType="Button">
+   <Setter Property="Foreground" Value="#F3EFFB"/><Setter Property="Background" Value="#282238"/><Setter Property="Padding" Value="18,12"/><Setter Property="Cursor" Value="Hand"/><Setter Property="FontSize" Value="13"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border x:Name="Surface" Background="{TemplateBinding Background}" CornerRadius="9" Padding="{TemplateBinding Padding}"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="Opacity" Value="0.8"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter TargetName="Surface" Property="Opacity" Value="0.4"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+  </Style>
+  <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/></Style>
+  <Style TargetType="ComboBox">
+   <Setter Property="Foreground" Value="#F3EFFB"/><Setter Property="Background" Value="#282238"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBox">
+    <Grid><ToggleButton Focusable="False" IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+     <ToggleButton.Template><ControlTemplate TargetType="ToggleButton"><Border Background="#282238" CornerRadius="8" Padding="12"><Grid><Path Data="M 0,0 L 5,5 L 10,0" Stroke="#BD9CEC" StrokeThickness="1.5" HorizontalAlignment="Right" VerticalAlignment="Center" Width="10" Height="5"/></Grid></Border></ControlTemplate></ToggleButton.Template>
+    </ToggleButton><ContentPresenter Margin="12,10,30,10" IsHitTestVisible="False" Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"/>
+    <Popup x:Name="PART_Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Fade"><Border Background="#241B30" BorderBrush="#694982" BorderThickness="1" CornerRadius="8" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"><ScrollViewer MaxHeight="280"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/></ScrollViewer></Border></Popup></Grid>
+   </ControlTemplate></Setter.Value></Setter>
+  </Style>
+  <Style TargetType="ComboBoxItem"><Setter Property="Foreground" Value="#F3EFFB"/><Setter Property="Padding" Value="10,8"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBoxItem"><Border x:Name="ItemBorder" Background="Transparent" Padding="{TemplateBinding Padding}"><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property="IsHighlighted" Value="True"><Setter TargetName="ItemBorder" Property="Background" Value="#54346F"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+ </Window.Resources>
+ <Border CornerRadius="20" BorderBrush="#40314F" BorderThickness="1" Background="#100E17">
+ <Grid>
+  <Grid.ColumnDefinitions><ColumnDefinition Width="230"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+  <Border CornerRadius="20,0,0,20" Background="#17121F" Padding="24,28">
+   <DockPanel>
+    <StackPanel DockPanel.Dock="Top">
+     <Image x:Name="BrandIcon" Width="128" Height="128" HorizontalAlignment="Center" Margin="0,0,0,14"/>
+     <TextBlock Text="Optishade" HorizontalAlignment="Center" FontSize="26" FontWeight="SemiBold"/>
+     <TextBlock Text="Nvidia ONLY · powered by fusion engine" TextAlignment="Center" Foreground="#BD9CEC" FontSize="11" Margin="0,6,0,32"/>
+     <Button x:Name="HomeNav" Content="Home" Margin="0,0,0,10"/><Button Visibility="Collapsed" x:Name="LibraryNav" Content="Library" Margin="0,0,0,10"/><Button x:Name="SetupNav" Content="Setup" Margin="0,0,0,10"/><Button x:Name="SettingsNav" Content="Settings"/>
+     <TextBlock Text="Install once.&#10;Make it yours in game." Foreground="#A499B6" Margin="16,20,0,0" FontSize="13"/>
+    </StackPanel>
+    <StackPanel DockPanel.Dock="Bottom" VerticalAlignment="Bottom">
+     <TextBlock Text="OptiShade - created by gravy" Foreground="#D4B7F9" FontWeight="SemiBold" FontSize="12"/>
+     
+     <TextBlock Text="VERSION  /  0.19.17" Foreground="#71657F" FontSize="10" Margin="0,22,0,0"/>
+    </StackPanel>
+    <Grid/>
+   </DockPanel>
+  </Border>
+  <Grid Grid.Column="1" Margin="30,20,26,24">
+   <Grid.RowDefinitions><RowDefinition Height="48"/><RowDefinition Height="*"/><RowDefinition Height="92"/></Grid.RowDefinitions>
+   <Grid x:Name="TitleBar" Background="Transparent" ToolTip="Drag here to move OptiShade"><TextBlock Text="FUSION ENGINE  /  OPTISHADE" Foreground="#91849F" FontSize="11" VerticalAlignment="Center"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button x:Name="Minimize" Background="Transparent" Padding="14,12" ToolTip="Minimize"><Path Data="M 0,5 L 12,5" Stroke="#F3EFFB" StrokeThickness="1.5" Width="12" Height="12"/></Button><Button x:Name="Close" Background="Transparent" Padding="14,12" ToolTip="Close"><Path Data="M 0,0 L 12,12 M 12,0 L 0,12" Stroke="#F3EFFB" StrokeThickness="1.5" Width="12" Height="12"/></Button></StackPanel></Grid>
+   <Grid Grid.Row="1">
+    <ScrollViewer x:Name="HomePage" VerticalScrollBarVisibility="Auto"><StackPanel Margin="0,10,8,16">
+     <Border CornerRadius="16" Padding="26,23" Margin="0,0,0,20">
+      <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#3A2156" Offset="0"/><GradientStop Color="#21172F" Offset="1"/></LinearGradientBrush></Border.Background>
+      <StackPanel><TextBlock Text="Optishade" HorizontalAlignment="Center" FontSize="28" FontWeight="SemiBold"/><TextBlock Text="Microsoft Flight Simulator 2024" HorizontalAlignment="Center" Foreground="#C2B0D7" FontSize="13" Margin="0,14,0,0"/></StackPanel>
+     </Border>
+     <Grid Margin="0,0,0,22"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="14"/><ColumnDefinition/></Grid.ColumnDefinitions>
+      <Border Background="#1B1624" CornerRadius="13" Padding="20"><StackPanel><TextBlock Text="01  /  PERFORMANCE" Foreground="#B68BE8" FontSize="11" FontWeight="SemiBold"/><TextBlock Text="Find your balance" FontSize="18" Margin="0,10,0,8"/><TextBlock Text="Upscaling, smoother motion and optional NVIDIA neural rendering." Foreground="#AA9CB9" FontSize="12"/></StackPanel></Border>
+      <Border Grid.Column="2" Background="#1B1624" CornerRadius="13" Padding="20"><StackPanel><TextBlock Text="02  /  IMAGE EFFECTS" Foreground="#B68BE8" FontSize="11" FontWeight="SemiBold"/><TextBlock Text="Build your look" FontSize="18" Margin="0,10,0,8"/><TextBlock Text="The full FX catalogue installs in your game folder. Bring your INI presets." Foreground="#AA9CB9" FontSize="12"/></StackPanel></Border>
+     </Grid>
+     <TextBlock x:Name="Hardware" Text="Checking your hardware..." Foreground="#C9B6DF" FontSize="12" Margin="0,0,0,12"/>
+
+     <Button x:Name="OpenLibrary" Content="Install Optishade" Background="#8650C8" HorizontalAlignment="Left" Margin="0,12,0,12"/>
+     <TextBlock Text="For Microsoft Flight Simulator 2024 on NVIDIA graphics cards. Install, play and restore from Setup." Foreground="#AA9CB9" FontSize="13"/>
+    </StackPanel></ScrollViewer>
+    <Grid x:Name="LibraryPage" Visibility="Collapsed"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+     <StackPanel Margin="0,12,0,16"><TextBlock Text="Your game library" FontSize="28" FontWeight="SemiBold"/><TextBlock Text="Games found on this PC. Choose one to open its setup page." Foreground="#AA9CB9" Margin="0,8,0,14"/><StackPanel Orientation="Horizontal"><Button x:Name="Scan" Content="Scan games" Margin="0,0,12,0"/><Button x:Name="AddGame" Content="Add a game"/></StackPanel></StackPanel>
+     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"><ItemsControl x:Name="LibraryGames"><ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate>
+      <Button Tag="{Binding}" Width="232" Height="156" Padding="16" Margin="0,0,12,12" HorizontalContentAlignment="Left"><StackPanel Width="200"><Image Source="{Binding Thumbnail}" Width="48" Height="48" HorizontalAlignment="Left" Margin="0,0,0,10"/><TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxHeight="38"/><TextBlock Text="{Binding State}" Foreground="#BD9CEC" FontSize="11" Margin="0,6,0,0"/></StackPanel></Button>
+     </DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer>
+    </Grid>
+    <StackPanel x:Name="SettingsPage" Visibility="Collapsed" Margin="0,14,0,0"><TextBlock Text="Settings" FontSize="28" FontWeight="SemiBold"/><Button x:Name="GitHub" Content="GitHub repository - awaiting publication" IsEnabled="False" ToolTip="The repository link will be enabled when publication is complete." HorizontalAlignment="Left" Margin="0,18,0,0"/><Button x:Name="Help" Content="Tutorial, how it works and features" HorizontalAlignment="Left" Background="#8650C8" Margin="0,18,0,8"/><TextBlock Text="Remove OptiShade from all games recorded by this installer." Foreground="#AA9CB9" Margin="0,20,0,12"/><TextBlock Text="Uninstall removes OptiShade and restores files it backed up. You can keep your saved INI presets or remove them. Game settings, controls and saves stay untouched. Your original installer EXE is kept." Foreground="#AA9CB9" Margin="0,0,0,20"/><Button x:Name="Uninstall" Content="Uninstall OptiShade" Background="#30212C" Foreground="#E3B7CC" Margin="0,0,10,10"/></StackPanel>
+    <ScrollViewer x:Name="SetupPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto"><StackPanel Margin="0,10,8,16"><DockPanel Margin="0,0,0,20"><Image x:Name="SelectedIcon" DockPanel.Dock="Right" Width="48" Height="48" Margin="16,0,0,0"/><StackPanel><TextBlock x:Name="SelectedTitle" Text="Microsoft Flight Simulator 2024" FontSize="26" FontWeight="SemiBold"/><TextBlock Text="Install, play and restore from one place." Foreground="#AA9CB9" Margin="0,6,0,0"/></StackPanel></DockPanel>
+     <TextBlock Text="Your installation" FontSize="16" FontWeight="SemiBold"/>
+     <TextBlock Text="Steam and Xbox installations are found automatically. If both are installed, choose your copy below." Foreground="#94869F" FontSize="12" Margin="0,5,0,12"/>
+     <ComboBox x:Name="MsfsCopies" Margin="0,0,0,12"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/></DataTemplate></ComboBox.ItemTemplate></ComboBox><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition Width="100"/></Grid.ColumnDefinitions><Border Background="#201A2B" CornerRadius="9" Padding="12"><TextBox x:Name="GamePath" Background="Transparent" Foreground="#EAE1F6" BorderThickness="0" FontSize="12" VerticalContentAlignment="Center"/></Border><Button x:Name="Browse" Grid.Column="2" Content="Browse"/></Grid>
+     <TextBlock Text="Once installation and downloads finish, you can close this installer. Optishade runs inside the game independently. Press Insert to open the menu." Foreground="#94869F" FontSize="12" Margin="0,12,0,12"/>
+<TextBlock Text="Install Optishade, then choose whether to add DLSS 5. Image effects and presets are included either way." Foreground="#C2B0D7" Margin="0,0,0,18"/><WrapPanel><Button x:Name="Install" Content="Install OptiShade" Background="#8650C8" Margin="0,0,10,10"/><Button x:Name="Play" Content="Play" Margin="0,0,10,10"/><Button x:Name="Restore" Content="Restore game" Margin="0,0,10,10"/></WrapPanel>
+<Expander Header="Advanced options and downloads" Foreground="#BD9CEC" Margin="0,20,0,12"><StackPanel Margin="0,14,0,0">     <TextBlock Text="Installation method - restore before trying another if the menu does not appear." Foreground="#94869F" FontSize="12" Margin="0,0,0,6"/>
+     <ComboBox x:Name="Method" SelectedIndex="0" Margin="0,0,0,12" Padding="8"><ComboBoxItem Content="Automatic - check game and graphics card" Tag="auto"/><ComboBoxItem Content="Windows multimedia - Xbox / Vulkan (winmm)" Tag="winmm.dll"/><ComboBoxItem Content="DirectX graphics (dxgi)" Tag="dxgi.dll"/><ComboBoxItem Content="DirectX 12 fallback (d3d12)" Tag="d3d12.dll"/><ComboBoxItem Content="Version library fallback (version)" Tag="version.dll"/><ComboBoxItem Content="Debug library fallback (dbghelp)" Tag="dbghelp.dll"/></ComboBox>
+     <Button x:Name="CheckCompatibility" Content="Check game and runtime versions" HorizontalAlignment="Left" Margin="0,0,0,10"/><TextBlock x:Name="Compatibility" Text="Check this game before installing. Automatic setup also checks again at install time." TextWrapping="Wrap" Foreground="#BDA0F4" Margin="0,0,0,14"/><WrapPanel><Button x:Name="Runtime" Content="Add NVIDIA runtime" Margin="0,0,10,10"/><Button x:Name="Retry" Content="Finish downloads" Margin="0,0,10,10"/></WrapPanel></StackPanel></Expander>     <TextBlock Text="Restore removes OptiShade and restores files it backed up. Your game settings, controls and saves stay untouched. Saved INI presets stay in the game presets folder." Foreground="#94869F" FontSize="11" Margin="0,4,0,0"/>
+
+    </StackPanel></ScrollViewer>
+   </Grid>
+   <Border Grid.Row="2" BorderBrush="#302438" BorderThickness="0,1,0,0" Padding="0,14,0,0"><StackPanel><TextBlock x:Name="Status" Text="Ready when you are. Shader downloads need an internet connection." Foreground="#C9B6DF" FontSize="12"/><ProgressBar x:Name="InstallProgress" Height="7" Margin="0,12,0,0" Foreground="#9755E9" Background="#332246" BorderThickness="0" Minimum="0" Maximum="100" Visibility="Collapsed"/><TextBlock Text="Neural rendering needs the matching RTX model file. Known local copies are added automatically. NVIDIA only. DLSS needs compatible RTX hardware." Foreground="#84758F" FontSize="10" Margin="0,10,0,0"/></StackPanel></Border>
+  </Grid>
+  <Border x:Name="Intro" Grid.ColumnSpan="2" Background="#171020" CornerRadius="20">
+   <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="620">
+    <TextBlock Text="Optishade" FontSize="48" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+    <TextBlock Text="Microsoft Flight Simulator 2024" Foreground="#BD9CEC" FontSize="22" HorizontalAlignment="Center" Margin="0,8,0,36"/>
+    <TextBlock x:Name="IntroStatus" Text="Welcome. Your hardware check starts next." HorizontalAlignment="Center" Foreground="#C9B6DF"/>
+    <ProgressBar x:Name="IntroProgress" Width="360" Height="7" Margin="0,24,0,0" Foreground="#9755E9" Background="#332246" BorderThickness="0" IsIndeterminate="True" Minimum="0" Maximum="100"/>
+    <TextBlock Text="created by gravy" HorizontalAlignment="Center" Foreground="#8E829E" Margin="0,26,0,22"/>
+
+   </StackPanel>
+  </Border>
+ </Grid>
+ </Border>
+</Window>
+
+

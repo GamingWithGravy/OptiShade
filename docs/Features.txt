@@ -1,0 +1,35 @@
+﻿OPTISHADE FEATURES
+Microsoft Flight Simulator 2024 | NVIDIA ONLY
+
+SETUP
+- Automatic Steam and Xbox installation detection.
+- Custom installer with Home, Setup and Settings pages.
+- Optional DLSS 5 installation with a Yes / No choice.
+- Internal game menu: Insert opens and closes it.
+- Close the installer after installation and downloads finish.
+
+IMAGE EFFECTS AND PRESETS
+- FX shader support and downloadable effects catalogue.
+- INI preset support.
+- Effect search, on/off switches and available effect settings.
+- Active first button brings enabled effects to the top when requested.
+- In-game preset browser with Downloads and Game presets shortcuts.
+- Copy and load downloaded INI presets without moving the originals.
+- Named saves, overwrite warnings and protection for other presets.
+- Unsaved-change notices and Revert changes.
+- No automatic preset saving.
+
+PERSONALISATION
+- Purple interface by default.
+- Six overlay accent colours plus a custom picker.
+- Reset to purple and save your overlay colour per game.
+
+RECOVERY
+- Runtime checks and download recovery options.
+- Backups before approved replacement of conflicting files.
+- Restore installed files and recover original backups.
+- Saved presets kept during Restore.
+- Uninstall offers a choice to keep saved presets.
+
+REQUIREMENTS
+This edition is for Microsoft Flight Simulator 2024 and NVIDIA graphics cards. Neural rendering requires compatible RTX hardware, a matching model and a supported game connection. Presets need their required shaders. Additional effects and neural passes can reduce frame rate; performance gains are not guaranteed.

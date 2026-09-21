@@ -1,0 +1,20 @@
+﻿[
+  {
+    "Name": "nvngx_dlss.dll",
+    "Version": "310,9,1,0",
+    "SHA256": "3975567B8943C53ACCE397F2B72380092F84F162D00B0D2C7D08A1025C563983",
+    "Signature": 0
+  },
+  {
+    "Name": "nvngx_dlssd.dll",
+    "Version": "310,9,1,0",
+    "SHA256": "4BC7EA5FCB2F32CF86BC2CB072E8D2860914A0BE511CBDCB2FC206C1D9D83B80",
+    "Signature": 0
+  },
+  {
+    "Name": "nvngx_dlssg.dll",
+    "Version": "310,9,1,0",
+    "SHA256": "FF6E90EB78B827927DFF5B4ECC6B1C870C2E9BCA29ED9F48C7D348CC9E170B82",
+    "Signature": 0
+  }
+]
