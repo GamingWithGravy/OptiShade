@@ -159,7 +159,7 @@ $form.FindName('Help').Add_Click({
  $guide.SelectedIndex=0;[void]$helpWindow.ShowDialog()
 })
 $form.FindName('HomeNav').Add_Click({ShowPage 'Home'})
-$form.FindName('GitHub').Add_Click({Start-Process 'https://github.com/GamingWithGravy/OptiShade_V0.19.17/releases/latest'})
+$form.FindName('GitHub').Add_Click({Start-Process 'https://github.com/GamingWithGravy/OptiShade/releases/latest'})
 $form.FindName('LibraryNav').Add_Click({ShowPage 'Library'})
 $form.FindName('OpenLibrary').Add_Click({ShowPage 'Library'})
 $form.FindName('SettingsNav').Add_Click({ShowPage 'Settings'})

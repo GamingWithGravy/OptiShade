@@ -18,7 +18,7 @@ static DWORD WINAPI Check(void* reference){
     WinHttpSetTimeouts(session,3000,3000,3000,3000);
     HINTERNET connection=WinHttpConnect(session,L"api.github.com",INTERNET_DEFAULT_HTTPS_PORT,0);
     if(connection){
-     HINTERNET request=WinHttpOpenRequest(connection,L"GET",L"/repos/GamingWithGravy/OptiShade_V0.19.17/releases/latest",nullptr,nullptr,nullptr,WINHTTP_FLAG_SECURE);
+     HINTERNET request=WinHttpOpenRequest(connection,L"GET",L"/repos/GamingWithGravy/OptiShade/releases/latest",nullptr,nullptr,nullptr,WINHTTP_FLAG_SECURE);
      if(request){
       if(WinHttpSendRequest(request,nullptr,0,nullptr,0,0,0)&&WinHttpReceiveResponse(request,nullptr)){
        DWORD status=0,length=sizeof(status);

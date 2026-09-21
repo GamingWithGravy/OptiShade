@@ -8,7 +8,7 @@
     <img src="https://img.shields.io/badge/Windows-x64-272133?style=flat-square" alt="Windows x64">
     <img src="https://img.shields.io/badge/Graphics-NVIDIA-76B900?style=flat-square" alt="NVIDIA graphics">
   </p>
-  <p><a href="https://github.com/GamingWithGravy/OptiShade_V0.19.17/releases/latest"><strong>Download the installer</strong></a> · <a href="docs/Tutorial.txt">Getting started</a> · <a href="docs/Features.txt">Features</a> · <a href="BUILDING.md">Build from source</a></p>
+  <p><a href="https://github.com/GamingWithGravy/OptiShade/releases/latest"><strong>Download the installer</strong></a> · <a href="docs/Tutorial.txt">Getting started</a> · <a href="docs/Features.txt">Features</a> · <a href="BUILDING.md">Build from source</a></p>
 </div>
 
 ![Optishade installer](docs/images/installer.png)
@@ -35,7 +35,7 @@ Press **Insert** to open the menu. Purple is the default; choose a different ove
 
 ## Install in a few steps
 
-1. Download the EXE from [Releases](https://github.com/GamingWithGravy/OptiShade_V0.19.17/releases/latest).
+1. Download the EXE from [Releases](https://github.com/GamingWithGravy/OptiShade/releases/latest).
 2. Close the simulator and open **Setup**.
 3. Select the detected Steam or Xbox installation.
 4. Click **Install Optishade** and choose whether to add the optional NVIDIA files.
@@ -70,6 +70,13 @@ Use the installation folder shown on Setup. These are look presets: do not put t
 Download the custom shader and preset, with REX Atmos CORE public-set instructions, from [Fusion Cinema](addons/FusionCinema/README.md). This addon is optional and works without neural rendering.
 
 ## Updates and recovery
+
+The repository is now **GamingWithGravy/OptiShade**. Existing web links redirect.
+The published 0.19.19 installer predates the rename and restricts update downloads
+to the old repository name. Users of that installer must manually download the
+next installer from [Releases](https://github.com/GamingWithGravy/OptiShade/releases/latest)
+once. The source on main now supports both names; this fix is not inside the
+already-published 0.19.19 EXE.
 
 Version 0.19.19 checks GitHub for newer stable releases. The overlay shows **Update available - check the installer**. Setup shows an update button only when a newer verified release asset is available. Close MSFS, then click it: the update window verifies the download, replaces the installer, updates recorded MSFS installations while preserving presets and configuration, and reopens setup. The previous installer is retained beside it with a .previous suffix.
 

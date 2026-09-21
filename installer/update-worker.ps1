@@ -4,7 +4,7 @@ Add-Type -AssemblyName PresentationFramework
 $settings=Get-Content -LiteralPath $Config -Raw -Encoding UTF8|ConvertFrom-Json
 $target=[IO.Path]::GetFullPath($settings.Installer)
 $uri=[uri]$settings.Url
-if($uri.Scheme -ne 'https' -or $uri.Host -ne 'github.com' -or -not $uri.AbsolutePath.StartsWith('/GamingWithGravy/OptiShade_V0.19.17/releases/download/') -or $settings.SHA256 -notmatch '^[a-fA-F0-9]{64}$' -or [IO.Path]::GetExtension($target) -ne '.exe'){throw 'Invalid update information.'}
+if($uri.Scheme -ne 'https' -or $uri.Host -ne 'github.com' -or $uri.AbsolutePath -cnotmatch '^/GamingWithGravy/(OptiShade|OptiShade_V0[.]19[.]17)/releases/download/' -or $settings.SHA256 -notmatch '^[a-fA-F0-9]{64}$' -or [IO.Path]::GetExtension($target) -ne '.exe'){throw 'Invalid update information.'}
 [xml]$markup=@'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="OptiShade update" Width="560" Height="420" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" Background="#17121F" Foreground="#F3EFFB" FontFamily="Segoe UI"><StackPanel Margin="28"><TextBlock Text="Optishade" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center"/><TextBlock Name="Version" FontSize="18" Margin="0,16,0,12"/><TextBox Name="Notes" Height="140" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Background="#241B30" Foreground="#D8C7ED" BorderThickness="0" Padding="10"/><ProgressBar Name="Progress" Height="8" Margin="0,20,0,16" Foreground="#9755E9"/><TextBlock Name="Status" TextWrapping="Wrap"/></StackPanel></Window>
 '@
