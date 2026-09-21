@@ -37,6 +37,9 @@
 #include "precompile/dlssnr_finished_color_Shader.h"
 #include "DlssNr_ResidualPair.h"
 #include "../output_scaling/OS_Dx12.h"
+#include "../../../../shared/TaaBridge.h"
+
+static std::atomic<ULONGLONG> g_lastNativeNrInput { 0 };
 
 namespace
 {
@@ -2030,7 +2033,7 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
         if (!snippet.has_value())
         {
             g_nr.failed = true;
-            g_nr.reason = "Neural rendering needs its NVIDIA model file. Close the game and use Add NVIDIA runtime in OptiShade";
+            g_nr.reason = "Model not found: nvngx_dlssnr.dll. The nvngx.dll_dlssnr.dll helper is a different file. Close MSFS and use installer Setup > Check game and runtime versions, then Add NVIDIA runtime.";
             LOG_ERROR("DLSS-NR unavailable: {}", g_nr.reason);
             device->Release();
             return;
@@ -3143,6 +3146,7 @@ void EvaluateInternal(ID3D12GraphicsCommandList* cmdList, NVSDK_NGX_Parameter* p
                       bool beforeUpscale, ID3D12CommandQueue* timingQueue, bool rayReconstruction,
                       unsigned long long submissionEpoch)
 {
+    g_lastNativeNrInput.store(GetTickCount64());
     std::lock_guard<std::recursive_mutex> nrLock(g_nrMutex);
     const Config& cfg = *Config::Instance();
     static unsigned lastPrecision=0;
@@ -3937,7 +3941,17 @@ void Shutdown()
 
     g_compose.reset();
 }
+#include "DlssNr_Taa.inl"
 } // namespace DlssNr
+
+extern "C" __declspec(dllexport) bool OptiShadeTaaRequested()
+{
+    return false; // TAA neural rendering is INOP in this release.
+}
+extern "C" __declspec(dllexport) void OptiShadeTaaSubmit(const ostaa::Frame* frame)
+{
+    (void)frame; // Hard gate: old shaders or settings cannot activate the INOP route.
+}
 
 // Read-only diagnostics for the OptiShade hardware test.
 extern "C" __declspec(dllexport) unsigned long long OptiShadeNrCompletedFrames(){std::lock_guard<std::recursive_mutex> guard(g_nrMutex);return g_nr.successfulDispatches;}

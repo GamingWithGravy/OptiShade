@@ -13,7 +13,10 @@ $window.FindName('Version').Text='Updating to Version '+$settings.Version
 $window.FindName('Notes').Text=$settings.Notes
 $script:started=$false;$script:updating=$true
 $window.Add_Closing({param($sender,$e) if($script:updating){$e.Cancel=$true}})
+# Raise the update splash once; release topmost before processing the update.
+$window.Add_Loaded({$window.Topmost=$true;[void]$window.Activate()})
 $window.Add_ContentRendered({
+ $window.Topmost=$false;[void]$window.Activate()
  if($script:started){return};$script:started=$true
  $download=Join-Path (Split-Path $Config) 'download.exe';$backup=$target+'.previous';$web=New-Object Net.WebClient
  try{

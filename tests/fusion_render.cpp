@@ -29,6 +29,11 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,LPWSTR args,int){
         ComPtr<ID3D12Debug> debug;bool debugOn=SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug)));if(debugOn)debug->EnableDebugLayer();
         HMODULE dll=LoadLibraryW((std::filesystem::path(executable).parent_path()/L"winmm.dll").c_str());if(!dll)throw std::runtime_error("Performance DLL load failed");
         Sleep(2000);
+        if(wcsstr(args,L"--taa-guides")){
+            auto requested=(bool(*)())GetProcAddress(dll,"OptiShadeTaaRequested");
+            if(!requested||requested())throw std::runtime_error("INOP TAA bridge accepted an old opt-in");
+            fprintf(report,"PASS: INOP TAA bridge refuses old opt-ins\n");
+        }
         HMODULE effects=GetModuleHandleW(L"ReShade64.dll");if(!effects)effects=LoadLibraryW(L"ReShade64.dll");
         if(!effects)throw std::runtime_error("Effects DLL load failed");
         auto read=(osfx::Read)GetProcAddress(effects,"OptiShadeEffectsRead");auto send=(osfx::Send)GetProcAddress(effects,"OptiShadeEffectsSend");
@@ -113,6 +118,11 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,LPWSTR args,int){
         }
         finish();unsigned errors=0;if(info){for(UINT64 i=0;i<info->GetNumStoredMessages();i++){SIZE_T size=0;info->GetMessage(i,nullptr,&size);std::vector<unsigned char> data(size);auto message=(D3D12_MESSAGE*)data.data();info->GetMessage(i,message,&size);if(message->Severity<=D3D12_MESSAGE_SEVERITY_ERROR){fprintf(report,"D3D12 ERROR: %s\n",message->pDescription);errors++;}}}
         if(automatic&&(!read(&snapshot,sizeof(snapshot))||!snapshot.techniques||snapshot.applied<3||errors))throw std::runtime_error("Bridge/runtime/debug verification failed");
+        if(wcsstr(args,L"--taa-guides")){
+            bool found=false;for(uint32_t i=0;i<snapshot.techniques;i++)if(!strcmp(snapshot.technique[i].effect,"OptiShade_TAA_Guides.fx"))found=true;
+            if(!found||!snapshot.compileOK)throw std::runtime_error("TAA guide FX did not compile in actual runtime");
+            fprintf(report,"PASS: TAA guide shader compiled in actual D3D12 effect runtime\n");
+        }
         fprintf(report,"PASS: actual FX compiler, INI preset, uniform and technique changes, four GPU readbacks; applied=%llu, debug errors=%u\n",snapshot.applied,errors);fclose(report);CloseHandle(event);        // The injected DLL remains resident to process termination, just as in the game.
         ExitProcess(0);
     }catch(const std::exception& error){if(report){fprintf(report,"FAIL: %s\n",error.what());fclose(report);}if(!automatic)MessageBoxA(nullptr,error.what(),"OptiShade test",MB_OK);ExitProcess(1);}

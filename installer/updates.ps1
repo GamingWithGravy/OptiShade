@@ -1,4 +1,4 @@
-﻿function GetOptiShadeUpdate([string]$Current='0.19.18'){
+﻿function GetOptiShadeUpdate([string]$Current='0.19.19',[switch]$ReportErrors){
  [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
  try{
   $release=Invoke-RestMethod 'https://api.github.com/repos/GamingWithGravy/OptiShade_V0.19.17/releases/latest' -Headers @{'User-Agent'='OptiShade-update-check'} -TimeoutSec 12
@@ -9,5 +9,5 @@
   $url=[uri]$asset[0].browser_download_url
   if($url.Scheme -ne 'https' -or $url.Host -ne 'github.com' -or -not $url.AbsolutePath.StartsWith('/GamingWithGravy/OptiShade_V0.19.17/releases/download/')){return $null}
   [pscustomobject]@{Version=$version;Url=$url.AbsoluteUri;SHA256=$asset[0].digest.Substring(7);Notes=[string]$release.body}
- }catch{return $null}
+ }catch{if($ReportErrors){throw 'Could not check GitHub. Check your connection and try again.'};return $null}
 }

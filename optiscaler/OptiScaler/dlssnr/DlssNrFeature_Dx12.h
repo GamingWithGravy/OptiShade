@@ -21,7 +21,7 @@ class Config;
 
 namespace DlssNr
 {
-inline constexpr unsigned int MaxPassCount = 30;
+inline constexpr unsigned int MaxPassCount = 5;
 inline constexpr unsigned int DefaultMaxPassCount = 3;
 
 // The model runs immediately after the game's upscaler, before the interface is drawn. It is shown a
@@ -107,6 +107,7 @@ CalibrationReading Calibration();
 
 // Whether the model is loaded and running, for the overlay.
 bool IsRunning();
+std::string TaaFallbackStatus();
 // Private residual-upscaler status; separate from the NR model's own running status/time.
 std::string DeferredDlssStatus();
 

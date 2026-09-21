@@ -341,9 +341,10 @@ bool Config::Reload(std::filesystem::path iniPath)
             DLSSEnabled.set_from_config(readBool("DLSS", "Enabled"));
 
             // --- DLSS 5 Neural Rendering (OptiScaler/dlssnr) ---
-            DlssNrEnabled.set_from_config(readBool("DlssNr", "Enabled"));
+            DlssNrEnabled.set_from_config(false); // Explicit session opt-in, even for older INIs.
             DlssNrRunBeforeSr.set_from_config(readBool("DlssNr", "RunBeforeSR"));
             DlssNrFinishedPicture.set_from_config(readBool("DlssNr", "FinishedPicture"));
+            DlssNrTaaFallback.set_from_config(false); // INOP: ignore previously saved opt-ins.
             DlssNrDeferredDlss.set_from_config(readBool("DlssNr", "DeferredDLSS"));
             DlssNrResidualAcrossRr.set_from_config(readBool("DlssNr", "ResidualAcrossRR"));
             DlssNrResidualAcrossRrBlend.set_from_config(readFloat("DlssNr", "ResidualAcrossRRBlend"));
@@ -1275,8 +1276,11 @@ bool Config::SaveIni()
         ini.SetValue("DLSS", "Enabled", GetBoolValue(Instance()->DLSSEnabled.value_for_config()).c_str());
 
     // --- DLSS 5 Neural Rendering (OptiScaler/dlssnr) ---
-    ini.SetValue("DlssNr", "Enabled", GetBoolValue(Instance()->DlssNrEnabled.value_for_config()).c_str());
+    // Preserve tuning, but never arm neural rendering on the next launch.
+    // Do not mutate the live option: saving must not interrupt the current session.
+    ini.SetValue("DlssNr", "Enabled", "false");
     ini.SetValue("DlssNr", "FinishedPicture", GetBoolValue(Instance()->DlssNrFinishedPicture.value_for_config()).c_str());
+    ini.SetValue("DlssNr", "TaaFallback", "false");
     ini.SetValue("DlssNr", "RunBeforeSR",
                  GetBoolValue(Instance()->DlssNrRunBeforeSr.value_for_config()).c_str());
     ini.SetValue("DlssNr", "DeferredDLSS",

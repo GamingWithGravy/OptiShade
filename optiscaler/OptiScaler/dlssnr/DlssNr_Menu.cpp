@@ -129,6 +129,12 @@ void RenderMenu(Config* config, float menuResScale)
         bool enabled = config->DlssNrEnabled.value_or_default();
         if (ImGui::Checkbox("Enable Neural Rendering", &enabled))
             config->DlssNrEnabled = enabled;
+        ImGui::TextDisabled("Tuning is saved; neural rendering always starts off.");
+        bool taaFallback = false;
+        ImGui::BeginDisabled();
+        ImGui::Checkbox("TAA neural rendering - Coming soon (INOP)", &taaFallback);
+        ImGui::EndDisabled();
+        HelpMarker("TAA neural rendering is not operational in this release. The option is disabled while development continues.");
 
         HelpMarker("Enhance lighting and material appearance with the NR model. Placement selects before or after upscaling.\nRequires nvngx_dlssnr.dll plus the included nvngx.dll_dlssnr.dll helper.");
 
@@ -278,7 +284,7 @@ void RenderMenu(Config* config, float menuResScale)
             {
                 ImGui::TextWrapped("Disable Generate before SR, apply after SR (DLSS) to use native Vulkan NR.");
             }
-            else if (enabled)
+            else if (enabled && !taaFallback)
                 ImGui::TextUnformatted("No upscaler frames received. Enable a supported upscaler in the game. Games without a compatible connection cannot run this pass; installing DLLs alone will not help.");
         }
         else
@@ -320,9 +326,9 @@ void RenderMenu(Config* config, float menuResScale)
         ImGui::SeparatorText("Performance");
 
         bool unlockPasses = config->DlssNrUnlockPasses.value_or_default();
-        if (ImGui::Checkbox("Lift model pass limit (up to 30; expensive)", &unlockPasses))
+        if (ImGui::Checkbox("Allow up to 5 model passes", &unlockPasses))
             config->DlssNrUnlockPasses = unlockPasses;
-        HelpMarker("F*ck around and find out");
+        HelpMarker("Raises the model pass limit from 3 to 5. Additional passes increase GPU load and can reduce frame rate. Start with one pass and increase gradually.");
         const unsigned int passLimit = unlockPasses ? MaxPassCount : DefaultMaxPassCount;
 
         {

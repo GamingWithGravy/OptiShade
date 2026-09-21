@@ -1,4 +1,4 @@
-﻿// In-game file browser. Directory contents are refreshed only on navigation.
+// In-game file browser. Directory contents are refreshed only on navigation.
 static std::string BrowserText(const std::filesystem::path& path){auto s=path.u8string();return std::string((const char*)s.c_str());}
 static bool importedShader=false;
 static bool ImportLook(const std::filesystem::path& source,const std::filesystem::path& root){
@@ -38,9 +38,14 @@ static void DrawPresetBrowser(const std::filesystem::path& root){
   std::error_code ec;if(!std::filesystem::is_directory(folder,ec))folder=root/L"Presets";
   refresh=true;selected.clear();filter[0]=0;ImGui::OpenPopup("Browse files to install");
  }
- ImGui::SetNextWindowSize(ImVec2(700,540),ImGuiCond_Appearing);
+ const auto area=ImGui::GetMainViewport()->WorkSize;
+ const float scale=ImGui::GetFontSize()/13.0f;
+ ImGui::SetNextWindowSize(ImVec2((std::min)(900.0f*scale,area.x-24),(std::min)(720.0f*scale,area.y-24)),ImGuiCond_Appearing);
+ ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetWorkCenter(),ImGuiCond_Appearing,ImVec2(.5f,.5f));
+ ImGui::SetNextWindowSizeConstraints(ImVec2((std::min)(600.0f,area.x-24),(std::min)(400.0f,area.y-24)),ImVec2(area.x-24,area.y-24));
  if(ImGui::BeginPopupModal("Browse files to install",nullptr,ImGuiWindowFlags_NoCollapse)){
   ImGui::TextWrapped(shaders?"Install an FX shader: copy it into Shaders/Custom, then recompile installed effects. Enable it in the effect list when ready.":"Import an INI look: copy it into Presets and load it. Required shaders must already be installed. The original file is kept.");
+  ImGui::TextWrapped("For ZIP packages containing FX, includes, textures or INI files, use Setup > Advanced options > Install FX / INI from ZIP in the installer.");
   auto go=[&](const std::filesystem::path& path){std::error_code ec;if(!path.is_absolute()||!std::filesystem::is_directory(path,ec)){issue="Enter an existing full folder path, for example D:\\My presets.";return;}folder=path;refresh=true;selected.clear();};
   if(ImGui::Button("Downloads")){wchar_t home[32768]{};GetEnvironmentVariableW(L"USERPROFILE",home,32768);go(std::filesystem::path(home)/L"Downloads");}
   ImGui::SameLine();if(ImGui::Button("Desktop")){wchar_t home[32768]{};GetEnvironmentVariableW(L"USERPROFILE",home,32768);go(std::filesystem::path(home)/L"Desktop");}
@@ -63,7 +68,7 @@ static void DrawPresetBrowser(const std::filesystem::path& root){
   ImGui::TextUnformatted("Folder path (paste a folder, then press Enter or Go)");
   ImGui::SetNextItemWidth(-80);bool enter=ImGui::InputText("##folder",folderText,sizeof(folderText),ImGuiInputTextFlags_EnterReturnsTrue);ImGui::SameLine();bool navigate=ImGui::Button("Go");if(enter||navigate)go(std::filesystem::u8path(folderText));
   ImGui::InputTextWithHint("##findpreset",shaders?"Find an FX file...":"Find an INI preset...",filter,sizeof(filter));
-  ImGui::BeginChild("Preset files",ImVec2(0,260),true);
+  ImGui::BeginChild("Preset files",ImVec2(0,(std::max)(60.0f,ImGui::GetContentRegionAvail().y-ImGui::GetTextLineHeightWithSpacing()*9)),true);
   for(const auto& entry:entries){
    auto name=BrowserText(entry.filename());std::string match=name,query=filter;
    for(auto& ch:match)ch=(char)tolower((unsigned char)ch);for(auto& ch:query)ch=(char)tolower((unsigned char)ch);

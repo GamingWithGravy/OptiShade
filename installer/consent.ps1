@@ -28,7 +28,7 @@ function ConfirmOptionalDlss($Owner,[bool]$Supported){
  [xml]$markup=@"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="Optishade setup" Width="550" SizeToContent="Height" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" Background="#17121F" Foreground="#F3EFFB" FontFamily="Segoe UI" ShowInTaskbar="False">
  <StackPanel Margin="28"><TextBlock Text="Would you like to install DLSS 5?" FontSize="23" FontWeight="SemiBold" TextWrapping="Wrap"/>
- <TextBlock Margin="0,16,0,12" Text="Yes adds the optional NVIDIA files. Compatible RTX hardware and the matching model are required; installing files does not switch the effect on." TextWrapping="Wrap" Foreground="#C2B0D7"/>
+ <TextBlock Margin="0,16,0,12" Text="Yes downloads GPU-matched files. DLSS/Streamline come from NVIDIA; the neural model comes from pinned community GitHub releases (RHI for RTX 50; OptiScaler-Susemi for RTX 20/30/40). RTX 20/30/40 uses an experimental modified model without a valid NVIDIA signature. Downloads are hash-verified. Installing files does not switch the effect on." TextWrapping="Wrap" Foreground="#C2B0D7"/>
  <TextBlock Text="No installs Optishade with image effects and presets, without adding DLSS 5 files. Your game's built-in DLSS stays untouched." TextWrapping="Wrap" Foreground="#C2B0D7"/>
  <TextBlock Name="Availability" Margin="0,14,0,0" Foreground="#FFBE83" TextWrapping="Wrap"/>
  <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0"><Button Name="Yes" Content="Yes" MinWidth="100" Margin="0,0,12,0"/><Button Name="No" Content="No" MinWidth="100" IsDefault="True"/></StackPanel>

@@ -1,0 +1,21 @@
+TAA guide shader attribution
+
+Upstream: https://github.com/vortigern11/vort_Shaders
+Revision: b410b9f0c0fbb83c8cb42164aaf1655fab386f4a
+
+vort_MotionVectors.fxh is attributed to Jakob Wapenhensch (Jak0bW),
+Pascal Gilcher / Marty McFly, with modifications by Vortigern.
+Its file header specifies Creative Commons Attribution-NonCommercial 4.0:
+https://creativecommons.org/licenses/by-nc/4.0/
+This component is not covered by the upstream repository's general MIT license.
+
+Original projects:
+https://github.com/JakobPCoder/ReshadeMotionEstimation
+https://gist.github.com/martymcmodding/69c775f844124ec2c71c37541801c053
+
+The included upstream helper files and vort_BlueNoise.png were copied without
+modification. Individual file notices are preserved, including MIT and Academy
+notices. The upstream MIT text is included separately.
+OptiShade_TAA_Guides.fx is a new adapter that invokes motion estimation and
+exports conventional depth for the experimental OptiShade TAA input path.
+The motion-estimation component must not be redistributed as MIT-only software.

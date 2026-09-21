@@ -3,10 +3,12 @@ $ErrorActionPreference='Stop'
 . "$PSScriptRoot/ownership.ps1"
 . "$PSScriptRoot/effects.ps1"
 . "$PSScriptRoot/nvidia.ps1"
+. "$PSScriptRoot/neural-download.ps1"
 . "$PSScriptRoot/library.ps1"
 . "$PSScriptRoot/consent.ps1"
 . "$PSScriptRoot/compatibility.ps1"
 . "$PSScriptRoot/updates.ps1"
+. "$PSScriptRoot/recovery.ps1"
 Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase,System.Windows.Forms
 Add-Type -TypeDefinition 'public class FusionGameCard { public string Name {get;set;} public string Folder {get;set;} public string Launcher {get;set;} public string State {get;set;} public string InstallFolder {get;set;} public string Label {get;set;} public string Artwork {get;set;} public System.Windows.Media.ImageSource Thumbnail {get;set;} }' -ReferencedAssemblies @([Windows.Media.ImageSource].Assembly.Location,[Windows.Threading.DispatcherObject].Assembly.Location)
 $store=Join-Path $env:LOCALAPPDATA 'OptiShade'
@@ -14,7 +16,7 @@ $script:cachePath=Join-Path $store 'msfs24-cache.json'
 [xml]$xaml=Get-Content "$PSScriptRoot/manager.xaml" -Raw -Encoding UTF8
 $form=[Windows.Markup.XamlReader]::Load((New-Object Xml.XmlNodeReader $xaml))
 $path=$form.FindName('GamePath');$status=$form.FindName('Status')
-$buttons=@('Browse','Install','Repair','Restore','Runtime','Retry','Uninstall','Scan','Play','LibraryGames','GamePath','Method','AddGame','HomeNav','LibraryNav','SetupNav','SettingsNav','OpenLibrary','CheckCompatibility')|ForEach-Object {$form.FindName($_)}
+$buttons=@('Browse','Install','Repair','Restore','Runtime','Retry','Uninstall','Scan','Play','LibraryGames','GamePath','Method','AddGame','HomeNav','LibraryNav','SetupNav','SettingsNav','OpenLibrary','CheckCompatibility','TroubleshootingNav','ResetDefaults','ImportZip','InstallCinema','RecoveryRepair','RecoveryRestore','CheckUpdates')|ForEach-Object {$form.FindName($_)}
 $form.Icon=[Windows.Media.Imaging.BitmapFrame]::Create([uri](Join-Path $PSScriptRoot 'OptiShade-app.ico'))
 $form.FindName('BrandIcon').Source=[Windows.Media.Imaging.BitmapFrame]::Create([uri](Join-Path $PSScriptRoot 'OptiShade-icon.png'))
 $form.FindName('TitleBar').Add_MouseLeftButtonDown({if($_.ChangedButton -eq 'Left'){$form.DragMove()}})
@@ -35,7 +37,7 @@ function RunAction([scriptblock]$action){
  if($script:startupResult -and -not $script:startupResult.IsCompleted){$status.Text='Finishing the hardware check. Please try again in a moment.';return}
  if($script:busy){return};$script:busy=$true
  foreach($control in $buttons){if($control){$control.IsEnabled=$false}}
- try{& $action;$status.Foreground='#BDA0F4'}catch{$status.Text=$_.Exception.Message;$status.Foreground='#FFBE83';WriteInstallerLog $_.Exception.Message}
+ try{if($path.Text){$path.Text=ResolveFusionInstallFolder $path.Text};& $action;$status.Foreground='#BDA0F4'}catch{$status.Text=$_.Exception.Message;$status.Foreground='#FFBE83';WriteInstallerLog $_.Exception.Message}
  finally{$form.FindName('InstallProgress').IsIndeterminate=$false;$form.FindName('InstallProgress').Visibility='Collapsed';if(-not $script:uninstallDone){RefreshLibrary};$script:busy=$false;foreach($control in $buttons){if($control){$control.IsEnabled=$true}}}
 }
 
@@ -60,17 +62,18 @@ $form.FindName('Install').Add_Click({RunAction {
  $existing=Test-Path -LiteralPath (ManifestPath $store $path.Text)
  $existing=$existing -or (Test-Path -LiteralPath (Join-Path $path.Text 'OptiShadeData'))
  if($replace.Count -or $existing){
-  $message="Files already in this game folder:`n"+(($replace|ForEach-Object { $_.Path+' - '+$(if($_.Recognised){$_.Description}else{'Unidentified loader; may belong to the game or another tool'}) }) -join "`n")+"`n`nBack up and replace this setup with OptiShade? Conflicting add-ons will be disabled. Restore will put these exact files back. Existing shader folders and presets are kept. Unidentified loaders may be needed by the game; choose No if unsure."
-  $message="ReShade / OptiShade files detected. Would you like to back up and replace conflicting files, then install OptiShade? Saved INI files are kept.`n`n"+$message
+  $message="Files already in this game folder:`n"+(($replace|ForEach-Object { $_.Path+' - '+$(if($_.Recognised){$_.Description}else{'Unidentified loader; may belong to the game or another tool'}) }) -join "`n")+"`n`nReplace this setup with OptiShade? Conflicting loaders will be removed from the game folder. Recovery copies are stored outside the game. Restore will put these exact files back. Existing shader folders and presets are kept. Unidentified loaders may be needed by the game; choose No if unsure."
+  $message="ReShade / OptiShade files detected. Remove conflicting files from the game folder, then install OptiShade? Recovery copies are stored outside the game and cannot load. Saved INI files are kept.`n`n"+$message
   if([Windows.MessageBox]::Show($form,$message,'Reinstall or replace graphics mods','YesNo','Question','No') -ne 'Yes'){return}
  }
  $script:manifest=InstallFusion $path.Text $Payload $store $Installer $proxy $replace -ReplaceExisting $existing
  $m=Get-Content $script:manifest -Raw|ConvertFrom-Json;$m|Add-Member -NotePropertyName LaunchExe -NotePropertyValue $exe -Force;$m|Add-Member -NotePropertyName Downloads -NotePropertyValue 'Pending' -Force;$m|Add-Member -NotePropertyName OptionalDlss -NotePropertyValue ([bool]$optionalDlss) -Force;WriteState $m $script:manifest
  SaveFusionCompatibility $path.Text $plan
+ if($form.FindName('IncludeCinema').IsChecked){InstallFusionCinema $path.Text}
  FinishOptionalDownloads $m $plan
 }})
 $form.FindName('Restore').Add_Click({RunAction {$m=ManifestPath $store $path.Text;if(-not(Test-Path $m)){throw 'No recorded installation for this game.'};RestoreFusion $m;$status.Text='Game restored. Original files are back and OptiShade game files are removed.'}})
-$form.FindName('Runtime').Add_Click({RunAction {$m=ManifestPath $store $path.Text;if(-not(Test-Path $m)){throw 'Install OptiShade first.'};$installed=Get-Content $m -Raw|ConvertFrom-Json;$plan=CheckGameCompatibility $installed.LaunchExe;if(-not $plan.DownloadNvidia){throw $plan.NeuralRendering};$d=New-Object Windows.Forms.OpenFileDialog;$d.Filter='NVIDIA NR runtime|nvngx_dlssnr.dll';if($d.ShowDialog() -eq 'OK'){ImportNrRuntime $m $d.FileName;$installed|Add-Member -NotePropertyName OptionalDlss -NotePropertyValue $true -Force;$latest=Get-Content $m -Raw|ConvertFrom-Json;$latest|Add-Member -NotePropertyName OptionalDlss -NotePropertyValue $true -Force;WriteState $latest $m;$status.Text='Model file added. It is not running yet: a supported game connection is still required.'};$d.Dispose()}})
+$form.FindName('Runtime').Add_Click({RunAction {$m=ManifestPath $store $path.Text;if(-not(Test-Path $m)){throw 'Install OptiShade first.'};$installed=Get-Content $m -Raw|ConvertFrom-Json;$plan=CheckGameCompatibility $installed.LaunchExe;if(-not $plan.DownloadNvidia){throw $plan.NeuralRendering};$d=New-Object Windows.Forms.OpenFileDialog;$d.Title='Choose '+$plan.NeuralRuntime.Expected;$d.Filter='NVIDIA NR model (not the helper)|nvngx_dlssnr.dll';if($d.ShowDialog() -eq 'OK'){ImportNrRuntime $m $d.FileName;$installed|Add-Member -NotePropertyName OptionalDlss -NotePropertyValue $true -Force;$latest=Get-Content $m -Raw|ConvertFrom-Json;$latest|Add-Member -NotePropertyName OptionalDlss -NotePropertyValue $true -Force;WriteState $latest $m;$status.Text='Model file added. It is not running yet: a supported game connection is still required.'};$d.Dispose()}})
 $form.FindName('Uninstall').Add_Click({RunAction {$choice=[Windows.MessageBox]::Show($form,'Would you like to keep your saved INI files? Yes keeps presets in each game folder for later. No removes them with OptiShade.','Keep saved presets?','YesNoCancel','Question','Yes');if($choice -eq 'Cancel'){return};UninstallFusion $store $Installer $PSScriptRoot -KeepPresets ($choice -eq 'Yes');$script:uninstallDone=$true;$status.Text='OptiShade removed. Closing setup; your original installer EXE is kept.';$script:busy=$false;$form.Close()}})
 $form.FindName('Retry').Add_Click({RunAction {$m=Get-Content (ManifestPath $store $path.Text) -Raw|ConvertFrom-Json;if($m.Status -ne 'Installed'){throw 'Install OptiShade first.'};AssertClosed $path.Text;$plan=CheckGameCompatibility $m.LaunchExe;SaveFusionCompatibility $path.Text $plan;FinishOptionalDownloads $m $plan}})
 $form.FindName('Repair').Add_Click({RunAction {
@@ -90,7 +93,7 @@ $form.FindName('Repair').Add_Click({RunAction {
 function WriteInstallerLog([string]$Message){try{New-Item -ItemType Directory -Path $store -Force|Out-Null;((Get-Date -Format o)+' '+$Message)|Add-Content -LiteralPath (Join-Path $store 'Installer.log') -Encoding UTF8}catch{}}
 function FinishOptionalDownloads($Manifest,$Plan){
  $issues=New-Object 'System.Collections.Generic.List[string]'
- if(UseOptionalDlss $Manifest $Plan){try{$nr=FindNrRuntime $Installer;if($nr){ImportNrRuntime (ManifestPath $store $path.Text) $nr};InstallNvidia $path.Text $progress}catch{$issues.Add('NVIDIA files: '+$_.Exception.Message)}}
+ if(UseOptionalDlss $Manifest $Plan){try{EnsureNeuralRuntime (ManifestPath $store $path.Text) (GetFusionGpu) $progress}catch{$issues.Add('Neural model: '+$_.Exception.Message)};try{InstallNvidia $path.Text $progress}catch{$issues.Add('NVIDIA files: '+$_.Exception.Message)}}
  try{$null=InstallAllEffects $path.Text (Join-Path $PSScriptRoot 'EffectPackages.ini') $progress}catch{$issues.Add('Additional FX: '+$_.Exception.Message)}
  if($issues.Count){
   $mp=ManifestPath $store $path.Text;$m=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json
@@ -99,6 +102,7 @@ function FinishOptionalDownloads($Manifest,$Plan){
   $status.Text='OptiShade is installed. Some optional downloads are unfinished; installed effects can still be used. Choose Retry unfinished downloads. Details: %LOCALAPPDATA%\OptiShade\Installer.log'
  }else{CompleteDownloads}
  WriteInstallerLog $status.Text
+ try{$updated=CheckGameCompatibility $Manifest.LaunchExe;SaveFusionCompatibility $path.Text $updated;if((UseOptionalDlss $Manifest $Plan) -and $updated.NeuralRuntime.State -ne 'Verified file'){$status.Text='OptiShade image effects are installed. Neural rendering is NOT ready: '+$updated.NeuralRuntime.Message+' Choose Retry unfinished downloads to retry the GPU-matched model download.';if($issues.Count){$status.Text+=' Some optional downloads also failed; use Retry unfinished downloads.'}}}catch{WriteInstallerLog ('Post-install diagnostics: '+$_.Exception.Message)}
 }
 
 function CheckGameCompatibility([string]$exe){
@@ -107,6 +111,8 @@ function CheckGameCompatibility([string]$exe){
  $root=$path.Text
  if($script:gameRoot -and $root.StartsWith($script:gameRoot+'\',[StringComparison]::OrdinalIgnoreCase)){$root=$script:gameRoot}
  $plan=GetFusionCompatibility $root $exe $script:gpu $script:gameLauncher
+ $plan|Add-Member -NotePropertyName DriverVersions -NotePropertyValue @($script:gpu.Drivers) -Force
+ $plan|Add-Member -NotePropertyName NeuralRuntime -NotePropertyValue (GetNeuralRuntimeStatus $path.Text $script:gpu) -Force
  $installed=@(GetFusionInstalledVersions $path.Text)
  $plan|Add-Member -NotePropertyName InstalledRuntimes -NotePropertyValue $installed
  $form.FindName('Compatibility').Text=FormatFusionCompatibility $plan
@@ -118,7 +124,7 @@ $path.Add_TextChanged({$form.FindName('Compatibility').Text='Check this game bef
 function CompleteDownloads{$mp=ManifestPath $store $path.Text;$m=Get-Content $mp -Raw|ConvertFrom-Json;$m|Add-Member -NotePropertyName Downloads -NotePropertyValue 'Complete' -Force;WriteState $m $mp;$status.Text='Install complete. You can close the installer and start your game.'}
 function ShowPage([string]$name){
  if($name -eq 'Library'){$name='Setup'}
- foreach($page in @('Home','Library','Setup','Settings')){$form.FindName($page+'Page').Visibility=if($page -eq $name){'Visible'}else{'Collapsed'}}
+ foreach($page in @('Home','Library','Setup','Settings','Troubleshooting')){$form.FindName($page+'Page').Visibility=if($page -eq $name){'Visible'}else{'Collapsed'}}
 }
 function ShowGames($games){
  $cards=New-Object Collections.Generic.List[FusionGameCard]
@@ -220,8 +226,43 @@ $script:startupTimer.Add_Tick({
  }
 })
 $form.FindName('MsfsCopies').Add_SelectionChanged({$copy=$form.FindName('MsfsCopies').SelectedItem;if($copy){$script:gameRoot=$copy.Folder;$script:gameLauncher=$copy.Launcher;$path.Text=if($copy.InstallFolder){$copy.InstallFolder}else{$copy.Folder};$form.FindName('SelectedTitle').Text='Microsoft Flight Simulator 2024'}})
+
+$form.FindName('TroubleshootingNav').Add_Click({ShowPage 'Troubleshooting'})
+$buttons+=@($form.FindName('ExportSupport'))
+$form.FindName('ExportSupport').Add_Click({RunAction {
+ $dialog=New-Object Windows.Forms.SaveFileDialog
+ $dialog.Filter='Support report (*.json)|*.json';$dialog.FileName='OptiShade-support-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.json'
+ try{if($dialog.ShowDialog() -eq 'OK'){
+  GetOptiShadeSupportReport $path.Text $store|ConvertTo-Json -Depth 8|Set-Content -LiteralPath $dialog.FileName -Encoding UTF8
+  $status.Text='Support report saved. Review it before sharing: '+$dialog.FileName
+ }}finally{$dialog.Dispose()}
+}})
+$form.FindName('RecoveryRepair').Add_Click({$form.FindName('Repair').RaiseEvent([Windows.RoutedEventArgs]::new([Windows.Controls.Button]::ClickEvent))})
+$form.FindName('RecoveryRestore').Add_Click({$form.FindName('Restore').RaiseEvent([Windows.RoutedEventArgs]::new([Windows.Controls.Button]::ClickEvent))})
+$form.FindName('ResetDefaults').Add_Click({RunAction {
+ if([Windows.MessageBox]::Show($form,'Back up and reset OptiShade Performance and image-effect settings? This selects a new empty look. Saved presets and MSFS settings are kept. Close MSFS first.','Reset OptiShade settings','YesNo','Question','No') -ne 'Yes'){return}
+ $saved=ResetOptiShadeSettings $path.Text $Payload $store;$status.Text='Defaults restored; effects are off. Previous settings saved at '+$saved
+}})
+$form.FindName('ImportZip').Add_Click({RunAction {
+ AssertClosed $path.Text
+ $dialog=New-Object Windows.Forms.OpenFileDialog;$dialog.Filter='FX and INI packages (*.zip)|*.zip'
+ try{if($dialog.ShowDialog() -eq 'OK'){$count=ImportEffectsZip $dialog.FileName $path.Text;$status.Text="Imported $count files. In game, choose the imported INI or recompile FX and enable the effects. ZIPs containing DLLs do not install those DLLs."}}finally{$dialog.Dispose()}
+}})
+$form.FindName('InstallCinema').Add_Click({RunAction {
+ $mp=ManifestPath $store $path.Text;if(-not(Test-Path -LiteralPath $mp)){throw 'Install OptiShade first.'}
+ InstallFusionCinema $path.Text;$status.Text='Fusion Cinema installed. Select Gravy - Fusion Cinema Custom v1 under saved looks in game. REX presets are separate; see the addon guide.'
+}})
+$form.FindName('CheckUpdates').Add_Click({RunAction {
+ $status.Text='Checking GitHub releases...';$form.Dispatcher.Invoke([Action]{},[Windows.Threading.DispatcherPriority]::Background)
+ $script:availableUpdate=GetOptiShadeUpdate -ReportErrors
+ if($script:availableUpdate){$form.FindName('UpdateAvailable').Content='Update available - '+$script:availableUpdate.Version;$form.FindName('UpdateAvailable').Visibility='Visible';$status.Text='An update is available. Use the update button to install it.'}
+ else{$form.FindName('UpdateAvailable').Visibility='Collapsed';$status.Text='No newer stable release is available.'}
+}})
+
 ShowPage 'Home'
-$form.Add_ContentRendered({$script:introStart=Get-Date;$form.FindName('IntroStatus').Text=if(Test-Path -LiteralPath $script:cachePath){'Loading your saved setup...'}else{'Checking NVIDIA hardware and finding Microsoft Flight Simulator 2024...'};$status.Text=$form.FindName('IntroStatus').Text;$script:startupTimer.Start()})
+# Raise the shared splash/installer window once, without keeping it above other apps.
+$form.Add_Loaded({$form.Topmost=$true;[void]$form.Activate()})
+$form.Add_ContentRendered({$form.Topmost=$false;[void]$form.Activate();$script:introStart=Get-Date;$form.FindName('IntroStatus').Text=if(Test-Path -LiteralPath $script:cachePath){'Loading your saved setup...'}else{'Checking NVIDIA hardware and finding Microsoft Flight Simulator 2024...'};$status.Text=$form.FindName('IntroStatus').Text;$script:startupTimer.Start()})
 $form.Add_Closed({$script:startupTimer.Stop();if($script:startupResult){$script:startup.BeginStop($null,$null)|Out-Null}})
 [void]$form.ShowDialog()
 

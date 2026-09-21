@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference='Stop'
+﻿﻿$ErrorActionPreference='Stop'
 $root=$PSScriptRoot;$payload=Join-Path $root 'installer/PayloadFusion'
 if(Test-Path "$root/installer/DefaultEffects"){New-Item -ItemType Directory -Path "$payload/OptiShadeData" -Force|Out-Null;Copy-Item "$root/installer/DefaultEffects/*" "$payload/OptiShadeData" -Recurse -Force}
 New-Item -ItemType Directory -Path $payload,(Join-Path $payload 'OptiShadeData/Presets'),(Join-Path $payload 'OptiShadeData/Shaders'),(Join-Path $payload 'OptiShadeData/Textures'),(Join-Path $payload 'OptiShadeData/Cache'),(Join-Path $payload 'OptiShadeData/Licenses'),(Join-Path $payload 'OptiShadeData/Engine/D3D12_OptiScaler') -Force|Out-Null
@@ -64,7 +64,7 @@ Push-Location "$root/installer"
 try{
  & go test -count=1 -v .
  if($LASTEXITCODE){throw 'Embedded payload verification failed. Installer was not built.'}
- & go build -trimpath -ldflags '-H=windowsgui -s -w' -o "$preview/OptiShade_Version_0.19.18.exe" .
+ & go build -trimpath -ldflags '-H=windowsgui -s -w' -o "$preview/OptiShade_Version_0.19.19.exe" .
  if($LASTEXITCODE){throw 'Installer build failed.'}
 }finally{Pop-Location}
 Write-Output "Built: $preview"

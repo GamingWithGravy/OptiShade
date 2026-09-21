@@ -4,7 +4,7 @@
   <p><strong>Microsoft Flight Simulator 2024</strong></p>
   <p>Created by gravy · Powered by Fusion Engine</p>
   <p>
-    <img src="https://img.shields.io/badge/Version-0.19.18-9755E9?style=flat-square" alt="Version 0.19.18">
+    <img src="https://img.shields.io/badge/Version-0.19.19-9755E9?style=flat-square" alt="Version 0.19.19">
     <img src="https://img.shields.io/badge/Windows-x64-272133?style=flat-square" alt="Windows x64">
     <img src="https://img.shields.io/badge/Graphics-NVIDIA-76B900?style=flat-square" alt="NVIDIA graphics">
   </p>
@@ -22,6 +22,10 @@ Optishade brings image effects, saved looks and optional NVIDIA neural rendering
 Search your FX shaders, switch effects on, adjust their settings and save a named INI preset. Browse downloaded presets from inside the game and copy them into your game presets folder. Overwrite warnings and Revert changes help you keep the looks you want.
 
 ### Optional NVIDIA features
+
+Neural rendering always starts **off**, even with older saved settings. Your tuning
+values are retained; enable neural rendering manually for each game session.
+[TAA neural rendering](docs/TAA-preview.md) is Coming soon (INOP) and disabled in this release.
 
 Choose **Yes or No** when setup asks about DLSS 5. Neural rendering requires compatible RTX hardware, a matching model and a supported game connection. Installing files does not automatically enable it or prove it is rendering. Extra effects and neural passes can reduce frame rate.
 
@@ -67,7 +71,7 @@ Download the custom shader and preset, with REX Atmos CORE public-set instructio
 
 ## Updates and recovery
 
-Version 0.19.18 checks GitHub for newer stable releases. The overlay shows **Update available - check the installer**. Setup shows an update button only when a newer verified release asset is available. Close MSFS, then click it: the update window verifies the download, replaces the installer, updates recorded MSFS installations while preserving presets and configuration, and reopens setup. The previous installer is retained beside it with a .previous suffix.
+Version 0.19.19 checks GitHub for newer stable releases. The overlay shows **Update available - check the installer**. Setup shows an update button only when a newer verified release asset is available. Close MSFS, then click it: the update window verifies the download, replaces the installer, updates recorded MSFS installations while preserving presets and configuration, and reopens setup. The previous installer is retained beside it with a .previous suffix.
 
 **Repair OptiShade** restores embedded application defaults and keeps saved INI looks. **Restore original files** undoes the installation using that user's verified local backups. GitHub releases provide replacement OptiShade files, not original game files or another user's mods. Use Steam/Xbox repair for missing game files. Keep local OptiShade backups until you no longer need Restore.
 

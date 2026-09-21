@@ -752,7 +752,7 @@ static void EvaluateAtSeamVk(VkCommandBuffer cmdBuffer, NVSDK_NGX_Parameter* par
 
         if (!snippet.has_value())
         {
-            Fail("Neural rendering needs its NVIDIA model file. Close the game and use Add NVIDIA runtime in OptiShade");
+            Fail("Model not found: nvngx_dlssnr.dll. The nvngx.dll_dlssnr.dll helper is a different file. Close MSFS and use installer Setup > Check game and runtime versions, then Add NVIDIA runtime.");
             return;
         }
 

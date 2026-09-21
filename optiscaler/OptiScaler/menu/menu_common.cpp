@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "menu_common.h"
 #include "optishade_effects_ui.inl"
 #include <framegen/dlssg/MfgUnlock.h>
@@ -7727,7 +7727,7 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
             ImGui::BeginDisabled(nrUnsupportedGpu);
             bool enabled=config->DlssNrEnabled.value_or_default();if(ImGui::Checkbox("Use neural rendering",&enabled))config->DlssNrEnabled=enabled;
             ImGui::TextWrapped("Adds detail and changes lighting with NVIDIA's model. It can change faces and scenery, and may lower your frame rate.");
-            int passes=(int)config->DlssNrPasses.value_or_default();const int passLimit=config->DlssNrUnlockPasses.value_or_default()?30:3;if(ImGui::SliderInt("Passes",&passes,1,passLimit))config->DlssNrPasses=(uint32_t)passes;
+            const int passLimit=config->DlssNrUnlockPasses.value_or_default()?5:3;int passes=(int)std::clamp(config->DlssNrPasses.value_or_default(),1u,(uint32_t)passLimit);if(ImGui::SliderInt("Passes",&passes,1,passLimit))config->DlssNrPasses=(uint32_t)passes;
             ImGui::TextDisabled("Start with one. Extra passes can add detail, but take more time.");
             static float strength=1.f;if(!ImGui::IsAnyItemActive())strength=config->DlssNrIntensity.value_or_default();
             ImGui::SliderFloat("Strength",&strength,0.f,2.f,"%.2f");if(ImGui::IsItemDeactivatedAfterEdit())config->DlssNrIntensity=strength;
@@ -7759,7 +7759,7 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
         }
         ImGui::EndChild();ImGui::Separator();
         if(ImGui::Button("Save settings",ImVec2(160,34)))saved=config->SaveIni();
-        ImGui::SameLine();ImGui::TextDisabled(saved?"Settings saved":"Insert to close   |   Save your look on Image effects");
+        ImGui::SameLine();ImGui::TextDisabled(saved?"Settings saved. Neural rendering will start off.":"Insert to close   |   Save your look on Image effects");
     }
     ImGui::End();if(!visible)HideMenu();
 }

@@ -4,15 +4,19 @@ An optional SDR finishing shader and preset by gravy, with subtle shadow fill,
 highlight softening, warm colour adjustment and light LumaSharpen sharpening.
 It does not require neural rendering. Keep Windows and MSFS HDR off for this preset.
 
-Download **Gravy_FusionCinema.fx** and **Gravy - Fusion Cinema Custom v1.ini**
-from this folder (open each file and choose **Download raw file**), or from the
-[release assets](https://github.com/GamingWithGravy/OptiShade_V0.19.17/releases).
+In version 0.19.19, select **Include optional Fusion Cinema shader and look**
+during installation, or **Install Fusion Cinema addon** in Advanced options.
+Both files are bundled in the installer and can be installed offline.
+
+For manual downloads, open [Gravy_FusionCinema.fx](Gravy_FusionCinema.fx) and
+[Gravy - Fusion Cinema Custom v1.ini](Gravy%20-%20Fusion%20Cinema%20Custom%20v1.ini)
+from this folder, then choose **Download raw file** for each.
 Keep both filenames unchanged. Source is provided under the repository's GPL-3.0 licence.
 LumaSharpen is a separate SweetFX effect, credited and licensed with that package.
 
 ## Install
 
-1. Install OptiShade. Version 0.19.18 bundles the standard and SweetFX effects;
+1. Install OptiShade. Versions 0.19.18 and newer bundle the standard and SweetFX effects;
    on older versions, finish the SweetFX download first.
 2. In the overlay, use **Install FX...** to select `Gravy_FusionCinema.fx`.
 3. Use **Import INI...** to select `Gravy - Fusion Cinema Custom v1.ini`.

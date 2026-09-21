@@ -1,14 +1,30 @@
 ﻿# Read launcher catalogues; never crawl entire disks or start games during discovery.
+function ResolveFusionInstallFolder([string]$Game){
+ if(-not $Game){return $Game}
+ $folder=[IO.Path]::GetFullPath($Game).TrimEnd('\','/')
+ if(Test-Path -LiteralPath (Join-Path $folder 'FlightSimulator2024.exe') -PathType Leaf){return $folder}
+ $content=Join-Path $folder 'Content'
+ if(Test-Path -LiteralPath (Join-Path $content 'FlightSimulator2024.exe') -PathType Leaf){return $content}
+ return $folder
+}
 function GetFusionInstallState([string]$Store,[string]$Game){
- $gamePath=[IO.Path]::GetFullPath($Game).TrimEnd('\')
+ $gamePath=ResolveFusionInstallFolder $Game
  foreach($file in Get-ChildItem (Join-Path $Store 'Games') -Filter manifest.json -Recurse -File -ErrorAction SilentlyContinue){
   try{$m=Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8|ConvertFrom-Json;if([IO.Path]::GetFullPath($m.Game).TrimEnd('\') -ne $gamePath){continue}
-   if($m.Status -eq 'Installed'){if($m.Downloads -eq 'Pending'){return 'Installed - downloads pending'};return 'Installed'}
+   if($m.Status -eq 'Installed'){
+    $loaders=@($m.Files|Where-Object {$_.SourcePath -eq 'winmm.dll'})
+    foreach($loader in $loaders){
+     $loaderPath=[IO.Path]::GetFullPath((Join-Path $gamePath $loader.Path))
+     if(-not $loaderPath.StartsWith($gamePath+'\',[StringComparison]::OrdinalIgnoreCase) -or -not(Test-Path -LiteralPath $loaderPath -PathType Leaf)){return 'Installation incomplete - repair required'}
+     if((Get-Item -LiteralPath $loaderPath).Length -eq 0){return 'Installation incomplete - repair required'}
+    }
+    if($m.Downloads -eq 'Pending'){return 'Installed - downloads pending'};return 'Installed'
+   }
    if($m.Status -eq 'Restored'){return 'Not installed (restored)'}
    return 'Installation incomplete - repair required'
   }catch{}
  }
- if(Test-Path -LiteralPath (Join-Path $Game 'ReShade64.dll')){return 'Graphics files detected - not tracked'}
+ if(Test-Path -LiteralPath (Join-Path $gamePath 'ReShade64.dll')){return 'Graphics files detected - not tracked'}
  return 'Not installed'
 }
 function FindFusionGames([string]$Store){
@@ -52,7 +68,7 @@ function FindFusionGames([string]$Store){
    else{AddGame (Split-Path $m.Game -Leaf) $m.Game 'Added by you';$key=([IO.Path]::GetFullPath($m.Game).TrimEnd('\')).ToLowerInvariant();if($games.ContainsKey($key)){$games[$key].State=$m.Status;if($m.Status -eq 'Installed' -and $m.Downloads -eq 'Pending'){$games[$key].State='Installed - finish downloads'}}}
   }catch{}
  }
- foreach($game in $games.Values){$installPath=if($game.InstallFolder){$game.InstallFolder}elseif(Test-Path -LiteralPath (Join-Path $game.Folder 'Content/FlightSimulator2024.exe')){Join-Path $game.Folder 'Content'}else{$game.Folder};$game.State=GetFusionInstallState $Store $installPath;$game.Label="$($game.Launcher) - OptiShade $($game.State)"}
+ foreach($game in $games.Values){$installPath=ResolveFusionInstallFolder $(if($game.InstallFolder){$game.InstallFolder}else{$game.Folder});$game|Add-Member -NotePropertyName InstallFolder -NotePropertyValue $installPath -Force;$game.State=GetFusionInstallState $Store $installPath;$game.Label="$($game.Launcher) - OptiShade $($game.State)"}
  @($games.Values|Sort-Object Name)
 }
 function FindFusionAntiCheat([string]$Game){
@@ -82,8 +98,14 @@ function FindFusionAntiCheat([string]$Game){
  @($hits)
 }
 function GetFusionGpu{
- $cards=@(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue|ForEach-Object Name)
- [pscustomobject]@{Names=($cards -join ', ');Nvidia=[bool]($cards -match 'NVIDIA');Known=($cards.Count -gt 0)}
+  $devices=@(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue)
+ $cards=@($devices|ForEach-Object Name)
+ $drivers=@(foreach($device in $devices|Where-Object Name -match 'NVIDIA'){
+  $raw=[string]$device.DriverVersion;$display=$raw
+  if($raw -match '^\d+\.\d+\.(\d+)\.(\d{1,4})$'){$number=(([int]$Matches[1]%10)*10000)+[int]$Matches[2];$display=('{0}.{1:00}' -f [math]::Floor($number/100),($number%100))}
+  [pscustomobject]@{Name=$device.Name;Version=$display;WindowsVersion=$raw}
+ })
+ [pscustomobject]@{Names=($cards -join ', ');Nvidia=[bool]($cards -match 'NVIDIA');Known=($cards.Count -gt 0);Drivers=$drivers}
 }
 function AssertFusionExecutable([string]$File){
  $stream=[IO.File]::OpenRead($File);$reader=New-Object IO.BinaryReader($stream)
@@ -96,7 +118,7 @@ function FindFusionExecutable([string]$Game,[string]$Launcher=''){
  foreach($folder in @($Game,(Join-Path $Game 'Content'))){
   $main=Join-Path $folder 'FlightSimulator2024.exe';$helper=Join-Path $folder 'gamelaunchhelper.exe'
   if(Test-Path -LiteralPath $main -PathType Leaf){
-   $xbox=$Launcher -eq 'Xbox' -or ($Launcher -ne 'Steam' -and ($folder -match '(?i)Xbox.?games' -or (Test-Path -LiteralPath (Join-Path $folder 'MicrosoftGame.Config'))))
+   $xbox=$Launcher -eq 'Xbox' -or ($Launcher -ne 'Steam' -and (Test-Path -LiteralPath (Join-Path $folder 'MicrosoftGame.Config')))
    $target=if($xbox){$helper}else{$main}
    if(-not(Test-Path -LiteralPath $target -PathType Leaf)){throw "Microsoft Flight Simulator 2024 launcher is missing: $target. Repair the game through its launcher first."}
    AssertFusionExecutable $target
@@ -110,7 +132,7 @@ function GetFusionGameArtwork($Games){
  foreach($game in $Games){
   $art=''
   try{
-   $exe=@(FindFusionExecutable $game.Folder)|Select-Object -First 1
+   $exe=@(FindFusionExecutable $game.Folder $game.Launcher)|Select-Object -First 1
    if($exe){$icon=[Drawing.Icon]::ExtractAssociatedIcon($exe.Path);if($icon){$bitmap=$icon.ToBitmap();$memory=New-Object IO.MemoryStream;try{$bitmap.Save($memory,[Drawing.Imaging.ImageFormat]::Png);$art=[Convert]::ToBase64String($memory.ToArray())}finally{$memory.Dispose();$bitmap.Dispose();$icon.Dispose()}}}
   }catch{}
   $game|Add-Member -NotePropertyName Artwork -NotePropertyValue $art -Force

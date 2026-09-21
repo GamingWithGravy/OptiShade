@@ -1,4 +1,30 @@
 ﻿# File discovery is evidence of a possible input, never proof of rendered support.
+function GetNeuralRuntimeStatus([string]$Game,$Gpu){
+ $cards=@($Gpu.Names -split ',\s*'|Where-Object {$_ -match '(?i)NVIDIA.*RTX'})
+ $family=if($cards.Count -ne 1){'Unknown / multiple RTX GPUs'}elseif($cards[0] -match 'RTX\s*50\d\d'){'RTX 50'}elseif($cards[0] -match 'RTX\s*[234]0\d\d'){'RTX 20/30/40'}else{'Unknown RTX family'}
+ $expected=if($family -eq 'RTX 50'){'Original verified RTX 50 model'}elseif($family -eq 'RTX 20/30/40'){'Verified 310.8 compatibility model (experimental)'}else{'Identify the GPU used by MSFS before choosing a model'}
+ $file=Join-Path $Game 'nvngx_dlssnr.dll';$state='Missing';$version='Unknown';$hash=''
+ $message='Model missing beside the game EXE. Add nvngx_dlssnr.dll; nvngx.dll_dlssnr.dll is a different helper and does not replace it.'
+ if(Test-Path -LiteralPath $file -PathType Leaf){
+  try{
+   $hash=(Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash
+   $version=[Diagnostics.FileVersionInfo]::GetVersionInfo($file).FileVersion
+   $original=$hash -eq 'E16BCF15E16E13F527491CDF7845B2FE6521A738D8F7C9C721866A8496E1FC8E'
+   $compat=$hash -eq 'E67DEE209320CDAFE0E93E45675D7AA34323A53ACC57A72B2E40A181581C989A'
+   if(-not($original -or $compat)){$state='Unverified';$message='Model found, but its SHA256 is not a runtime verified by this installer. Version alone does not establish compatibility.'}
+   elseif($family -eq 'RTX 20/30/40' -and $original){$state='Incompatible';$message='RTX 50 model found on RTX 20/30/40. Use the verified compatibility model.'}
+   elseif($family -like 'Unknown*'){$state='GPU selection required';$message='Known model found, but the active RTX GPU cannot be determined.'}
+   elseif($original -and (Get-AuthenticodeSignature -LiteralPath $file).Status -ne 'Valid'){$state='Signature failed';$message='Original model signature verification failed.'}
+   else{$state='Verified file';$message='Known model found for this GPU family. Loading and rendering still require an in-game check.'}
+  }catch{$state='Unreadable';$message='Model exists but could not be inspected. Check file access permissions.'}
+ }else{
+  foreach($relative in @('OptiShadeData/Engine/nvngx_dlssnr.dll','OptiShadeData/nvngx_dlssnr.dll','streamline/nvngx_dlssnr.dll')){
+   $other=Join-Path $Game $relative
+   if(Test-Path -LiteralPath $other -PathType Leaf){$state='Alternate location';$message='Model found at '+$other+'. Use Add NVIDIA runtime to validate and place it beside the selected game EXE. This does not confirm the game loads it.';break}
+  }
+ }
+ [pscustomobject]@{Family=$family;Expected=$expected;Path=$file;Version=$version;SHA256=$hash;State=$state;Message=$message;DriverAssessment='Minimum driver requirement for this model is unverified; driver compatibility is not confirmed.'}
+}
 function GetFusionCompatibility([string]$Game,[string]$Exe,$Gpu,[string]$Launcher=''){
  $rtx=[bool]($Gpu.Known -and $Gpu.Names -match '(?i)NVIDIA[^,]*\bRTX\b')
  $hits=New-Object 'System.Collections.Generic.List[object]'
@@ -29,7 +55,8 @@ function GetFusionCompatibility([string]$Game,[string]$Exe,$Gpu,[string]$Launche
  $possible=$msfs -or ($inputs.Count -gt 0 -and -not $truck)
  $addons=@()
  if($Exe){$addons=@(Get-ChildItem -LiteralPath (Split-Path $Exe) -Filter '*.addon64' -ErrorAction SilentlyContinue|Where-Object Name -match '(?i)dlss5|renodx')}
- $proxy=if($Launcher -eq 'Xbox' -or $Game -match '(?i)Xbox.?games' -or [IO.Path]::GetFileName($Exe) -eq 'gamelaunchhelper.exe'){'winmm.dll'}else{'dxgi.dll'}
+ # The selected executable is authoritative; folder names must not override a Steam copy.
+ $proxy=if([IO.Path]::GetFileName($Exe) -eq 'gamelaunchhelper.exe'){'winmm.dll'}else{'dxgi.dll'}
  $performance=if($possible){'Possible upscaling connection found. Enable a supported upscaler in the game; this check cannot confirm it is running.'}elseif($truck){'No supported upscaler connection found. Use image effects in this game; installing DLSS files alone will not add DLSS.'}else{'No supported upscaler connection found. Image effects can be tried; upscaling is unconfirmed. Some games hide their upscaler inside the game code.'}
  $neural=if(-not $Gpu.Known){'DLSS neural rendering: graphics card unknown. NVIDIA downloads are skipped.'}elseif(-not $rtx){'DLSS neural rendering is not supported by this build on the detected card. FSR/XeSS are separate options in compatible games.'}elseif(-not $possible){'DLSS neural rendering: no compatible game connection identified. NVIDIA downloads are skipped.'}else{'DLSS neural rendering needs a matching RTX model and a supported rendering path. Files alone do not enable it; it stays off by default.'}
  $generation=if($Gpu.Names -match '(?i)RTX\s*40\d\d'){'RTX 40'}elseif($Gpu.Names -match '(?i)RTX\s*50\d\d'){'RTX 50'}elseif($Gpu.Names -match '(?i)RTX\s*[23]0\d\d'){'RTX 20/30'}else{'Unknown'}
@@ -39,8 +66,10 @@ function GetFusionCompatibility([string]$Game,[string]$Exe,$Gpu,[string]$Launche
  [pscustomobject]@{Schema=1;Game=$Game;Executable=$Exe;Gpu=$Gpu.Names;Proxy=$proxy;InputEvidence=@($hits.ToArray());ExternalAddons=@($addons|ForEach-Object Name);ScanComplete=$complete;PossibleInput=[bool]$possible;DownloadNvidia=[bool]($rtx -and $possible);Performance=$performance;NeuralRendering=$neural;RuntimeState='Not tested in game';Checked=(Get-Date -Format o)}
 }
 function FormatFusionCompatibility($Plan){
- $lines=@(('Performance: '+$Plan.Performance),$Plan.NeuralRendering)
- if($Plan.DownloadNvidia){$lines+='Automatic downloads: tested DLSS 310.9.1 / Streamline 2.14.1. The separate neural-rendering model is 310.8 and must match the RTX card.'}
+ $lines=@(('GPU: '+$Plan.Gpu),('Performance: '+$Plan.Performance),$Plan.NeuralRendering)
+ if($Plan.PSObject.Properties['DriverVersions']){foreach($driver in $Plan.DriverVersions){$lines+=('Driver: '+$driver.Name+' - '+$driver.Version+' (Windows: '+$driver.WindowsVersion+')')}}
+ if($Plan.PSObject.Properties['NeuralRuntime']){$nr=$Plan.NeuralRuntime;$lines+=@(('Required model: '+$nr.Expected),('Model status: '+$nr.State+' - '+$nr.Message),('Checked location: '+$nr.Path),('Model file version: '+$nr.Version),$nr.DriverAssessment)}
+ if($Plan.DownloadNvidia){$lines+='Automatic downloads: DLSS 310.9.1 / Streamline 2.14.1. The separate neural-rendering model is chosen by GPU family and verified hash, not driver version alone.'}
  if(-not $Plan.ScanComplete){$lines+='The file check was limited or some folders could not be read.'}
  if($Plan.ExternalAddons.Count){$lines+=('Another DLSS/ReShade add-on setup was found: '+($Plan.ExternalAddons -join ', ')+'. Install will offer to back up and replace it; Restore puts it back.')}
  foreach($hit in $Plan.InputEvidence){$lines+=([IO.Path]::GetFileName($hit.File)+' - found version '+$hit.Version+' (not proof it is used)')}

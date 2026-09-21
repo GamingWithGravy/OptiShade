@@ -30,6 +30,7 @@
 #include <fpng.h>
 #include <simple_lossless.h>
 #include "optishade_effects_bridge.inl"
+#include "optishade_taa_bridge.inl"
 #include <stb_image.h>
 #include <stb_image_dds.h>
 #include <stb_image_write.h>
@@ -4049,6 +4050,8 @@ void reshade::runtime::render_effects(api::command_list *cmd_list, api::resource
 		}
 
 		render_technique(tech, cmd_list, back_buffer_resource, rtv, rtv_srgb, permutation_index);
+		if (find_technique("OptiShade_TAA_Guides.fx", "OptiShade_TAA_Guides").handle == reinterpret_cast<uintptr_t>(&tech))
+			ostaa_impl::Run(this, cmd_list, rtv, _back_buffer_color_space);
 
 		if (tech.time_left > 0)
 		{
