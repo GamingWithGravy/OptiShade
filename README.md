@@ -4,7 +4,7 @@
   <p><strong>Microsoft Flight Simulator 2024</strong></p>
   <p>Created by gravy · Powered by Fusion Engine</p>
   <p>
-    <img src="https://img.shields.io/badge/Version-0.19.19-9755E9?style=flat-square" alt="Version 0.19.19">
+    <img src="https://img.shields.io/badge/Version-0.20-9755E9?style=flat-square" alt="Version 0.20">
     <img src="https://img.shields.io/badge/Windows-x64-272133?style=flat-square" alt="Windows x64">
     <img src="https://img.shields.io/badge/Graphics-NVIDIA-76B900?style=flat-square" alt="NVIDIA graphics">
   </p>
