@@ -6,12 +6,13 @@ $target=[IO.Path]::GetFullPath($settings.Installer)
 $uri=[uri]$settings.Url
 if($uri.Scheme -ne 'https' -or $uri.Host -ne 'github.com' -or $uri.AbsolutePath -cnotmatch '^/GamingWithGravy/(OptiShade|OptiShade_V0[.]19[.]17)/releases/download/' -or $settings.SHA256 -notmatch '^[a-fA-F0-9]{64}$' -or [IO.Path]::GetExtension($target) -ne '.exe'){throw 'Invalid update information.'}
 [xml]$markup=@'
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="OptiShade update" Width="560" Height="420" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" Background="#17121F" Foreground="#F3EFFB" FontFamily="Segoe UI"><StackPanel Margin="28"><TextBlock Text="Optishade" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center"/><TextBlock Name="Version" FontSize="18" Margin="0,16,0,12"/><TextBox Name="Notes" Height="140" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Background="#241B30" Foreground="#D8C7ED" BorderThickness="0" Padding="10"/><ProgressBar Name="Progress" Height="8" Margin="0,20,0,16" Foreground="#9755E9"/><TextBlock Name="Status" TextWrapping="Wrap"/></StackPanel></Window>
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="OptiShade update" Width="700" Height="440" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" Background="#171020" Foreground="#F3EFFB" FontFamily="Segoe UI"><StackPanel Margin="36" VerticalAlignment="Center"><TextBlock Text="Optishade" FontSize="48" FontWeight="SemiBold" HorizontalAlignment="Center"/><TextBlock Text="Microsoft Flight Simulator 2024" FontSize="22" Foreground="#BD9CEC" HorizontalAlignment="Center" Margin="0,8,0,24"/><TextBlock Name="Version" HorizontalAlignment="Center" Margin="0,0,0,16"/><TextBox Name="Notes" Visibility="Collapsed"/><TextBlock Name="Status" Text="Updating..." TextWrapping="Wrap" TextAlignment="Center" Foreground="#C9B6DF"/><ProgressBar Name="Progress" Width="360" Height="7" Margin="0,24,0,0" Foreground="#9755E9" Background="#332246" Maximum="100"/><Button Name="Launch" Content="Launch OptiShade" Visibility="Collapsed" HorizontalAlignment="Center" Padding="26,10" Margin="0,22,0,0" Background="#8650C8" Foreground="White"/><TextBlock Text="created by gravy" HorizontalAlignment="Center" Foreground="#8E829E" Margin="0,26,0,0"/></StackPanel></Window>
 '@
 $window=[Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($markup))
 $window.FindName('Version').Text='Updating to Version '+$settings.Version
 $window.FindName('Notes').Text=$settings.Notes
 $script:started=$false;$script:updating=$true
+$window.FindName('Launch').Add_Click({try{Start-Process -FilePath $target -WindowStyle Hidden;$window.Close()}catch{$window.FindName('Status').Text=$_.Exception.Message}})
 $window.Add_Closing({param($sender,$e) if($script:updating){$e.Cancel=$true}})
 # Raise the update splash once; release topmost before processing the update.
 $window.Add_Loaded({$window.Topmost=$true;[void]$window.Activate()})
@@ -41,9 +42,8 @@ $window.Add_ContentRendered({
   if($job.ExitCode -ne 0){throw 'The installer was updated, but game-file updating stopped. Existing files were preserved or rolled back for the failed installation. See %LOCALAPPDATA%\OptiShade\Update-error.txt. Close this window and open setup to resolve it.'}
   $window.FindName('Progress').IsIndeterminate=$false;$window.FindName('Progress').Value=100
   $window.FindName('Status').Text='Update complete. Your installer and recorded game installations are up to date.'
-  Start-Process -FilePath $target
   Remove-Item -LiteralPath $download -Force
-  $script:updating=$false;$window.Close()
+  $script:updating=$false;$window.FindName('Launch').Visibility='Visible'
  }catch{$window.FindName('Progress').IsIndeterminate=$false;$window.FindName('Status').Text=$_.Exception.Message;$script:updating=$false}
  finally{$web.Dispose()}
 })

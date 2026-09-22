@@ -15,7 +15,9 @@ class FusionSetup {
     using(var shell=PowerShell.Create()) {
      shell.Runspace=runspace;
      bool updating=args.Length>1 && args[1]=="--apply-update";
-     shell.AddCommand(Path.Combine(root,updating?"update-install.ps1":"manager.ps1")).AddParameter("Payload",Path.Combine(root,"PayloadFusion")).AddParameter("Installer",args.Length>0?args[0]:Application.ExecutablePath);
+     bool worker=args.Length>1 && args[0]=="--update-worker";
+     if(worker) shell.AddCommand(Path.Combine(root,"update-worker.ps1")).AddParameter("Config",args[1]);
+     else shell.AddCommand(Path.Combine(root,updating?"update-install.ps1":"manager.ps1")).AddParameter("Payload",Path.Combine(root,"PayloadFusion")).AddParameter("Installer",args.Length>0?args[0]:Application.ExecutablePath);
      shell.Invoke();
      // Expected discovery misses can populate the error stream even when handled.
      // Only a failed invocation means setup or the unattended update failed.

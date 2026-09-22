@@ -13,7 +13,8 @@ foreach($record in $records){
  $proxy=@($m.Files|Where-Object SourcePath -eq 'winmm.dll'|Select-Object -First 1).Path
  if(-not $proxy){throw 'An installation has no recorded loader. Automatic update stopped.'}
  $conflicts=@(FindFusionConflicts $m.Game)
- foreach($c in $conflicts){$owned=@($m.Files|Where-Object {$_.Path -eq $c.Path -and $_.Hash -eq $c.Hash});if(-not $owned.Count){throw "An untracked or modified graphics loader was found in $($m.Game). Use setup to review conflicts."}}
+ foreach($c in $conflicts){$owned=@($m.Files|Where-Object {$_.Path -eq $c.Path -and ($_.Hash -eq $c.Hash -or ($_.Mutable -and $_.Path -match '\.(ini|log)$'))});if(-not $owned.Count){throw "An untracked or modified graphics loader was found in $($m.Game). Use setup to review conflicts."}}
+ CleanModBackupReferences $m (Split-Path $record.FullName)
  foreach($f in $m.Files){if($f.Backup -and (HashFile (OwnedPath (Split-Path $record.FullName) $f.Backup)) -ne $f.PreviousHash){throw 'An original backup is missing. Automatic update stopped.'}}
  $targets+=@{Manifest=$m;Proxy=$proxy;Conflicts=$conflicts}
 }

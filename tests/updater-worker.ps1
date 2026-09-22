@@ -23,7 +23,16 @@ function New-Object([string]$TypeName){
  $web|Add-Member ScriptMethod CancelAsync {}
  return $web
 }
+Add-Type -AssemblyName PresentationFramework
+$script:launchChecked=$false
+$timer=[Windows.Threading.DispatcherTimer]::new();$timer.Interval=[TimeSpan]::FromMilliseconds(100)
+$timer.Add_Tick({if($window -and $window.FindName('Launch').Visibility -eq 'Visible'){
+ if(Test-Path "$fixture/current.exe.opened"){throw 'Installer restarted before Launch was clicked'}
+ if($window.FindName('Progress').Value -ne 100){throw 'Completion progress not shown'}
+ $script:launchChecked=$true;$timer.Stop();$window.FindName('Launch').RaiseEvent([Windows.RoutedEventArgs]::new([Windows.Controls.Button]::ClickEvent))
+}});$timer.Start()
 . "$PSScriptRoot/../installer/update-worker.ps1" -Config "$fixture/config.json"
+if(-not $script:launchChecked){throw 'Completion screen was not checked'}
 Start-Sleep -Milliseconds 500
 foreach($name in @('current.exe.previous','current.exe.applied','current.exe.opened')){if(-not(Test-Path "$fixture/$name")){throw "Missing updater result: $name"}}
 'PASS: update window verifies, replaces installer, runs game update helper, then reopens setup'

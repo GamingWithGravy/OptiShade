@@ -9,6 +9,7 @@ $ErrorActionPreference='Stop'
 . "$PSScriptRoot/compatibility.ps1"
 . "$PSScriptRoot/updates.ps1"
 . "$PSScriptRoot/recovery.ps1"
+. "$PSScriptRoot/release-notes.ps1"
 Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase,System.Windows.Forms
 Add-Type -TypeDefinition 'public class FusionGameCard { public string Name {get;set;} public string Folder {get;set;} public string Launcher {get;set;} public string State {get;set;} public string InstallFolder {get;set;} public string Label {get;set;} public string Artwork {get;set;} public System.Windows.Media.ImageSource Thumbnail {get;set;} }' -ReferencedAssemblies @([Windows.Media.ImageSource].Assembly.Location,[Windows.Threading.DispatcherObject].Assembly.Location)
 $store=Join-Path $env:LOCALAPPDATA 'OptiShade'
@@ -19,7 +20,16 @@ $path=$form.FindName('GamePath');$status=$form.FindName('Status')
 $buttons=@('Browse','Install','Repair','Restore','Runtime','Retry','Uninstall','Scan','Play','LibraryGames','GamePath','Method','AddGame','HomeNav','LibraryNav','SetupNav','SettingsNav','OpenLibrary','CheckCompatibility','TroubleshootingNav','ResetDefaults','ImportZip','InstallCinema','RecoveryRepair','RecoveryRestore','CheckUpdates')|ForEach-Object {$form.FindName($_)}
 $form.Icon=[Windows.Media.Imaging.BitmapFrame]::Create([uri](Join-Path $PSScriptRoot 'OptiShade-app.ico'))
 $form.FindName('BrandIcon').Source=[Windows.Media.Imaging.BitmapFrame]::Create([uri](Join-Path $PSScriptRoot 'OptiShade-icon.png'))
+$form.FindName('BrandIcon').Cursor='SizeAll'
+$form.FindName('BrandIcon').Add_MouseLeftButtonDown({if($_.ChangedButton -eq 'Left'){$form.DragMove()}})
 $form.FindName('TitleBar').Add_MouseLeftButtonDown({if($_.ChangedButton -eq 'Left'){$form.DragMove()}})
+$form.Add_PreviewMouseLeftButtonDown({
+ $e=$_;$bottom=$form.FindName('TitleBar').TranslatePoint([Windows.Point]::new(0,$form.FindName('TitleBar').ActualHeight),$form).Y
+ if($e.GetPosition($form).Y -gt $bottom){return}
+ $node=$e.OriginalSource
+ while($node -is [Windows.DependencyObject]){if($node -is [Windows.Controls.Primitives.ButtonBase]){return};if($node -isnot [Windows.Media.Visual]){break};$node=[Windows.Media.VisualTreeHelper]::GetParent($node)}
+ if($e.LeftButton -eq 'Pressed'){$e.Handled=$true;$form.DragMove()}
+})
 $form.FindName('Close').Add_Click({if(-not $script:busy){$form.Close()}})
 $form.FindName('Minimize').Add_Click({$form.WindowState='Minimized'})
 $script:busy=$false
@@ -30,7 +40,8 @@ $form.FindName('UpdateAvailable').Add_Click({
  $worker=Join-Path $updateDir 'update-worker.ps1';Copy-Item -LiteralPath "$PSScriptRoot/update-worker.ps1" -Destination $worker
  $config=Join-Path $updateDir 'update.json';$script:availableUpdate|Add-Member -NotePropertyName Installer -NotePropertyValue $Installer -Force
  $script:availableUpdate|ConvertTo-Json|Set-Content -LiteralPath $config -Encoding UTF8
- Start-Process -FilePath "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -ArgumentList @('-NoProfile','-STA','-ExecutionPolicy','Bypass','-File',('"'+$worker+'"'),'-Config',('"'+$config+'"')) -WindowStyle Hidden
+ $hostExe=Join-Path $updateDir 'OptiShade_updater.exe';Copy-Item -LiteralPath "$PSScriptRoot/FusionSetup.exe" -Destination $hostExe
+ Start-Process -FilePath $hostExe -ArgumentList @('--update-worker',('"'+$config+'"')) -WindowStyle Hidden
  $form.Close()
 })
 function RunAction([scriptblock]$action){
@@ -62,8 +73,8 @@ $form.FindName('Install').Add_Click({RunAction {
  $existing=Test-Path -LiteralPath (ManifestPath $store $path.Text)
  $existing=$existing -or (Test-Path -LiteralPath (Join-Path $path.Text 'OptiShadeData'))
  if($replace.Count -or $existing){
-  $message="Files already in this game folder:`n"+(($replace|ForEach-Object { $_.Path+' - '+$(if($_.Recognised){$_.Description}else{'Unidentified loader; may belong to the game or another tool'}) }) -join "`n")+"`n`nReplace this setup with OptiShade? Conflicting loaders will be removed from the game folder. Recovery copies are stored outside the game. Restore will put these exact files back. Existing shader folders and presets are kept. Unidentified loaders may be needed by the game; choose No if unsure."
-  $message="ReShade / OptiShade files detected. Remove conflicting files from the game folder, then install OptiShade? Recovery copies are stored outside the game and cannot load. Saved INI files are kept.`n`n"+$message
+  $message="Files already in this game folder:`n"+(($replace|ForEach-Object { $_.Path+' - '+$(if($_.Recognised){$_.Description}else{'Unidentified loader; may belong to the game or another tool'}) }) -join "`n")+"`n`nReplace this setup with OptiShade? Conflicting loaders will be removed from the game folder. Recognised graphics mods are removed and will not be restored. Only unrelated original files are backed up. Existing shader folders and presets are kept. Unidentified loaders may be needed by the game; choose No if unsure."
+  $message="ReShade / OptiShade files detected. Remove conflicting files from the game folder, then install OptiShade? Recognised mod files will not be included in the restore backup. Saved INI files are kept.`n`n"+$message
   if([Windows.MessageBox]::Show($form,$message,'Reinstall or replace graphics mods','YesNo','Question','No') -ne 'Yes'){return}
  }
  $script:manifest=InstallFusion $path.Text $Payload $store $Installer $proxy $replace -ReplaceExisting $existing
@@ -78,7 +89,7 @@ $form.FindName('Uninstall').Add_Click({RunAction {$choice=[Windows.MessageBox]::
 $form.FindName('Retry').Add_Click({RunAction {$m=Get-Content (ManifestPath $store $path.Text) -Raw|ConvertFrom-Json;if($m.Status -ne 'Installed'){throw 'Install OptiShade first.'};AssertClosed $path.Text;$plan=CheckGameCompatibility $m.LaunchExe;SaveFusionCompatibility $path.Text $plan;FinishOptionalDownloads $m $plan}})
 $form.FindName('Repair').Add_Click({RunAction {
  $mp=ManifestPath $store $path.Text
- if(-not(Test-Path -LiteralPath $mp)){throw 'No installation record. Use Install to back up and replace detected files.'}
+ if(-not(Test-Path -LiteralPath $mp)){throw 'No installation record. Use Install to remove conflicting mods and install OptiShade.'}
  $previous=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json
  if($previous.Status -ne 'Installed'){throw 'Use Install OptiShade to install first.'}
  if([Windows.MessageBox]::Show($form,'Repair OptiShade from this installer? Core files and default configuration will be replaced. Your saved INI presets are kept. Original pre-install backups are preserved.','Repair OptiShade','YesNo','Question','No') -ne 'Yes'){return}
@@ -142,7 +153,8 @@ function RefreshLibrary{
   $state=GetFusionInstallState $store $installPath
   $game.State=$state;$game.Label="$($game.Launcher) - OptiShade $state"
  }
- $selector.Items.Refresh()
+ $selected=$selector.SelectedIndex;$savedPath=$path.Text
+ $selector.ItemsSource=$null;$selector.ItemsSource=$items;$selector.SelectedIndex=$selected;$path.Text=$savedPath
 }
 function SelectGame($game){
  $script:gameRoot=$game.Folder;$script:gameLauncher=$game.Launcher;$path.Text=if($game.InstallFolder){$game.InstallFolder}else{$game.Folder}
@@ -222,7 +234,7 @@ $script:startupTimer.Add_Tick({
    if($copies.Count){$form.FindName('MsfsCopies').SelectedIndex=0}else{$path.Text=''}
    $status.Text='Microsoft Flight Simulator 2024 detection complete. Open Setup to install, play or restore.'
   }catch{$form.FindName('Hardware').Text='Hardware detection was unavailable. Choose settings in game after checking your graphics card.'}
-  finally{$script:startup.Dispose();$script:startupResult=$null;$script:startupTimer.Stop();$form.FindName('Intro').Visibility='Collapsed'}
+  finally{$script:startup.Dispose();$script:startupResult=$null;$script:startupTimer.Stop();$form.FindName('Intro').Visibility='Collapsed';ShowReleaseNotes $form $store}
  }
 })
 $form.FindName('MsfsCopies').Add_SelectionChanged({$copy=$form.FindName('MsfsCopies').SelectedItem;if($copy){$script:gameRoot=$copy.Folder;$script:gameLauncher=$copy.Launcher;$path.Text=if($copy.InstallFolder){$copy.InstallFolder}else{$copy.Folder};$form.FindName('SelectedTitle').Text='Microsoft Flight Simulator 2024'}})

@@ -1,10 +1,10 @@
-$ErrorActionPreference='Stop'
+﻿$ErrorActionPreference='Stop'
 Add-Type -AssemblyName PresentationFramework
 [xml]$xaml=Get-Content "$PSScriptRoot/../installer/manager.xaml" -Raw -Encoding UTF8
 $form=[Windows.Markup.XamlReader]::Load((New-Object Xml.XmlNodeReader $xaml))
 $form.FindName('Intro').Visibility='Collapsed';$form.FindName('HomePage').Visibility='Collapsed';$form.FindName('SetupPage').Visibility='Visible'
 $combo=$form.FindName('MsfsCopies')
-$combo.ItemsSource=@([pscustomobject]@{Label='Xbox — OptiShade Installed';Artwork='MUST_NOT_DISPLAY_IMAGE_DATA';Folder='E:\test';Launcher='Xbox'},[pscustomobject]@{Label='Steam — OptiShade Not installed';Artwork='MUST_NOT_DISPLAY_IMAGE_DATA';Folder='D:\test';Launcher='Steam'})
+$combo.ItemsSource=@([pscustomobject]@{Label='Xbox — OptiShade Installed';State='Not installed';Artwork='MUST_NOT_DISPLAY_IMAGE_DATA';Folder='E:\test';Launcher='Xbox'},[pscustomobject]@{Label='Steam — OptiShade Not installed';State='Not installed';Artwork='MUST_NOT_DISPLAY_IMAGE_DATA';Folder='D:\test';Launcher='Steam'})
 $combo.SelectedIndex=0
 $form.Opacity=0;$form.ShowInTaskbar=$false;$form.Show();$form.Dispatcher.Invoke([Action]{},[Windows.Threading.DispatcherPriority]::ApplicationIdle)
 $form.Measure([Windows.Size]::new(1100,780));$form.Arrange([Windows.Rect]::new(0,0,1100,780));$form.UpdateLayout()
@@ -15,5 +15,15 @@ foreach($index in @(0,1)){
  if(($texts -join ' ') -match 'MUST_NOT_DISPLAY|Artwork=|Folder='){throw 'Internal record leaked'}
  "PASS: rendered label: $($combo.SelectedItem.Label)"
 }
+$tokens=$null;$errors=$null
+$ast=[Management.Automation.Language.Parser]::ParseFile("$PSScriptRoot/../installer/manager.ps1",[ref]$tokens,[ref]$errors)
+$fn=$ast.Find({param($n) $n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'RefreshLibrary'},$true)
+. ([scriptblock]::Create($fn.Extent.Text))
+function GetFusionInstallState($Store,$Game){'Installed'}
+$store='fixture';$path=$form.FindName('GamePath');$path.Text='D:\test'
+RefreshLibrary
+$form.UpdateLayout();$texts=@(GetTexts $combo)
+if($texts -notcontains 'Steam - OptiShade Installed'){throw 'Selected installation text did not refresh immediately'}
+'PASS: selected installation label updates without restarting the launcher'
 $form.Close()
 

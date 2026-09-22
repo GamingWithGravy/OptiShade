@@ -1,4 +1,4 @@
-$ErrorActionPreference='Stop'
+﻿$ErrorActionPreference='Stop'
 . "$PSScriptRoot/../installer/ownership.ps1"
 . "$PSScriptRoot/../installer/library.ps1"
 function AssertClosed([string]$Game){} # Fixtures contain text files, never a running simulator.
@@ -47,13 +47,13 @@ $restoredManifest=Get-Content $mp -Raw|ConvertFrom-Json
 Assert ((@($restoredManifest.Files|Where-Object Path -eq 'dxgi.dll')[0].Hash) -eq $beforeLoader) 'Interrupted update restores ownership record'
 RestoreFusion $mp
 Assert ((HashFile (Join-Path $game 'dxgi.dll')) -eq $original) 'Restore after upgrade recovers original pre-v1 loader'
-Assert ((Get-Content (Join-Path $game 'ReShade.ini')) -eq 'original config') 'Original config survives ownership chain'
+Assert (-not(Test-Path (Join-Path $game 'ReShade.ini'))) 'Mod configuration is not resurrected by Restore'
 Assert ((GetFusionInstallState $store $game) -eq 'Not installed (restored)') 'Restore refreshes selector state'
 $orphan=Join-Path $fixture 'Orphan';New-Item -ItemType Directory -Path (Join-Path $orphan 'OptiShadeData/Shaders') -Force|Out-Null
 Set-Content (Join-Path $orphan 'OptiShadeData/Shaders/test.fx') 'untracked user shader'
 $mp=InstallFusion $orphan $payload $store $installer 'winmm.dll' @() -ReplaceExisting $true
 RestoreFusion $mp
-Assert ((Get-Content (Join-Path $orphan 'OptiShadeData/Shaders/test.fx')) -eq 'untracked user shader') 'Untracked data restored after replacement'
+Assert (-not(Test-Path (Join-Path $orphan 'OptiShadeData/Shaders/test.fx'))) 'Orphaned app files are not restored as originals'
 Set-Content (Join-Path $game 'FlightSimulator2024.exe') 'fixture, not executable'
 $mp=InstallFusion $game $payload $store $installer 'dxgi.dll' @(FindFusionConflicts $game) -ReplaceExisting $true
 Set-Content (Join-Path $game 'ReShade.ini') 'keep update config'

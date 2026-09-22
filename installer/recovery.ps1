@@ -69,7 +69,7 @@ function GetOptiShadeSupportReport([string]$Game,[string]$Store){
    }
   }
  }
- [ordered]@{InstallerVersion='0.20';Created=(Get-Date -Format o);GameFolder=$Game;InstallationState=(GetFusionInstallState $Store $Game);GPU=$gpu;NeuralModel=(GetNeuralRuntimeStatus $Game $gpu);Files=$files;Note='Stored files only. This report does not confirm loaded DLLs or rendered output. No presets or log contents included.'}
+ [ordered]@{InstallerVersion='0.20.1';Created=(Get-Date -Format o);GameFolder=$Game;InstallationState=(GetFusionInstallState $Store $Game);GPU=$gpu;NeuralModel=(GetNeuralRuntimeStatus $Game $gpu);Files=$files;Note='Stored files only. This report does not confirm loaded DLLs or rendered output. No presets or log contents included.'}
 }
 
 function InstallFusionCinema([string]$Game){

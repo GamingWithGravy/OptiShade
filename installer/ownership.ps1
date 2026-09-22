@@ -17,7 +17,20 @@ function ManifestPath([string]$StateRoot,[string]$Game){
     OwnedPath $StateRoot ('Games/'+$id+'/manifest.json')
 }
 function WriteState($Manifest,[string]$Path){$tmp=$Path+'.tmp';$Manifest|ConvertTo-Json -Depth 8|Set-Content -LiteralPath $tmp -Encoding UTF8;Move-Item -LiteralPath $tmp -Destination $Path -Force}
+function IsGraphicsMod([string]$Relative,[string]$File){
+ if($Relative -match '^(?i:OptiShadeData)[\\/]' -or $Relative -match '^(?i:ReShade(?:64\.dll|\.ini|\.log)|OptiScaler(?:\.dll|\.ini|\.log)|nvngx_dlssnr\.dll|nvngx\.dll_dlssnr\.dll)$' -or $Relative -match '(?i)(dlss5|renodx).*\.addon64$'){return $true}
+ if(Test-Path -LiteralPath $File -PathType Leaf){try{$v=[Diagnostics.FileVersionInfo]::GetVersionInfo($File);return "$($v.ProductName) $($v.FileDescription)" -match '(?i)optishade|optiscaler|reshade'}catch{}}
+ return $false
+}
+function CleanModBackupReferences($Manifest,[string]$Folder){
+ foreach($f in $Manifest.Files){if($f.Backup -and (IsGraphicsMod $f.Path (OwnedPath $Folder $f.Backup))){$f.Backup='';$f.PreviousHash=''}}
+}
+function RemoveUnreferencedBackups($Manifest,[string]$Folder){
+ $root=OwnedPath $Folder 'Backups';$keep=@($Manifest.Files|Where-Object Backup|ForEach-Object {OwnedPath $Folder $_.Backup})
+ if(Test-Path -LiteralPath $root){foreach($f in Get-ChildItem -LiteralPath $root -File -Recurse){$safe=OwnedPath $Folder $f.FullName.Substring($Folder.Length+1);if($safe -notin $keep){Remove-Item -LiteralPath $safe -Force}}}
+}
 function FindFusionConflicts([string]$Game){
+ foreach($name in @('ReShade.ini','OptiScaler.ini','ReShade.log','OptiScaler.log','nvngx_dlssnr.dll','nvngx.dll_dlssnr.dll')){if(Test-Path -LiteralPath (Join-Path $Game $name) -PathType Leaf){[pscustomobject]@{Path=$name;Recognised=$true;Description='Graphics mod file';Hash=(HashFile (Join-Path $Game $name))}}}
  foreach($addon in Get-ChildItem -LiteralPath $Game -Filter '*.addon64' -File -ErrorAction SilentlyContinue|Where-Object Name -match '(?i)dlss5|renodx'){
   [pscustomobject]@{Path=$addon.Name;Recognised=$true;Description='External neural-rendering/ReShade add-on';Hash=(HashFile $addon.FullName)}
  }
@@ -37,7 +50,7 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
     $mp=ManifestPath $StateRoot $Game
     $old=$null;$oldJson=$null
     if(Test-Path -LiteralPath $mp){$oldJson=Get-Content -LiteralPath $mp -Raw;$old=$oldJson|ConvertFrom-Json;if($old.Status -ne 'Restored' -and -not $ReplaceExisting){throw 'OptiShade is already recorded here. Choose Repair or approve reinstalling it.'};if($old.Status -eq 'Restored'){$old=$null}}
-    if($old){foreach($f in $old.Files){if($f.Backup -and (HashFile (OwnedPath (Split-Path $mp) $f.Backup)) -ne $f.PreviousHash){throw "Original backup is missing or damaged: $($f.Path). Keep the installation and recover its backup before replacing it."}}}
+    if($old){CleanModBackupReferences $old (Split-Path $mp);foreach($f in $old.Files){if($f.Backup -and (HashFile (OwnedPath (Split-Path $mp) $f.Backup)) -ne $f.PreviousHash){throw "Original backup is missing or damaged: $($f.Path). Keep the installation and recover its backup before replacing it."}}}
     $conflicts=@(FindFusionConflicts $Game)
     foreach($conflict in $conflicts){
         $approved=@($ReplaceMods|Where-Object {$_.Path -eq $conflict.Path -and $_.Hash -eq $conflict.Hash})
@@ -56,13 +69,12 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
     $files=@();$index=0;$transaction=[guid]::NewGuid().ToString('N')
     # Keep the original ownership chain across upgrades. Orphaned data is backed up
     # as pre-existing user data so Restore can recover it instead of deleting it.
-    if($old){$files=@($old.Files|ForEach-Object {@{Path=$_.Path;SourcePath='';Hash=$_.Hash;PreviousHash=$_.PreviousHash;Backup=$_.Backup;Mutable=$_.Mutable;Retained=$true}})}
+    if($old){$files=@($old.Files|ForEach-Object {@{Path=$_.Path;SourcePath='';Hash=$_.Hash;PreviousHash=$_.PreviousHash;Backup=$_.Backup;Mutable=$_.Mutable;Retained=($_.Path -match '^OptiShadeData[\\/](Presets|Shaders|Textures)[\\/]' -or ($PreserveConfiguration -and $_.Path -match '\.ini$') -or $_.Path -match 'Effects-install\.json$' -or $_.Path -eq 'nvngx_dlssnr.dll')}})}
     elseif($ReplaceExisting -and (Test-Path -LiteralPath $data)){
         foreach($entry in Get-ChildItem -LiteralPath $data -File -Recurse -Force){
-            $relative=$entry.FullName.Substring($Game.Length+1);$previous=HashFile $entry.FullName;$backup='Backups/'+$transaction+'-data-'+$index++
-            Copy-Item -LiteralPath $entry.FullName -Destination (OwnedPath $folder $backup)
-            if((HashFile (OwnedPath $folder $backup)) -ne $previous){throw 'Existing data backup verification failed.'}
-            $files+=@{Path=$relative;SourcePath='';Hash=$previous;PreviousHash=$previous;Backup=$backup;Mutable=$true;Retained=$true}
+            $relative=$entry.FullName.Substring($Game.Length+1);$previous=HashFile $entry.FullName
+            $keep=$relative -match '^OptiShadeData[\\/](Presets|Shaders|Textures)[\\/]'
+            $files+=@{Path=$relative;SourcePath='';Hash=$(if($keep){$previous}else{''});PreviousHash='';Backup='';Mutable=$true;Retained=$keep}
         }
     }
     foreach($entry in $catalog){
@@ -75,18 +87,19 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
         if($PreserveConfiguration -and $relative -match '\.ini$' -and (Test-Path -LiteralPath $dest)){continue}
         $existing=@($files|Where-Object Path -eq $relative)
         if($existing.Count){$previous=$existing[0].PreviousHash;$backup=$existing[0].Backup;$files=@($files|Where-Object Path -ne $relative)}
-        else{$previous=HashFile $dest;$backup='';if($previous){$backup='Backups/'+$transaction+'-'+$index;Copy-Item -LiteralPath $dest -Destination (OwnedPath $folder $backup);if((HashFile (OwnedPath $folder $backup)) -ne $previous){throw 'Backup verification failed.'}}}
+        else{$previous=HashFile $dest;$backup='';if(IsGraphicsMod $relative $dest){$previous=''};if($previous){$backup='Backups/'+$transaction+'-'+$index;Copy-Item -LiteralPath $dest -Destination (OwnedPath $folder $backup);if((HashFile (OwnedPath $folder $backup)) -ne $previous){throw 'Backup verification failed.'}}}
         $files+=@{Path=$relative;SourcePath=$entry.Path;Hash=$entry.Hash;PreviousHash=$previous;Backup=$backup;Mutable=(($entry.Path -match '\.(ini|log)$') -or ($entry.Path -match '^OptiShadeData[\\/]Effects-install\.json$'));Retained=$false};$index++
     }
     foreach($conflict in $conflicts){
         if($files.Path -contains $conflict.Path){
             $tracked=@($files|Where-Object Path -eq $conflict.Path)[0]
-            if($tracked.Retained){$tracked.Retained=$false;$tracked.Hash=''}
+            if($PreserveConfiguration -and $tracked.Retained -and $conflict.Path -match '\.ini$'){continue}
+            if($tracked.Retained -and $conflict.Path -eq 'nvngx_dlssnr.dll'){continue};if($tracked.Retained){$tracked.Retained=$false;$tracked.Hash=''}
             continue
         }
         $backup='Backups/'+$transaction+'-mod-'+$index;$previous=$conflict.Hash;$source=OwnedPath $Game $conflict.Path
-        Copy-Item -LiteralPath $source -Destination (OwnedPath $folder $backup)
-        if((HashFile (OwnedPath $folder $backup)) -ne $previous){throw 'Existing mod backup verification failed.'}
+        if(IsGraphicsMod $conflict.Path $source){$backup='';$previous=''}else{Copy-Item -LiteralPath $source -Destination (OwnedPath $folder $backup)
+        if((HashFile (OwnedPath $folder $backup)) -ne $previous){throw 'Existing mod backup verification failed.'}}
         $files+=@{Path=$conflict.Path;SourcePath='';Hash='';PreviousHash=$previous;Backup=$backup;Mutable=$false};$index++
     }
     $rollback=@();$rollbackFolder=OwnedPath $folder ('Rollback/'+$transaction);New-Item -ItemType Directory -Path $rollbackFolder -Force|Out-Null
@@ -95,7 +108,7 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
         if($hash){Copy-Item -LiteralPath $dest -Destination $copy;if((HashFile $copy) -ne $hash){throw 'Rollback snapshot verification failed.'}}
         $rollback+=@{Path=$entry.Path;Hash=$hash;Copy=$copy}
     }
-    $manifest=@{Version='P0.20-MSFS24';Game=$Game;Installer=(FullPath $Installer);Status='Installing';Files=$files;OwnedDirectories=@('OptiShadeData');Created=(Get-Date -Format o)}
+    $manifest=@{Version='P0.20.1-MSFS24';Game=$Game;Installer=(FullPath $Installer);Status='Installing';Files=$files;OwnedDirectories=@('OptiShadeData');Created=(Get-Date -Format o)}
     WriteState $manifest $mp
     try{
         # The entry-point proxy is copied last so an incomplete install cannot start.
@@ -117,6 +130,7 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
     }
     foreach($entry in $rollback){if(Test-Path -LiteralPath $entry.Copy){Remove-Item -LiteralPath $entry.Copy -Force}}
     Remove-Item -LiteralPath $rollbackFolder
+    RemoveUnreferencedBackups $manifest $folder
     $mp
 }
 function RemoveRecordedOptiShadeLoaders($Manifest,[string]$ManifestPath){
@@ -128,10 +142,6 @@ function RemoveRecordedOptiShadeLoaders($Manifest,[string]$ManifestPath){
         $hash=HashFile $file
         if($hash -and $hash -in $hashes){
             AssertClosed $Manifest.Game
-            $backup=OwnedPath (Split-Path $ManifestPath) ('Backups/removed-loader-'+[guid]::NewGuid().ToString('N'))
-            New-Item -ItemType Directory -Path (Split-Path $backup) -Force|Out-Null
-            Copy-Item -LiteralPath $file -Destination $backup
-            if((HashFile $backup) -ne $hash){throw 'Remaining loader backup failed verification.'}
             Remove-Item -LiteralPath $file -Force
             if(Test-Path -LiteralPath $file){throw ('OptiShade loader is still present: '+$file)}
         }
@@ -139,6 +149,7 @@ function RemoveRecordedOptiShadeLoaders($Manifest,[string]$ManifestPath){
 }
 function RestoreFusion([string]$ManifestPath,[bool]$KeepPresets=$true){
     $m=Get-Content -LiteralPath $ManifestPath -Raw|ConvertFrom-Json
+    CleanModBackupReferences $m (Split-Path $ManifestPath)
     if($m.Status -eq 'Restored'){
         AssertClosed $m.Game
         RemoveRecordedOptiShadeLoaders $m $ManifestPath
@@ -188,7 +199,7 @@ function RestoreFusion([string]$ManifestPath,[bool]$KeepPresets=$true){
         if($f.Backup -and $f.PreviousHash -notin $ours){if((HashFile $dest) -ne $f.PreviousHash){throw ('Restored file verification failed: '+$f.Path)}}
         elseif(Test-Path -LiteralPath $dest){throw ('Removal verification failed: '+$f.Path)}
     }
-    $m.Status='Restored';WriteState $m $ManifestPath
+    $m.Status='Restored';WriteState $m $ManifestPath;RemoveUnreferencedBackups $m $folder
 }
 function FindNrRuntime([string]$Installer){
     # Only inspect known locations; never crawl drives for DLLs.
@@ -217,8 +228,7 @@ function ImportNrRuntime([string]$ManifestPath,[string]$Source){
     if($old){Copy-Item -LiteralPath $dest -Destination $snapshot;if((HashFile $snapshot) -ne $old){throw 'Runtime rollback snapshot failed verification.'}}
     try{
     if(-not $existing.Count){
-        $backup='';if($old){$backup='Backups/nr-runtime-'+[guid]::NewGuid().ToString('N');Copy-Item -LiteralPath $snapshot -Destination (OwnedPath (Split-Path $ManifestPath) $backup)}
-        $m.Files+=@{Path=$relative;Hash=$hash;PreviousHash=$old;Backup=$backup;Mutable=$false};WriteState $m $ManifestPath
+        $m.Files+=@{Path=$relative;Hash=$hash;PreviousHash='';Backup='';Mutable=$false};WriteState $m $ManifestPath
     }
     if((FullPath $Source) -ne (FullPath $dest)){Copy-Item -LiteralPath $Source -Destination $dest -Force}
     if((HashFile $dest) -ne $hash){throw 'Imported runtime verification failed.'}

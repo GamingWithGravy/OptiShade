@@ -7689,7 +7689,7 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
     ImGui::SetNextWindowPos(ImVec2(15,15),ImGuiCond_FirstUseEver);
     bool visible=_isVisible;static bool saved=false;
     if(ImGui::Begin("optishade | fusion engine",&visible,ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar)){
-        ImGui::SetWindowFontScale(1.75f);ImGui::TextUnformatted("optishade");ImGui::SetWindowFontScale(1.f);
+        ImGui::SetWindowFontScale(1.75f);ImGui::TextUnformatted("optishade  0.20.1");ImGui::SetWindowFontScale(1.f);
         ImGui::SameLine(ImGui::GetWindowWidth()-100);if(ImGui::SmallButton("Close"))visible=false;
         ImGui::TextColored(ImGui::GetStyleColorVec4(ImGuiCol_CheckMark),"powered by fusion engine");
         ImGui::TextDisabled("created by gravy");ImGui::Spacing();

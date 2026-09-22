@@ -1,0 +1,15 @@
+OptiShade 0.20.1
+
+- Installation status refreshes immediately after installing, repairing or restoring.
+- The in-game OptiShade header now displays 0.20.1.
+- Recognised old OptiShade, ReShade, OptiScaler and external neural-rendering files are removed rather than kept as restore originals. Legacy mod backup references are cleaned up. Genuine original files retain their verified backup across upgrades.
+- Saved looks are preserved. Current settings are preserved during automatic updates, but removed with OptiShade on restore.
+- The updater uses a windowed OptiShade_updater.exe helper in AppData instead of launching PowerShell. The in-game update check uses Windows networking directly.
+- Updates replace the main installer at its existing location.
+- The updater now matches the startup splash, shows progress and Update complete, and waits for the Launch button.
+- This patch-notes window opens after setup loads. Do not show again applies to this version only.
+
+For testing, use Check for updates in your 0.20 installer. The first update runs through 0.20's existing updater; the new completion screen and Launch button are used by updates started from 0.20.1 onward.
+
+Neural rendering still starts off, the extended pass limit remains five, and TAA neural rendering remains Coming soon (INOP).
+- Enlarged the draggable title bar, added a move cursor, and made the sidebar logo draggable.
