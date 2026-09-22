@@ -1,5 +1,5 @@
 ﻿function ShowReleaseNotes($Owner,[string]$Store){
- $version='0.20.3';$marker=Join-Path $Store 'release-notes-dismissed.txt'
+ $version='0.20.4';$marker=Join-Path $Store 'release-notes-dismissed.txt'
  if((Test-Path -LiteralPath $marker) -and (Get-Content -LiteralPath $marker -Raw).Trim() -eq $version){return}
  [xml]$markup=@'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="What's new in OptiShade" Width="720" Height="620" WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True" WindowStartupLocation="CenterOwner" Background="Transparent" Foreground="#F3EFFB" FontFamily="Segoe UI">

@@ -50,7 +50,7 @@ function RunAction([scriptblock]$action){
  if($script:busy){return};$script:busy=$true
  foreach($control in $buttons){if($control){$control.IsEnabled=$false}}
  try{if($path.Text){$path.Text=ResolveFusionInstallFolder $path.Text};& $action;$status.Foreground='#BDA0F4'}catch{$status.Text=$_.Exception.Message;$status.Foreground='#FFBE83';WriteInstallerLog $_.Exception.Message}
- finally{$form.FindName('InstallProgress').IsIndeterminate=$false;$form.FindName('InstallProgress').Visibility='Collapsed';if(-not $script:uninstallDone){RefreshLibrary};$script:busy=$false;foreach($control in $buttons){if($control){$control.IsEnabled=$true}}}
+ finally{$form.FindName('InstallProgress').IsIndeterminate=$false;$form.FindName('InstallProgress').Visibility='Collapsed';$script:busy=$false;foreach($control in $buttons){if($control){$control.IsEnabled=$true}};if(-not $script:uninstallDone){RefreshLibrary}}
 }
 
 $form.Add_Closing({param($sender,$e) if($script:busy){$e.Cancel=$true}})
@@ -62,6 +62,7 @@ $progress={param($text,[int]$completed=0,[int]$total=0)
 }
 $form.FindName('Browse').Add_Click({$d=New-Object Windows.Forms.FolderBrowserDialog;if($d.ShowDialog() -eq 'OK'){$path.Text=$d.SelectedPath};$d.Dispose()})
 $form.FindName('Install').Add_Click({RunAction {
+ if((GetFusionInstallState $store $path.Text) -match '^Installed|^Installation incomplete'){$status.Text='OptiShade is already installed. Use Repair, Restore or Troubleshooting to manage it.';return}
  $exe=ChooseGameExe; if(-not $exe){return}; AssertFusionExecutable $exe
  AssertMsfsNvidiaTarget $exe (GetFusionGpu)
  $proxy=[string]$form.FindName('Method').SelectedItem.Tag
@@ -132,7 +133,7 @@ function CheckGameCompatibility([string]$exe){
  return $plan
 }
 $form.FindName('CheckCompatibility').Add_Click({RunAction {$exe=ChooseGameExe;if($exe){$plan=CheckGameCompatibility $exe;$status.Text='Check complete. Found files are clues, not confirmation a feature works in game.'}}})
-$path.Add_TextChanged({$form.FindName('Compatibility').Text='Check this game before installing. Automatic setup also checks again at install time.'})
+$path.Add_TextChanged({$form.FindName('Compatibility').Text='Check this game before installing. Automatic setup also checks again at install time.';RefreshHomeState})
 function CompleteDownloads{$mp=ManifestPath $store $path.Text;$m=Get-Content $mp -Raw|ConvertFrom-Json;$m|Add-Member -NotePropertyName Downloads -NotePropertyValue 'Complete' -Force;WriteState $m $mp;$status.Text='Install complete. You can close the manager and start your game.'}
 function ShowPage([string]$name){
  if($name -eq 'Library'){$name='Setup'}
@@ -148,7 +149,10 @@ function ShowGames($games){
  $script:libraryGames=$cards;$form.FindName('LibraryGames').ItemsSource=$cards
 }
 function RefreshHomeState{
- $state=if($path.Text){GetFusionInstallState $store $path.Text}else{'Not installed'}
+ try{$state=if($path.Text){GetFusionInstallState $store $path.Text}else{'Not installed'}}catch{$state='Invalid path'}
+ $installed=$state -match '^Installed';$incomplete=$state -match '^Installation incomplete'
+ $install=$form.FindName('Install');$install.Content=if($installed){'Already installed'}elseif($incomplete){'Repair required'}else{'Install OptiShade'}
+ $install.IsEnabled=(-not $script:busy -and -not $installed -and -not $incomplete -and $state -ne 'Invalid path' -and -not [string]::IsNullOrWhiteSpace($path.Text))
  $form.FindName('HomeInstallState').Text=if($state -match '^Installed'){'OptiShade installed'}elseif($state -match 'incomplete'){'OptiShade needs repair'}else{'Install OptiShade'}
 }
 function RefreshLibrary{

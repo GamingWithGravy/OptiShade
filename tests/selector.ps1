@@ -33,5 +33,23 @@ RefreshLibrary
 if($form.FindName('HomeInstallState').Text -ne 'Install OptiShade'){throw 'Home label did not reset after restore'}
 if($form.FindName('TitleBar').ToolTip){throw 'Drag tooltip remains'}
 'PASS: Home install state tracks installed and restored states; no drag tooltip'
+$actionFn=$ast.Find({param($n) $n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'RunAction'},$true)
+. ([scriptblock]::Create($actionFn.Extent.Text))
+function ResolveFusionInstallFolder($Game){$Game}
+function GetFusionInstallState($Store,$Game){$script:fixtureState}
+$buttons=@('Install','Repair','Restore','Retry','TroubleshootingNav')|ForEach-Object {$form.FindName($_)}
+$status=$form.FindName('Status');$script:startupResult=$null;$script:uninstallDone=$false
+foreach($case in @(@{State='Installed';Enabled=$false;Label='Already installed'},@{State='Installed - downloads pending';Enabled=$false;Label='Already installed'},@{State='Installation incomplete - repair required';Enabled=$false;Label='Repair required'},@{State='Not installed (restored)';Enabled=$true;Label='Install OptiShade'},@{State='Not installed';Enabled=$true;Label='Install OptiShade'})){
+ $script:fixtureState=$case.State
+ RunAction {}
+ $install=$form.FindName('Install')
+ if($install.IsEnabled -ne $case.Enabled -or $install.Content -ne $case.Label){throw "Wrong Install state after action: $($case.State)"}
+ foreach($name in @('Repair','Restore','Retry','TroubleshootingNav')){if(-not $form.FindName($name).IsEnabled){throw "Recovery control unavailable: $name"}}
+}
+$script:fixtureState='Not installed';$script:busy=$true;RefreshHomeState
+if($form.FindName('Install').IsEnabled){throw 'Install was re-enabled during a busy operation'}
+$script:busy=$false;$path.Text='';RefreshHomeState
+if($form.FindName('Install').IsEnabled){throw 'Install enabled without a game path'}
+'PASS: Install button stays disabled after actions for installed/incomplete states, enables after restore, and leaves recovery controls usable'
 $form.Close()
 

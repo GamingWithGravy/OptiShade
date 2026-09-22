@@ -1,9 +1,7 @@
-﻿OptiShade Manager 0.20.3
+﻿OptiShade Manager 0.20.4
 
-- Removed the drag-area tooltip while keeping the full upper area draggable.
-- Home now shows OptiShade installed when the selected installation is installed. The button includes Click here to manage installation and opens Setup. Its label refreshes after installing, restoring and switching installations.
-- Verified the borderless updater: no native white title bar, with the matching dark splash design and Open manager / Close completion buttons.
-- In-game update checks now run at startup and every five minutes. Failed checks retry after one minute, without blocking rendering.
-- Replaced the temporary floating notice with a purple UPDATE AVAILABLE message beneath Close, followed by smaller please check OptiShade manager text. It remains visible in the menu when an update is known, without interrupting the flight.
-
-Updates launched by an older manager use the updater bundled with that version. Versions 0.20.2 and later include the borderless updater. Older in-game builds need this update before they can use periodic checks and the new notice.
+- Setup now shows Already installed and disables Install for installed copies, including installations with optional downloads still pending.
+- Incomplete installations show Repair required instead of allowing another normal installation.
+- Repair, Restore, troubleshooting and unfinished-download recovery remain available.
+- The Install button refreshes after actions, when switching installations and when changing the game directory. Restoring enables installation again.
+- Added a second installation-state check when Install is clicked to prevent an accidental reinstall if the state changed after the screen loaded.
