@@ -38,11 +38,12 @@ $form.FindName('UpdateAvailable').Add_Click({
  if(Get-Process FlightSimulator2024 -ErrorAction SilentlyContinue){$status.Text='Close Microsoft Flight Simulator 2024 before updating.';return}
  $updateDir=Join-Path $store ('Updates/'+[guid]::NewGuid().ToString('N'));New-Item -ItemType Directory -Path $updateDir -Force|Out-Null
  $worker=Join-Path $updateDir 'update-worker.ps1';Copy-Item -LiteralPath "$PSScriptRoot/update-worker.ps1" -Destination $worker
+ Copy-Item -LiteralPath "$PSScriptRoot/dialog-theme.xaml" -Destination (Join-Path $updateDir 'dialog-theme.xaml')
  $config=Join-Path $updateDir 'update.json';$script:availableUpdate|Add-Member -NotePropertyName Installer -NotePropertyValue $Installer -Force
  $script:availableUpdate|ConvertTo-Json|Set-Content -LiteralPath $config -Encoding UTF8
  $hostExe=Join-Path $updateDir 'OptiShade_updater.exe';Copy-Item -LiteralPath "$PSScriptRoot/FusionSetup.exe" -Destination $hostExe
- Start-Process -FilePath $hostExe -ArgumentList @('--update-worker',('"'+$config+'"')) -WindowStyle Hidden
- $form.Close()
+ try{Start-Process -FilePath $hostExe -ArgumentList @('--update-worker',('"'+$config+'"')) -WindowStyle Hidden -Verb RunAs;$form.Close()}
+ catch{$status.Text='The updater could not start or administrator access was cancelled. No update was applied. '+$_.Exception.Message}
 })
 function RunAction([scriptblock]$action){
  if($script:startupResult -and -not $script:startupResult.IsCompleted){$status.Text='Finishing the hardware check. Please try again in a moment.';return}
@@ -99,7 +100,7 @@ $form.FindName('Repair').Add_Click({RunAction {
  $repaired=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json
  foreach($key in @('LaunchExe','Downloads','OptionalDlss')){if($previous.PSObject.Properties[$key]){$repaired|Add-Member -NotePropertyName $key -NotePropertyValue $previous.$key -Force}}
  WriteState $repaired $mp
- $status.Text='OptiShade repaired from the installer. Saved looks and original backups are kept. You can close the installer and start your game.'
+ $status.Text='OptiShade repaired from the manager. Saved looks and original backups are kept. You can close the manager and start your game.'
 }})
 function WriteInstallerLog([string]$Message){try{New-Item -ItemType Directory -Path $store -Force|Out-Null;((Get-Date -Format o)+' '+$Message)|Add-Content -LiteralPath (Join-Path $store 'Installer.log') -Encoding UTF8}catch{}}
 function FinishOptionalDownloads($Manifest,$Plan){
@@ -132,7 +133,7 @@ function CheckGameCompatibility([string]$exe){
 }
 $form.FindName('CheckCompatibility').Add_Click({RunAction {$exe=ChooseGameExe;if($exe){$plan=CheckGameCompatibility $exe;$status.Text='Check complete. Found files are clues, not confirmation a feature works in game.'}}})
 $path.Add_TextChanged({$form.FindName('Compatibility').Text='Check this game before installing. Automatic setup also checks again at install time.'})
-function CompleteDownloads{$mp=ManifestPath $store $path.Text;$m=Get-Content $mp -Raw|ConvertFrom-Json;$m|Add-Member -NotePropertyName Downloads -NotePropertyValue 'Complete' -Force;WriteState $m $mp;$status.Text='Install complete. You can close the installer and start your game.'}
+function CompleteDownloads{$mp=ManifestPath $store $path.Text;$m=Get-Content $mp -Raw|ConvertFrom-Json;$m|Add-Member -NotePropertyName Downloads -NotePropertyValue 'Complete' -Force;WriteState $m $mp;$status.Text='Install complete. You can close the manager and start your game.'}
 function ShowPage([string]$name){
  if($name -eq 'Library'){$name='Setup'}
  foreach($page in @('Home','Library','Setup','Settings','Troubleshooting')){$form.FindName($page+'Page').Visibility=if($page -eq $name){'Visible'}else{'Collapsed'}}

@@ -63,6 +63,14 @@ $savedLocalAppData=$env:LOCALAPPDATA
 try{
  $env:LOCALAPPDATA=$fixture
  function Get-Process {} # Simulate a closed game; only this fixture's store is visible.
+ $beforeCheck=HashFile $mp;$beforeGame=HashFile (Join-Path $game 'dxgi.dll')
+ & "$PSScriptRoot/../installer/update-install.ps1" -Payload $payload -Installer $installer -ValidateOnly
+ Assert ((HashFile $mp) -eq $beforeCheck -and (HashFile (Join-Path $game 'dxgi.dll')) -eq $beforeGame) 'Staging validation does not modify game or manifest'
+ $shader=Join-Path $payload 'OptiShadeData/Shaders/test.fx';$bytes=[IO.File]::ReadAllBytes($shader)
+ Set-Content $shader 'corrupt staged payload'
+ $rejected=$false;try{& "$PSScriptRoot/../installer/update-install.ps1" -Payload $payload -Installer $installer -ValidateOnly}catch{$rejected=$true}
+ [IO.File]::WriteAllBytes($shader,$bytes)
+ Assert ($rejected -and (HashFile $mp) -eq $beforeCheck -and (HashFile (Join-Path $game 'dxgi.dll')) -eq $beforeGame) 'Damaged staged payload rejected before changes'
  & "$PSScriptRoot/../installer/update-install.ps1" -Payload $payload -Installer $installer
 }finally{$env:LOCALAPPDATA=$savedLocalAppData;Remove-Item Function:/Get-Process}
 Assert ((Get-Content (Join-Path $game 'dxgi.dll')) -eq 'v4') 'Real update helper updates tracked MSFS installation'

@@ -1,15 +1,22 @@
-﻿param([string]$Payload,[string]$Installer)
+﻿param([string]$Payload,[string]$Installer,[switch]$ValidateOnly)
 $ErrorActionPreference='Stop'
 . "$PSScriptRoot/ownership.ps1"
+# Check every extracted payload file before changing any installation.
+$catalog=Get-Content -LiteralPath (Join-Path $Payload 'files.json') -Raw|ConvertFrom-Json
+if(-not $catalog.Count){throw 'The staged installer has an empty payload catalogue.'}
+foreach($entry in $catalog){if((HashFile (OwnedPath $Payload $entry.Path)) -ne $entry.Hash){throw "Staged payload is missing or damaged: $($entry.Path)"}}
 $store=Join-Path $env:LOCALAPPDATA 'OptiShade'
 $records=@(Get-ChildItem -LiteralPath (Join-Path $store 'Games') -Filter manifest.json -Recurse -File -ErrorAction SilentlyContinue)
 # Preflight every installation before changing any of them.
 $targets=@()
+$diskNeeded=@{}
+$payloadBytes=0L;foreach($entry in $catalog){$payloadBytes+=(Get-Item -LiteralPath (OwnedPath $Payload $entry.Path)).Length}
 foreach($record in $records){
  $m=Get-Content -LiteralPath $record.FullName -Raw|ConvertFrom-Json
  if($m.Status -ne 'Installed'){continue}
  if(-not(Test-Path -LiteralPath (Join-Path $m.Game 'FlightSimulator2024.exe'))){continue}
  AssertClosed $m.Game
+ $drive=[IO.Path]::GetPathRoot([IO.Path]::GetFullPath($m.Game));$diskNeeded[$drive]+=2*$payloadBytes+64MB
  $proxy=@($m.Files|Where-Object SourcePath -eq 'winmm.dll'|Select-Object -First 1).Path
  if(-not $proxy){throw 'An installation has no recorded loader. Automatic update stopped.'}
  $conflicts=@(FindFusionConflicts $m.Game)
@@ -18,6 +25,8 @@ foreach($record in $records){
  foreach($f in $m.Files){if($f.Backup -and (HashFile (OwnedPath (Split-Path $record.FullName) $f.Backup)) -ne $f.PreviousHash){throw 'An original backup is missing. Automatic update stopped.'}}
  $targets+=@{Manifest=$m;Proxy=$proxy;Conflicts=$conflicts}
 }
+foreach($drive in $diskNeeded.Keys){if(([IO.DriveInfo]::new($drive)).AvailableFreeSpace -lt $diskNeeded[$drive]){throw "Not enough disk space on $drive for the game update and rollback files. Free $([math]::Ceiling($diskNeeded[$drive]/1MB)) MB and retry. No game files were changed."}}
+if($ValidateOnly){"Validated $($catalog.Count) payload files and $($targets.Count) recorded installation(s).";return}
 foreach($target in $targets){
  $m=$target.Manifest
  $mp=InstallFusion $m.Game $Payload $store $Installer $target.Proxy $target.Conflicts -ReplaceExisting $true -PreserveConfiguration $true

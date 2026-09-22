@@ -13,7 +13,7 @@ static DWORD WINAPI Check(void* reference){
   OS_HTTP(WinHttpOpen);OS_HTTP(WinHttpSetTimeouts);OS_HTTP(WinHttpConnect);OS_HTTP(WinHttpOpenRequest);OS_HTTP(WinHttpSendRequest);OS_HTTP(WinHttpReceiveResponse);OS_HTTP(WinHttpReadData);OS_HTTP(WinHttpCloseHandle);OS_HTTP(WinHttpQueryHeaders);
 #undef OS_HTTP
   if(WinHttpOpen&&WinHttpSetTimeouts&&WinHttpConnect&&WinHttpOpenRequest&&WinHttpSendRequest&&WinHttpReceiveResponse&&WinHttpReadData&&WinHttpCloseHandle&&WinHttpQueryHeaders){
-   HINTERNET session=WinHttpOpen(L"OptiShade/0.20.1",WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,nullptr,nullptr,0);
+   HINTERNET session=WinHttpOpen(L"OptiShade/0.20.2",WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,nullptr,nullptr,0);
    if(session){
     WinHttpSetTimeouts(session,3000,3000,3000,3000);
     HINTERNET connection=WinHttpConnect(session,L"api.github.com",INTERNET_DEFAULT_HTTPS_PORT,0);
@@ -26,7 +26,7 @@ static DWORD WINAPI Check(void* reference){
         std::string body;char buffer[4096];DWORD count=0;ULONGLONG deadline=GetTickCount64()+10000;
         while(body.size()<262144&&GetTickCount64()<deadline&&WinHttpReadData(request,buffer,sizeof(buffer),&count)&&count)body.append(buffer,count);
         try{std::smatch match;std::regex tag("\"tag_name\"\\s*:\\s*\"v?([0-9]+)\\.([0-9]+)(?:\\.([0-9]+))?\"");
-         if(std::regex_search(body,match,tag)){int major=std::stoi(match[1]),minor=std::stoi(match[2]),patch=match[3].matched?std::stoi(match[3]):0;available=(major>0||(major==0&&(minor>20||(minor==20&&patch>1))));}
+         if(std::regex_search(body,match,tag)){int major=std::stoi(match[1]),minor=std::stoi(match[2]),patch=match[3].matched?std::stoi(match[3]):0;available=(major>0||(major==0&&(minor>20||(minor==20&&patch>2))));}
         }catch(...){}
        }
       }
@@ -47,7 +47,7 @@ static void Draw(bool menuOpen){
  if(dismissed&&!menuOpen)return;
  ImGui::SetNextWindowPos(ImVec2(24,160),ImGuiCond_Always);ImGui::SetNextWindowBgAlpha(.94f);
  if(ImGui::Begin("OptiShade update notice",nullptr,ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoFocusOnAppearing|ImGuiWindowFlags_NoInputs)){
-  ImGui::TextColored(ImVec4(.75f,.55f,1.f,1.f),"Update available - check the installer");
+  ImGui::TextColored(ImVec4(.75f,.55f,1.f,1.f),"Update available - open OptiShade Manager");
  }ImGui::End();
 }
 }

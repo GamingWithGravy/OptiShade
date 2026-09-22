@@ -1,15 +1,18 @@
-OptiShade 0.20.1
+﻿OptiShade Manager 0.20.2
 
-- Installation status refreshes immediately after installing, repairing or restoring.
-- The in-game OptiShade header now displays 0.20.1.
-- Recognised old OptiShade, ReShade, OptiScaler and external neural-rendering files are removed rather than kept as restore originals. Legacy mod backup references are cleaned up. Genuine original files retain their verified backup across upgrades.
-- Saved looks are preserved. Current settings are preserved during automatic updates, but removed with OptiShade on restore.
-- The updater uses a windowed OptiShade_updater.exe helper in AppData instead of launching PowerShell. The in-game update check uses Windows networking directly.
-- Updates replace the main installer at its existing location.
-- The updater now matches the startup splash, shows progress and Update complete, and waits for the Launch button.
-- This patch-notes window opens after setup loads. Do not show again applies to this version only.
+- Fixed missing Windows PowerShell module discovery in the embedded update helper.
+- Added free-space checks before download, extraction and game-file updates, with clear low-disk-space errors.
+- Added staged update validation: the downloaded installer is checksum-verified, extracted and its complete payload checked before the working installer is replaced. Recorded game installations and original backups are checked first too.
+- Added a separate completion receipt for each update stage, retained process handles and fresh error reporting so an unconfirmed stage cannot be reported as successful.
+- The updater requests administrator access before applying changes. Cancelling UAC keeps setup open.
+- Renamed the user-facing application OptiShade Manager. Existing update filenames remain compatible.
+- Restyled the patch-notes popup with a dark draggable header, rounded controls and matching scrollbar.
+- Cleaned up the updater to match the startup splash, with stage progress, scrollable error details, Update complete and Open manager / Close buttons. It stays open until you choose.
+- The old application recovery copy is removed after the entire update succeeds. Failed updates retain it for recovery.
+- The manager remains at its existing location. Presets and configuration are preserved during game-file updates.
+- Includes 0.20.1 improvements: immediate installation-label refresh, version in the in-game header, clean original-file backup handling, full-width top drag area and dismissible patch notes.
+- Automatic update checks remain available in setup and in game, alongside the manual Check for updates button.
 
-For testing, use Check for updates in your 0.20 installer. The first update runs through 0.20's existing updater; the new completion screen and Launch button are used by updates started from 0.20.1 onward.
+Use Check for updates in the manager. Updates started from older versions still use that version's updater interface; the full staged workflow is used for updates started from 0.20.2 onward. The 0.20.2 game-update helper also validates its payload when invoked by an older updater.
 
-Neural rendering still starts off, the extended pass limit remains five, and TAA neural rendering remains Coming soon (INOP).
-- Enlarged the draggable title bar, added a move cursor, and made the sidebar logo draggable.
+Neural rendering starts off by default. The extended pass limit remains five. TAA neural rendering remains Coming soon (INOP).

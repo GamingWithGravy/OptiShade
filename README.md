@@ -4,14 +4,14 @@
   <p><strong>Microsoft Flight Simulator 2024</strong></p>
   <p>Created by gravy · Powered by Fusion Engine</p>
   <p>
-    <img src="https://img.shields.io/badge/Version-0.20.1-9755E9?style=flat-square" alt="Version 0.20.1">
+    <img src="https://img.shields.io/badge/Version-0.20.2-9755E9?style=flat-square" alt="Version 0.20.2">
     <img src="https://img.shields.io/badge/Windows-x64-272133?style=flat-square" alt="Windows x64">
     <img src="https://img.shields.io/badge/Graphics-NVIDIA-76B900?style=flat-square" alt="NVIDIA graphics">
   </p>
-  <p><a href="https://github.com/GamingWithGravy/OptiShade/releases/latest"><strong>Download the installer</strong></a> · <a href="docs/Tutorial.txt">Getting started</a> · <a href="docs/Features.txt">Features</a> · <a href="BUILDING.md">Build from source</a></p>
+  <p><a href="https://github.com/GamingWithGravy/OptiShade/releases/latest"><strong>Download OptiShade Manager</strong></a> · <a href="docs/Tutorial.txt">Getting started</a> · <a href="docs/Features.txt">Features</a> · <a href="BUILDING.md">Build from source</a></p>
 </div>
 
-![Optishade installer](docs/images/installer.png)
+![OptiShade Manager 0.20.2](docs/images/installer.png)
 
 ## Your flight. Your look.
 
@@ -78,7 +78,7 @@ next installer from [Releases](https://github.com/GamingWithGravy/OptiShade/rele
 once. The source on main now supports both names; this fix is not inside the
 already-published 0.19.19 EXE.
 
-The installer checks GitHub automatically on launch and also provides a manual Check for updates button. The in-game overlay checks once per game session for newer stable releases. The overlay shows **Update available - check the installer**. Setup shows an update button only when a newer verified release asset is available. Close MSFS, then click it: the update window verifies the download, replaces the installer, updates recorded MSFS installations while preserving presets and configuration, and offers Launch when complete (updates started from 0.20 still reopen setup automatically). The previous installer is retained beside it with a .previous suffix.
+The installer checks GitHub automatically on launch and also provides a manual Check for updates button. The in-game overlay checks once per game session for newer stable releases. The overlay shows **Update available - open OptiShade Manager**. Setup shows an update button only when a newer verified release asset is available. Close MSFS, then click it: the update window verifies the download, replaces the installer, updates recorded MSFS installations while preserving presets and configuration, and offers Launch when complete (updates started from 0.20 still reopen setup automatically). The recovery copy is removed after a successful 0.20.2 update; failed updates retain it for recovery.
 
 **Repair OptiShade** restores embedded application defaults and keeps saved INI looks. **Restore original files** undoes the installation using that user's verified local backups. GitHub releases provide replacement OptiShade files, not original game files or another user's mods. Use Steam/Xbox repair for missing game files. Keep local OptiShade backups until you no longer need Restore.
 
@@ -89,3 +89,7 @@ RTX 40-series image effects are supported by the existing rendering path. Neural
 Installation labels refresh immediately. The overlay displays its version. Recognised graphics mods are removed rather than backed up as originals; genuine original backups are retained across upgrades. Temporary rollback copies are discarded after a successful installation. Saved looks are kept.
 
 Updates started from 0.20.1 use a windowed companion updater extracted into AppData, preserve the main EXE location, and wait for Launch after completion. A version-specific patch-notes window appears in setup. The initial update from 0.20 uses the previous updater window and automatic restart.
+
+## Version 0.20.2
+
+OptiShade Manager adds staged payload validation, free-space checks and per-stage completion receipts. The companion updater requests administrator access, preserves the EXE location, removes its recovery copy after success and waits for Open manager or Close. Patch notes now match the main dark UI. Updates initiated by older versions use their existing worker; the new staged workflow applies to future updates initiated by 0.20.2.

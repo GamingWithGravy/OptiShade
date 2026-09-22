@@ -1,4 +1,4 @@
-$ErrorActionPreference='Stop'
+﻿$ErrorActionPreference='Stop'
 Add-Type -AssemblyName PresentationFramework
 . "$PSScriptRoot/../installer/release-notes.ps1"
 if(-not [Windows.Application]::Current){$app=[Windows.Application]::new();$app.ShutdownMode='OnExplicitShutdown'}
