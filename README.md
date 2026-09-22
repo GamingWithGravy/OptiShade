@@ -4,14 +4,14 @@
   <p><strong>Microsoft Flight Simulator 2024</strong></p>
   <p>Created by gravy · Powered by Fusion Engine</p>
   <p>
-    <img src="https://img.shields.io/badge/Version-0.20.2-9755E9?style=flat-square" alt="Version 0.20.2">
+    <img src="https://img.shields.io/badge/Version-0.20.3-9755E9?style=flat-square" alt="Version 0.20.3">
     <img src="https://img.shields.io/badge/Windows-x64-272133?style=flat-square" alt="Windows x64">
     <img src="https://img.shields.io/badge/Graphics-NVIDIA-76B900?style=flat-square" alt="NVIDIA graphics">
   </p>
   <p><a href="https://github.com/GamingWithGravy/OptiShade/releases/latest"><strong>Download OptiShade Manager</strong></a> · <a href="docs/Tutorial.txt">Getting started</a> · <a href="docs/Features.txt">Features</a> · <a href="BUILDING.md">Build from source</a></p>
 </div>
 
-![OptiShade Manager 0.20.2](docs/images/installer.png)
+![OptiShade Manager 0.20.3](docs/images/installer.png)
 
 ## Your flight. Your look.
 
@@ -78,7 +78,7 @@ next installer from [Releases](https://github.com/GamingWithGravy/OptiShade/rele
 once. The source on main now supports both names; this fix is not inside the
 already-published 0.19.19 EXE.
 
-The installer checks GitHub automatically on launch and also provides a manual Check for updates button. The in-game overlay checks once per game session for newer stable releases. The overlay shows **Update available - open OptiShade Manager**. Setup shows an update button only when a newer verified release asset is available. Close MSFS, then click it: the update window verifies the download, replaces the installer, updates recorded MSFS installations while preserving presets and configuration, and offers Launch when complete (updates started from 0.20 still reopen setup automatically). The recovery copy is removed after a successful 0.20.2 update; failed updates retain it for recovery.
+The installer checks GitHub automatically on launch and also provides a manual Check for updates button. The in-game overlay checks at startup and every five minutes, retrying failed checks after one minute. The overlay shows **UPDATE AVAILABLE** and **please check OptiShade manager** beneath Close whenever a newer release is known. Setup shows an update button only when a newer verified release asset is available. Close MSFS, then click it: the update window verifies the download, replaces the installer, updates recorded MSFS installations while preserving presets and configuration, and offers Launch when complete (updates started from 0.20 still reopen setup automatically). The recovery copy is removed after a successful 0.20.2 update; failed updates retain it for recovery.
 
 **Repair OptiShade** restores embedded application defaults and keeps saved INI looks. **Restore original files** undoes the installation using that user's verified local backups. GitHub releases provide replacement OptiShade files, not original game files or another user's mods. Use Steam/Xbox repair for missing game files. Keep local OptiShade backups until you no longer need Restore.
 
@@ -93,3 +93,7 @@ Updates started from 0.20.1 use a windowed companion updater extracted into AppD
 ## Version 0.20.2
 
 OptiShade Manager adds staged payload validation, free-space checks and per-stage completion receipts. The companion updater requests administrator access, preserves the EXE location, removes its recovery copy after success and waits for Open manager or Close. Patch notes now match the main dark UI. Updates initiated by older versions use their existing worker; the new staged workflow applies to future updates initiated by 0.20.2.
+
+## Version 0.20.3
+
+Home reflects installation status and opens Setup to manage it. The upper drag tooltip is removed. In-game update checks repeat without blocking rendering, and a persistent two-line purple notice appears under Close in the menu. The updater remains borderless with Open manager and Close buttons.

@@ -19,11 +19,19 @@ $tokens=$null;$errors=$null
 $ast=[Management.Automation.Language.Parser]::ParseFile("$PSScriptRoot/../installer/manager.ps1",[ref]$tokens,[ref]$errors)
 $fn=$ast.Find({param($n) $n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'RefreshLibrary'},$true)
 . ([scriptblock]::Create($fn.Extent.Text))
+$homeFn=$ast.Find({param($n) $n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'RefreshHomeState'},$true)
+. ([scriptblock]::Create($homeFn.Extent.Text))
 function GetFusionInstallState($Store,$Game){'Installed'}
 $store='fixture';$path=$form.FindName('GamePath');$path.Text='D:\test'
 RefreshLibrary
 $form.UpdateLayout();$texts=@(GetTexts $combo)
 if($texts -notcontains 'Steam - OptiShade Installed'){throw 'Selected installation text did not refresh immediately'}
 'PASS: selected installation label updates without restarting the launcher'
+if($form.FindName('HomeInstallState').Text -ne 'OptiShade installed'){throw 'Home installed label missing'}
+function GetFusionInstallState($Store,$Game){'Not installed (restored)'}
+RefreshLibrary
+if($form.FindName('HomeInstallState').Text -ne 'Install OptiShade'){throw 'Home label did not reset after restore'}
+if($form.FindName('TitleBar').ToolTip){throw 'Drag tooltip remains'}
+'PASS: Home install state tracks installed and restored states; no drag tooltip'
 $form.Close()
 

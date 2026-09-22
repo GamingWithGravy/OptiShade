@@ -29,6 +29,7 @@ $timer=[Windows.Threading.DispatcherTimer]::new();$timer.Interval=[TimeSpan]::Fr
 $timer.Add_Tick({if($window -and $window.FindName('Launch').Visibility -eq 'Visible'){
  if(Test-Path "$fixture/current.exe.opened"){throw 'Installer restarted before Launch was clicked'}
  if($window.FindName('Progress').Value -ne 100){throw 'Completion progress not shown'}
+ if($window.WindowStyle -ne 'None' -or -not $window.AllowsTransparency){throw 'Native updater title bar remains'}
  if($window.FindName('DoneClose').Visibility -ne 'Visible'){throw 'Completion Close button missing'}
  $script:launchChecked=$true;$timer.Stop();$window.FindName('Launch').RaiseEvent([Windows.RoutedEventArgs]::new([Windows.Controls.Button]::ClickEvent))
 }});$timer.Start()

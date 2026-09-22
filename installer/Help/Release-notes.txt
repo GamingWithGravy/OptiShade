@@ -1,18 +1,9 @@
-﻿OptiShade Manager 0.20.2
+﻿OptiShade Manager 0.20.3
 
-- Fixed missing Windows PowerShell module discovery in the embedded update helper.
-- Added free-space checks before download, extraction and game-file updates, with clear low-disk-space errors.
-- Added staged update validation: the downloaded installer is checksum-verified, extracted and its complete payload checked before the working installer is replaced. Recorded game installations and original backups are checked first too.
-- Added a separate completion receipt for each update stage, retained process handles and fresh error reporting so an unconfirmed stage cannot be reported as successful.
-- The updater requests administrator access before applying changes. Cancelling UAC keeps setup open.
-- Renamed the user-facing application OptiShade Manager. Existing update filenames remain compatible.
-- Restyled the patch-notes popup with a dark draggable header, rounded controls and matching scrollbar.
-- Cleaned up the updater to match the startup splash, with stage progress, scrollable error details, Update complete and Open manager / Close buttons. It stays open until you choose.
-- The old application recovery copy is removed after the entire update succeeds. Failed updates retain it for recovery.
-- The manager remains at its existing location. Presets and configuration are preserved during game-file updates.
-- Includes 0.20.1 improvements: immediate installation-label refresh, version in the in-game header, clean original-file backup handling, full-width top drag area and dismissible patch notes.
-- Automatic update checks remain available in setup and in game, alongside the manual Check for updates button.
+- Removed the drag-area tooltip while keeping the full upper area draggable.
+- Home now shows OptiShade installed when the selected installation is installed. The button includes Click here to manage installation and opens Setup. Its label refreshes after installing, restoring and switching installations.
+- Verified the borderless updater: no native white title bar, with the matching dark splash design and Open manager / Close completion buttons.
+- In-game update checks now run at startup and every five minutes. Failed checks retry after one minute, without blocking rendering.
+- Replaced the temporary floating notice with a purple UPDATE AVAILABLE message beneath Close, followed by smaller please check OptiShade manager text. It remains visible in the menu when an update is known, without interrupting the flight.
 
-Use Check for updates in the manager. Updates started from older versions still use that version's updater interface; the full staged workflow is used for updates started from 0.20.2 onward. The 0.20.2 game-update helper also validates its payload when invoked by an older updater.
-
-Neural rendering starts off by default. The extended pass limit remains five. TAA neural rendering remains Coming soon (INOP).
+Updates launched by an older manager use the updater bundled with that version. Versions 0.20.2 and later include the borderless updater. Older in-game builds need this update before they can use periodic checks and the new notice.

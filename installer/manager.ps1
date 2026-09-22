@@ -147,6 +147,10 @@ function ShowGames($games){
  }
  $script:libraryGames=$cards;$form.FindName('LibraryGames').ItemsSource=$cards
 }
+function RefreshHomeState{
+ $state=if($path.Text){GetFusionInstallState $store $path.Text}else{'Not installed'}
+ $form.FindName('HomeInstallState').Text=if($state -match '^Installed'){'OptiShade installed'}elseif($state -match 'incomplete'){'OptiShade needs repair'}else{'Install OptiShade'}
+}
 function RefreshLibrary{
  $selector=$form.FindName('MsfsCopies');$items=@($selector.ItemsSource)
  foreach($game in $items){
@@ -156,6 +160,7 @@ function RefreshLibrary{
  }
  $selected=$selector.SelectedIndex;$savedPath=$path.Text
  $selector.ItemsSource=$null;$selector.ItemsSource=$items;$selector.SelectedIndex=$selected;$path.Text=$savedPath
+ RefreshHomeState
 }
 function SelectGame($game){
  $script:gameRoot=$game.Folder;$script:gameLauncher=$game.Launcher;$path.Text=if($game.InstallFolder){$game.InstallFolder}else{$game.Folder}
@@ -171,7 +176,7 @@ $form.FindName('Help').Add_Click({
  $guide.Add_SelectionChanged({$file=@('Tutorial.txt','How-it-works.txt','Features.txt')[$guide.SelectedIndex];$helpWindow.FindName('Reading').Text=Get-Content -LiteralPath (Join-Path $PSScriptRoot ('Help/'+$file)) -Raw -Encoding UTF8})
  $guide.SelectedIndex=0;[void]$helpWindow.ShowDialog()
 })
-$form.FindName('HomeNav').Add_Click({ShowPage 'Home'})
+$form.FindName('HomeNav').Add_Click({RefreshHomeState;ShowPage 'Home'})
 $form.FindName('GitHub').Add_Click({Start-Process 'https://github.com/GamingWithGravy/OptiShade/releases/latest'})
 $form.FindName('LibraryNav').Add_Click({ShowPage 'Library'})
 $form.FindName('OpenLibrary').Add_Click({ShowPage 'Library'})
@@ -238,7 +243,7 @@ $script:startupTimer.Add_Tick({
   finally{$script:startup.Dispose();$script:startupResult=$null;$script:startupTimer.Stop();$form.FindName('Intro').Visibility='Collapsed';ShowReleaseNotes $form $store}
  }
 })
-$form.FindName('MsfsCopies').Add_SelectionChanged({$copy=$form.FindName('MsfsCopies').SelectedItem;if($copy){$script:gameRoot=$copy.Folder;$script:gameLauncher=$copy.Launcher;$path.Text=if($copy.InstallFolder){$copy.InstallFolder}else{$copy.Folder};$form.FindName('SelectedTitle').Text='Microsoft Flight Simulator 2024'}})
+$form.FindName('MsfsCopies').Add_SelectionChanged({$copy=$form.FindName('MsfsCopies').SelectedItem;if($copy){$script:gameRoot=$copy.Folder;$script:gameLauncher=$copy.Launcher;$path.Text=if($copy.InstallFolder){$copy.InstallFolder}else{$copy.Folder};$form.FindName('SelectedTitle').Text='Microsoft Flight Simulator 2024';RefreshHomeState}})
 
 $form.FindName('TroubleshootingNav').Add_Click({ShowPage 'Troubleshooting'})
 $buttons+=@($form.FindName('ExportSupport'))
