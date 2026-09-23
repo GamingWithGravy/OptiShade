@@ -37,3 +37,13 @@ __pycache__/
 /Screenshots/
 /.research/
 /tests/render-release-local.ps1
+
+# Private neural research data: generated models contain vendor weights.
+*.safetensors
+*.onnx
+/tools/amd-neural-lab/results/
+
+# Unpublished research and internal phase audit (not part of releases)
+/tools/amd-neural-lab/
+/docs/AMD-neural-research.md
+/docs/Local-0208-phases.md

@@ -21,7 +21,7 @@ static void PollZipImport(){
 static bool StartZipImport(const std::filesystem::path& archive,const std::filesystem::path& root,bool dependencies=false,bool discardApproved=false){
  if(zipProcess||(fx.dirty&&!discardApproved)||fx.loading){strcpy_s(feedback,"Wait for the current operation and save or revert your look before importing.");return false;}
  std::error_code ec;auto worker=root/L"Tools/import-effects.ps1";
- if(!std::filesystem::is_regular_file(worker,ec)){strcpy_s(feedback,"ZIP helper is missing. Close MSFS and Repair with the 0.20.7 manager.");return false;}
+ if(!std::filesystem::is_regular_file(worker,ec)){strcpy_s(feedback,"ZIP helper is missing. Close MSFS and Repair with the 0.20.8 manager.");return false;}
  if(!std::filesystem::is_regular_file(archive,ec)){strcpy_s(feedback,"Choose an existing ZIP file.");return false;}
  wchar_t system[MAX_PATH]{};GetSystemDirectoryW(system,MAX_PATH);
  auto exe=std::filesystem::path(system)/L"WindowsPowerShell/v1.0/powershell.exe";

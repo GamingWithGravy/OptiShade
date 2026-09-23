@@ -4,12 +4,17 @@ if(Test-Path "$root/installer/DefaultEffects"){New-Item -ItemType Directory -Pat
 New-Item -ItemType Directory -Path $payload,(Join-Path $payload 'OptiShadeData/Presets'),(Join-Path $payload 'OptiShadeData/Shaders'),(Join-Path $payload 'OptiShadeData/Textures'),(Join-Path $payload 'OptiShadeData/Cache'),(Join-Path $payload 'OptiShadeData/Licenses'),(Join-Path $payload 'OptiShadeData/Engine/D3D12_OptiScaler') -Force|Out-Null
 Copy-Item "$root/optiscaler/x64/Release/OptiScaler.dll" "$payload/winmm.dll" -Force
 Copy-Item "$root/reshade/bin/x64/Release/ReShade64.dll" $payload -Force
+New-Item -ItemType Directory -Path "$payload/OptiShadeData/Shaders/Custom" -Force|Out-Null
+Copy-Item "$root/installer/FusionCinema/Gravy_FusionCinema.fx" "$payload/OptiShadeData/Shaders/Custom/Gravy_FusionCinema.fx" -Force
+Copy-Item "$root/installer/FusionCinema/Gravy - Fusion Cinema Custom v1.ini" "$payload/OptiShadeData/Presets/Gravy - Fusion Cinema Custom v1.ini" -Force
+Copy-Item "$root/installer/FusionCinema/LICENSE" "$payload/OptiShadeData/Licenses/FusionCinema-GPL3.txt" -Force
 Copy-Item "$root/optiscaler/x64/Release/a/nvngx.dll_dlssnr.dll" $payload -Force
 Copy-Item "$root/optiscaler/external/xess/bin/*.dll" "$payload/OptiShadeData/Engine/" -Force
 foreach($name in @('amd_fidelityfx_loader_dx12.dll','amd_fidelityfx_upscaler_dx12.dll','amd_fidelityfx_framegeneration_dx12.dll')){Copy-Item "$root/optiscaler/external/FidelityFX-SDK-v2/Kits/FidelityFX/signedbin/$name" "$payload/OptiShadeData/Engine/" -Force}
 Copy-Item "$root/optiscaler/external/FidelityFX-SDK/PrebuiltSignedDLL/amd_fidelityfx_vk.dll" "$payload/OptiShadeData/Engine/" -Force
 Copy-Item "$root/optiscaler/external/directx_agility_sdk/lib/D3D12Core.dll" "$payload/OptiShadeData/Engine/D3D12_OptiScaler/" -Force
 Copy-Item "$root/optiscaler/LICENSE" "$payload/OptiShadeData/Licenses/OptiScaler-GPL3.txt" -Force
+foreach($notice in @('LICENSE','NOTICE.md','BRANDING.md','LICENSING.md')){Copy-Item (Join-Path $root $notice) (Join-Path "$payload/OptiShadeData/Licenses" $notice) -Force}
 Copy-Item "$root/reshade/LICENSE.md" "$payload/OptiShadeData/Licenses/ReShade-BSD3.txt" -Force
 Copy-Item "$root/optiscaler/Licenses/*" "$payload/OptiShadeData/Licenses/" -Recurse -Force
 Copy-Item "$root/optiscaler/external/xess/LICENSE.txt" "$payload/OptiShadeData/Licenses/XeSS.txt" -Force
@@ -69,7 +74,7 @@ Push-Location "$root/installer"
 try{
  & go test -count=1 -v .
  if($LASTEXITCODE){throw 'Embedded payload verification failed. Installer was not built.'}
- & go build -trimpath -ldflags '-H=windowsgui -s -w' -o "$preview/OptiShade_Version_0.20.7.exe" .
+ & go build -trimpath -ldflags '-H=windowsgui -s -w' -o "$preview/OptiShade_Version_0.20.8.exe" .
  if($LASTEXITCODE){throw 'Installer build failed.'}
 }finally{Pop-Location}
 Write-Output "Built: $preview"

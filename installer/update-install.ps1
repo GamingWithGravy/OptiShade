@@ -31,7 +31,7 @@ foreach($target in $targets){
  $m=$target.Manifest
  $mp=InstallFusion $m.Game $Payload $store $Installer $target.Proxy $target.Conflicts -ReplaceExisting $true -PreserveConfiguration $true
  $updated=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json
- foreach($key in @('LaunchExe','Downloads','OptionalDlss')){if($m.PSObject.Properties[$key]){$updated|Add-Member -NotePropertyName $key -NotePropertyValue $m.$key -Force}}
+ foreach($key in @('LaunchExe','Downloads','OptionalDlss','FxPresetRelative')){if($m.PSObject.Properties[$key]){$updated|Add-Member -NotePropertyName $key -NotePropertyValue $m.$key -Force}}
  WriteState $updated $mp
 }
 "Updated $($targets.Count) Microsoft Flight Simulator installation(s). Presets and configuration preserved."

@@ -520,10 +520,14 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D11_CreateFeature(ID3D11DeviceContext
                                                              NVSDK_NGX_Parameter* InParameters,
                                                              NVSDK_NGX_Handle** OutHandle)
 {
+    if (!InDevCtx || !InParameters || !OutHandle) return NVSDK_NGX_Result_Fail;
+    Microsoft::WRL::ComPtr<ID3D11Device> requestDevice;
+    InDevCtx->GetDevice(&requestDevice);
+    if (!requestDevice) { LOG_ERROR("DX11 feature request has no rendering device"); return NVSDK_NGX_Result_Fail; }
     // FeatureId check
     if (InFeatureID != NVSDK_NGX_Feature_SuperSampling && InFeatureID != NVSDK_NGX_Feature_RayReconstruction)
     {
-        if (Config::Instance()->DLSSEnabled.value_or_default() && NVNGXProxy::InitDx11(D3D11Device) &&
+        if (Config::Instance()->DLSSEnabled.value_or_default() && NVNGXProxy::InitDx11(requestDevice.Get()) &&
             NVNGXProxy::D3D11_CreateFeature() != nullptr)
         {
             auto result = NVNGXProxy::D3D11_CreateFeature()(InDevCtx, InFeatureID, InParameters, OutHandle);
@@ -546,7 +550,7 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D11_CreateFeature(ID3D11DeviceContext
         Upscaler upscalerChoice = Upscaler::FSR22; // Default FSR 2.2.1
 
         // If original NVNGX available use DLSS as base upscaler
-        if (IdentifyGpu::getPrimaryGpu().dlssCapable && NVNGXProxy::IsDx11Inited())
+        if (IdentifyGpu::getGpuForDx11Device(requestDevice.Get()).dlssCapable && NVNGXProxy::IsDx11Inited())
             upscalerChoice = Upscaler::DLSS;
 
         if (Config::Instance()->Dx11Upscaler.has_value())
@@ -556,7 +560,7 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D11_CreateFeature(ID3D11DeviceContext
 
         Dx11Contexts[handleId] = {};
 
-        if (!FeatureProvider_Dx11::GetFeature(upscalerChoice, handleId, InParameters, &Dx11Contexts[handleId].feature))
+        if (!FeatureProvider_Dx11::GetFeature(upscalerChoice, handleId, InParameters, &Dx11Contexts[handleId].feature, requestDevice.Get()))
         {
             LOG_ERROR("Can't create {} feature", UpscalerDisplayName(upscalerChoice));
             return NVSDK_NGX_Result_Fail;
@@ -568,7 +572,7 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D11_CreateFeature(ID3D11DeviceContext
 
         Dx11Contexts[handleId] = {};
 
-        if (!FeatureProvider_Dx11::GetFeature(Upscaler::DLSSD, handleId, InParameters, &Dx11Contexts[handleId].feature))
+        if (!FeatureProvider_Dx11::GetFeature(Upscaler::DLSSD, handleId, InParameters, &Dx11Contexts[handleId].feature, requestDevice.Get()))
         {
             LOG_ERROR("Can't create DLSSD feature");
             return NVSDK_NGX_Result_Fail;
@@ -579,22 +583,15 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D11_CreateFeature(ID3D11DeviceContext
     auto deviceContext = Dx11Contexts[handleId].feature.get();
     *OutHandle = deviceContext->Handle();
 
-    // Always get device from context to avoid issues with Dx11 w/Dx12
-    LOG_DEBUG("Get Dx11Device from InDevCtx!");
-    InDevCtx->GetDevice(&D3D11Device);
+    // Retain the legacy evaluation pointer; the request holds a COM reference through initialization.
+    D3D11Device = requestDevice.Get();
     evalCounter = 0;
-
-    if (!D3D11Device)
-    {
-        LOG_ERROR("Can't get Dx11Device from InDevCtx!");
-        return NVSDK_NGX_Result_Fail;
-    }
-
-    D3D11Device->Release();
 
     State::Instance().autoExposure.reset();
 
-    if (deviceContext->ModuleLoaded() && deviceContext->Init(D3D11Device, InDevCtx, InParameters))
+    const bool initialized = deviceContext->ModuleLoaded() && deviceContext->Init(requestDevice.Get(), InDevCtx, InParameters);
+    LOG_INFO("OptiShade DX11 feature initialization: handle={}; initialized={}", handleId, initialized);
+    if (initialized)
     {
         State::Instance().currentFeature = deviceContext;
         return NVSDK_NGX_Result_Success;

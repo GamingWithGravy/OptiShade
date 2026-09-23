@@ -110,6 +110,16 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,LPWSTR args,int){
                 if(snapshot.dirty)throw std::runtime_error("Discard left unsaved changes");bool active=false;for(uint32_t i=0;i<snapshot.techniques;i++)if(!strcmp(snapshot.technique[i].effect,"Vibrance.fx")&&snapshot.technique[i].enabled)active=true;
                 if(active)throw std::runtime_error("Discard did not restore saved techniques");fprintf(report,"Discard restores saved look and clears unsaved notice: PASS\n");
             }
+            if(automatic&&tick==645){
+                read(&snapshot,sizeof(snapshot));if(!snapshot.dirty)throw std::runtime_error("Expected pending edits before mode test");osfx::Command c{};c.version=osfx::Version;c.generation=snapshot.generation;c.kind=osfx::PerformanceMode;c.enabled=1;if(!send(&c,sizeof(c)))throw std::runtime_error("Dirty mode request not queued");
+            }
+            if(automatic&&tick==655){read(&snapshot,sizeof(snapshot));if(snapshot.performanceMode||!snapshot.dirty)throw std::runtime_error("Performance mode lost unsaved edits");fprintf(report,"Performance Mode preserves unsaved edits by rejecting enable: PASS\n");}
+            if(automatic&&(tick==720||tick==810)){
+                read(&snapshot,sizeof(snapshot));osfx::Command c{};c.version=osfx::Version;c.generation=snapshot.generation;c.kind=osfx::PerformanceMode;c.enabled=tick==720;
+                if(!send(&c,sizeof(c)))throw std::runtime_error("Performance mode command rejected");
+            }
+            if(automatic&&tick==790){read(&snapshot,sizeof(snapshot));if(!snapshot.performanceMode||snapshot.loading||!snapshot.compileOK)throw std::runtime_error("Performance mode did not compile successfully");fprintf(report,"Performance Mode enabled and compiled: PASS\n");}
+            if(automatic&&tick==880){read(&snapshot,sizeof(snapshot));if(snapshot.performanceMode||snapshot.loading||!snapshot.compileOK)throw std::runtime_error("Performance mode did not return to editable mode");fprintf(report,"Performance Mode disabled and compiled: PASS\n");}
             if(automatic&&tick==24){
                 finish();
                 const HRESULT nullQueues=swap->ResizeBuffers1(3,960,640,DXGI_FORMAT_UNKNOWN,0,nullptr,nullptr);

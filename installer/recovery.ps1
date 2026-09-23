@@ -1,5 +1,20 @@
 ﻿. "$PSScriptRoot/import-effects.ps1"
 function ImportEffectsZip([string]$Archive,[string]$Game){AssertClosed $Game;ImportEffectsArchive $Archive $Game}
+function TestOwnPreset([string]$Preset,[string]$Game,[string]$Catalogue){
+ if([IO.Path]::GetExtension($Preset) -ne '.ini' -or -not(Test-Path -LiteralPath $Preset -PathType Leaf)){throw 'Choose an INI preset first.'}
+ $names=@(GetPresetShaderNames $Preset)
+ $text=[IO.File]::ReadAllText($Preset)
+ if($text -notmatch '(?im)^Techniques='){throw 'This INI is not a ReShade look preset (Techniques is missing).'}
+ if(-not $names.Count -and $text -match '(?im)^Techniques=\S'){throw 'This preset does not identify its FX files. Import the author''s shader ZIP first or use the full FX package.'}
+ $null=GetPresetPackages @(GetMissingPresetShaders $Preset $Game) $Catalogue
+}
+function SaveOwnPreset([string]$Preset,[string]$Game,[string]$Catalogue){
+ AssertClosed $Game;TestOwnPreset $Preset $Game $Catalogue
+ $relative='OptiShadeData/Presets/Imported-'+[guid]::NewGuid().ToString('N')+'/'+[IO.Path]::GetFileName($Preset)
+ $dest=OwnedPath $Game $relative;New-Item -ItemType Directory -Path (Split-Path $dest) -Force|Out-Null
+ [IO.File]::Copy($Preset,$dest,$false)
+ return $relative
+}
 function ResetOptiShadeSettings([string]$Game,[string]$Payload,[string]$Store){
  AssertClosed $Game
  $mp=ManifestPath $Store $Game
@@ -38,7 +53,7 @@ function GetOptiShadeSupportReport([string]$Game,[string]$Store){
    }
   }
  }
- [ordered]@{InstallerVersion='0.20.7';Created=(Get-Date -Format o);GameFolder=$Game;InstallationState=(GetFusionInstallState $Store $Game);GPU=$gpu;NeuralModel=(GetNeuralRuntimeStatus $Game $gpu);Files=$files;Note='Stored files only. This report does not confirm loaded DLLs or rendered output. No presets or log contents included.'}
+ [ordered]@{InstallerVersion='0.20.8';Created=(Get-Date -Format o);GameFolder=$Game;InstallationState=(GetFusionInstallState $Store $Game);GPU=$gpu;NeuralModel=(GetNeuralRuntimeStatus $Game $gpu);Files=$files;Note='Stored files only. This report does not confirm loaded DLLs or rendered output. No presets or log contents included.'}
 }
 
 function InstallFusionCinema([string]$Game){

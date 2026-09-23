@@ -77,6 +77,10 @@ static void DrawEffects(){
  }
 
  ImGui::BeginDisabled(fx.loading!=0||zipProcess!=nullptr);
+ bool performanceMode=fx.performanceMode!=0;
+ ImGui::BeginDisabled(fx.dirty!=0&&!performanceMode);if(ImGui::Checkbox("Performance Mode (image effects)",&performanceMode)){osfx::Command c{};c.kind=osfx::PerformanceMode;c.enabled=performanceMode;Send(c);}ImGui::EndDisabled();
+ if(fx.dirty)ImGui::TextDisabled("Save or revert your look before changing Performance Mode.");
+ else ImGui::TextDisabled("Optimizes saved shader settings. Turn off to edit shader values. Gains vary by effect.");
  bool enabled=fx.enabled!=0;if(ImGui::Checkbox("Image effects",&enabled)){osfx::Command c{};c.kind=osfx::Effects;c.enabled=enabled;Send(c);}
  ImGui::SameLine();if(ImGui::Button("Recompile installed FX")){osfx::Command c{};c.kind=osfx::Reload;Send(c);}if(ImGui::IsItemHovered())ImGui::SetTooltip("Reload shader code already installed in the game. This does not import or download files.");
 
@@ -84,7 +88,8 @@ static void DrawEffects(){
  std::error_code error;
  if(fx.saveSerial!=seenSave){seenSave=fx.saveSerial;strcpy_s(feedback,fx.saveOK?"Preset saved. This look will load next time.":"Could not save. Check the folder, permissions, and use a new name for Save as.");}
  static char presetName[128]="My custom look",presetFolder[1024]="";static bool replaceCurrent=false;
- ImGui::SameLine();if(ImGui::Button("Save preset...")){auto current=std::filesystem::u8path(fx.preset);auto folder=(root/L"Presets").u8string();auto name=current.stem().u8string();strncpy_s(presetFolder,(const char*)folder.c_str(),_TRUNCATE);if(!name.empty())strncpy_s(presetName,(const char*)name.c_str(),_TRUNCATE);replaceCurrent=false;ImGui::OpenPopup("Save your look");}
+ ImGui::SameLine();ImGui::BeginDisabled(fx.performanceMode!=0);if(ImGui::Button("Save preset...")){auto current=std::filesystem::u8path(fx.preset);auto folder=(root/L"Presets").u8string();auto name=current.stem().u8string();strncpy_s(presetFolder,(const char*)folder.c_str(),_TRUNCATE);if(!name.empty())strncpy_s(presetName,(const char*)name.c_str(),_TRUNCATE);replaceCurrent=false;ImGui::OpenPopup("Save your look");}
+ ImGui::EndDisabled();
  if(ImGui::BeginPopupModal("Save your look",nullptr,ImGuiWindowFlags_AlwaysAutoResize)){
   ImGui::TextWrapped("Save your chosen effects and their current settings as an INI preset.");
   ImGui::SetNextItemWidth(480);ImGui::InputText("Name",presetName,sizeof(presetName),ImGuiInputTextFlags_AutoSelectAll);
@@ -156,6 +161,7 @@ static void DrawEffects(){
  }
  if(feedback[0])ImGui::TextWrapped("%s",feedback);
  ImGui::Separator();
+ ImGui::BeginDisabled(fx.performanceMode!=0);
  static std::vector<std::filesystem::path> library;static bool indexed=false;
  if(importedShader){indexed=false;importedShader=false;}
  bool libraryChanged=!indexed;
@@ -211,9 +217,9 @@ static void DrawEffects(){
      if(edited){u.value[k]=value;changed=true;}ImGui::PopID();}}
     if(changed){osfx::Command c{};c.kind=osfx::Uniform;c.count=u.count;strcpy_s(c.effect,u.effect);strcpy_s(c.name,u.name);std::copy_n(u.value,16,c.value);Send(c);}ImGui::PopID();
    }
-   if(ready&&!settings)ImGui::TextWrapped("This effect has no adjustable settings in this panel.");
+   if(fx.performanceMode)ImGui::TextWrapped("Turn off Performance Mode to adjust shader values.");else if(ready&&!settings)ImGui::TextWrapped("This effect has no adjustable settings in this panel.");
    if(fx.truncated)ImGui::TextWrapped("This panel reached its display limit. The full preset still loads in the effects engine.");
   }
- }ImGui::EndChild();ImGui::EndDisabled();
+ }ImGui::EndChild();ImGui::EndDisabled();ImGui::EndDisabled();
 }
 }

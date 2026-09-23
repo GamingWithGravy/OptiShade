@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "../../../shared/BackendSelection.h"
 #include "Util.h"
 #include "Config.h"
 
@@ -596,22 +597,19 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D12_DestroyParameters(NVSDK_NGX_Param
 
 #pragma region DLSS Feature Calls
 
-static Upscaler GetUpscalerBackend()
+static Upscaler GetUpscalerBackend(ID3D12Device* device)
 {
-    Upscaler upscaler = Upscaler::XeSS; // Default
-
-    auto primaryGpu = IdentifyGpu::getPrimaryGpu();
-
-    if (NVNGXProxy::IsDx12Inited() && primaryGpu.dlssCapable)
-        upscaler = Upscaler::DLSS;
-
-    if (primaryGpu.fsr4Support != FSR4Support::None)
-        upscaler = Upscaler::FFX;
-
+    // Explicit choices take precedence; load/initialization validates them later.
     if (Config::Instance()->Dx12Upscaler.has_value())
-        upscaler = Config::Instance()->Dx12Upscaler.value();
-
-    return upscaler;
+        return Config::Instance()->Dx12Upscaler.value();
+    const auto gpu = IdentifyGpu::getGpuForDevice(device);
+    const auto decision = optishade::SelectAutomaticUpscaler(
+        gpu.vendorId == VendorId::Invalid ? optishade::Evidence::Unknown : gpu.dlssCapable ? optishade::Evidence::Yes : optishade::Evidence::No,
+        NVNGXProxy::IsDx12Inited() ? optishade::Evidence::Yes : optishade::Evidence::No,
+        gpu.fsr4Support != FSR4Support::None ? optishade::Evidence::Yes : optishade::Evidence::Unknown);
+    if (decision == optishade::AutomaticUpscaler::Dlss) return Upscaler::DLSS;
+    if (decision == optishade::AutomaticUpscaler::FidelityFX) return Upscaler::FFX;
+    return Upscaler::XeSS;
 }
 
 static bool EnsureD3D12Device(ID3D12GraphicsCommandList* cmdList)
@@ -646,11 +644,16 @@ static NVSDK_NGX_Result TryCreateOptiFeature(ID3D12GraphicsCommandList* InCmdLis
     const uint32_t handleId = IFeature::GetNextHandleId();
     LOG_INFO("Creating OptiScaler feature, HandleId: {}", handleId);
 
+    // Use this request's device, even when another window/device was seen first.
+    Microsoft::WRL::ComPtr<ID3D12Device> selectionDevice;
+    if (!InCmdList || FAILED(InCmdList->GetDevice(IID_PPV_ARGS(&selectionDevice))))
+        return NVSDK_NGX_Result_Fail;
+
     // Determine backend name
     Upscaler upscalerBackend;
     if (InFeatureID == NVSDK_NGX_Feature_SuperSampling)
     {
-        upscalerBackend = GetUpscalerBackend();
+        upscalerBackend = GetUpscalerBackend(selectionDevice.Get());
         LOG_INFO("Creating {} upscaler feature", UpscalerDisplayName(upscalerBackend));
     }
     else
@@ -674,7 +677,7 @@ static NVSDK_NGX_Result TryCreateOptiFeature(ID3D12GraphicsCommandList* InCmdLis
     Dx12Contexts[handleId] = {};
 
     // Retrieve feature implementation
-    if (!FeatureProvider_Dx12::GetFeature(upscalerBackend, handleId, InParameters, &Dx12Contexts[handleId].feature))
+    if (!FeatureProvider_Dx12::GetFeature(upscalerBackend, handleId, InParameters, &Dx12Contexts[handleId].feature, selectionDevice.Get()))
     {
         LOG_ERROR("Failed to retrieve feature implementation for '{}'", UpscalerDisplayName(upscalerBackend));
 
@@ -707,15 +710,16 @@ static NVSDK_NGX_Result TryCreateOptiFeature(ID3D12GraphicsCommandList* InCmdLis
     IFeature_Dx12* feature = Dx12Contexts[handleId].feature.get();
 
     // Initialize feature
-    if (feature->Init(D3D12Device, InCmdList, InParameters))
+    if (feature->Init(selectionDevice.Get(), InCmdList, InParameters))
     {
+        LOG_INFO("OptiShade DX12 backend initialization: handle={}; backend={}; result=success", handleId, feature->ShortName());
         state.currentFeature = feature;
         evalCounter = 0;
         UpscalerInputsDx12::Reset();
     }
     else
     {
-        LOG_ERROR("Feature '{}' initialization failed falling back to FSR 2.1.2", UpscalerDisplayName(upscalerBackend));
+        LOG_ERROR("OptiShade DX12 backend initialization: handle={}; backend={}; result=failed; fallback=FSR 2.1 pending", handleId, feature->ShortName());
         state.newBackend = Upscaler::FSR21;
         state.changeBackend[handleId] = true;
     }

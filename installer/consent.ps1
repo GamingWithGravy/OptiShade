@@ -46,6 +46,16 @@ function ConfirmOptionalDlss($Owner,[bool]$Supported){
 }
 function UseOptionalDlss($Manifest,$Plan){return ($Manifest.OptionalDlss -eq $true -and $Plan.DownloadNvidia -eq $true)}
 
+function ShouldWarnAmdExperimental($Gpu){
+ # Inventory is not the game's active adapter. An AMD iGPU alongside NVIDIA is
+ # not evidence that the user is installing for AMD; retain runtime device checks.
+ if(-not $Gpu -or -not $Gpu.Known){return $false}
+ if($Gpu.Nvidia -or $Gpu.Names -match '(?i)NVIDIA'){return $false}
+ # Conservative model allowlist: generic Radeon Graphics, Vega 8/11 and
+ # Radeon 680M/780M/890M are not evidence of a dedicated card.
+ $dedicated='(?i)\bRadeon\s+(?:RX\s+(?:\d{3,4}\b|Vega\s+(?:56|64)\b)|VII\b|R[579]\s+(?:\d{3}\b|Fury\b)|Pro\s+(?:W\d{4}\b|WX\s*\d{4}\b))'
+ return [bool]($Gpu.Names -match $dedicated)
+}
 function ConfirmAmdExperimental($Owner){
  [xml]$markup=@'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="AMD experimental support" Width="550" SizeToContent="Height" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" Background="#17121F" Foreground="#F3EFFB" FontFamily="Segoe UI" ShowInTaskbar="False">
@@ -59,6 +69,35 @@ function ConfirmAmdExperimental($Owner){
 </Window>
 '@
  $dialog=[Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($markup));$dialog.Owner=$Owner
+ foreach($name in @('Cancel','Continue')){$dialog.FindName($name).Style=$Owner.FindResource([Windows.Controls.Button])}
+ $dialog.FindName('Cancel').Add_Click({$dialog.DialogResult=$false}.GetNewClosure())
+ $dialog.FindName('Continue').Add_Click({$dialog.DialogResult=$true}.GetNewClosure())
+ return $dialog.ShowDialog() -eq $true
+}
+function GetNvidiaDriverWarning($Gpu){
+ if(-not $Gpu -or (-not $Gpu.Nvidia -and $Gpu.Names -notmatch '(?i)NVIDIA')){return ''}
+ $drivers=@($Gpu.Drivers|Where-Object {$_.Name -match '(?i)NVIDIA'})
+ if(-not $drivers.Count){return 'The NVIDIA driver version could not be detected. Compatibility is unknown. Please update to NVIDIA driver 616.92 or newer to help avoid possible issues.'}
+ $messages=@(foreach($driver in $drivers){
+  $version=[string]$driver.Version
+  if($version -notmatch '^\d{3,4}\.\d{2}$'){'NVIDIA driver version unknown for '+$driver.Name+'. Please update to NVIDIA driver 616.92 or newer to help avoid possible issues.'}
+  elseif([version]$version -lt [version]'616.92'){"Driver $version detected for $($driver.Name). Compatibility with this driver is unknown. Please update to 616.92 or newer to help avoid possible issues."}
+ })
+ return ($messages -join "`n`n")
+}
+function ConfirmNvidiaDriver($Owner,$Gpu){
+ $message=GetNvidiaDriverWarning $Gpu
+ if(-not $message){return $true}
+ [xml]$markup=@"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="NVIDIA driver recommendation" Width="560" SizeToContent="Height" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" Background="#17121F" Foreground="#F3EFFB" FontFamily="Segoe UI" ShowInTaskbar="False"><StackPanel Margin="28">
+<TextBlock Text="Check your graphics driver" FontSize="23" FontWeight="SemiBold" TextWrapping="Wrap"/>
+<TextBlock Name="DriverDetails" Foreground="#FFBE83" TextWrapping="Wrap" Margin="0,16,0,14"/>
+<TextBlock Text="This is OptiShade's recommended baseline, not a guarantee of compatibility. Cancel to update your driver, or continue with the current version." Foreground="#C2B0D7" TextWrapping="Wrap"/>
+<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0"><Button Name="Cancel" Content="Cancel installation" IsCancel="True" IsDefault="True" Margin="0,0,12,0"/><Button Name="Continue" Content="Continue anyway"/></StackPanel>
+</StackPanel></Window>
+"@
+ $dialog=[Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($markup));$dialog.Owner=$Owner
+ $dialog.FindName('DriverDetails').Text=$message
  foreach($name in @('Cancel','Continue')){$dialog.FindName($name).Style=$Owner.FindResource([Windows.Controls.Button])}
  $dialog.FindName('Cancel').Add_Click({$dialog.DialogResult=$false}.GetNewClosure())
  $dialog.FindName('Continue').Add_Click({$dialog.DialogResult=$true}.GetNewClosure())

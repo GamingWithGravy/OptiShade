@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "menu_common.h"
 #include "../../../shared/RenderingCapability.h"
+#include "../../../shared/D3D12Capabilities.h"
 #include "optishade_effects_ui.inl"
 #include <framegen/dlssg/MfgUnlock.h>
 #include <framegen/dlssg/AmpereMfgLoader.h>
@@ -66,9 +67,7 @@ static GpuInformation RenderingGpu(const State& state) {
         }
     }
     if (!luid.HighPart && !luid.LowPart) return {};
-    for (const auto& gpu : IdentifyGpu::getAllGpus())
-        if (IsEqualLUID(gpu.luid, luid)) return gpu;
-    return {}; // A missing match is unknown, never an inferred primary adapter.
+    return IdentifyGpu::getGpuByLuid(luid); // Unknown never becomes the first adapter.
 }
 
 static float fontSize = 14.0f; // just changing this doesn't make other elements scale ideally
@@ -502,7 +501,7 @@ void MenuCommon::GetCurrentBackendInfo(const API api, Upscaler& upscaler, std::s
 
 void MenuCommon::RenderUpscalerCombo(const API api, Upscaler currentUpscaler, const std::vector<Upscaler>& options)
 {
-    auto primaryGpu = IdentifyGpu::getPrimaryGpu();
+    auto primaryGpu = api == API::Vulkan ? IdentifyGpu::getPrimaryGpu() : RenderingGpu(State::Instance());
 
     // Determine display name
     Upscaler targetBackend = State::Instance().newBackend;
@@ -7710,7 +7709,7 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
     if (!_isVisible) return;
     auto config=ctx.config;
     State::Instance().vulkanSkipHooks=true;
-    ctx.primaryGpu=std::make_unique<std::decay_t<decltype(IdentifyGpu::getPrimaryGpu())>>(IdentifyGpu::getPrimaryGpu());
+    ctx.primaryGpu=std::make_unique<std::decay_t<decltype(IdentifyGpu::getPrimaryGpu())>>(ctx.state.api == API::Vulkan ? IdentifyGpu::getPrimaryGpu() : RenderingGpu(ctx.state));
     State::Instance().vulkanSkipHooks=false;
     const ImVec2 available(std::max(1.f,ctx.io.DisplaySize.x-30.f),std::max(1.f,ctx.io.DisplaySize.y-30.f));
     static ImVec2 previousViewport{};
@@ -7722,7 +7721,7 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
     ImGui::SetNextWindowPos(ImVec2(15,15),ImGuiCond_FirstUseEver);
     bool visible=_isVisible;static bool saved=false;
     if(ImGui::Begin("optishade | fusion engine",&visible,ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar)){
-        ImGui::SetWindowFontScale(1.75f);ImGui::TextUnformatted("optishade  0.20.7");ImGui::SetWindowFontScale(1.f);
+        ImGui::SetWindowFontScale(1.75f);ImGui::TextUnformatted("optishade  " OPTISHADE_VERSION_TEXT);ImGui::SetWindowFontScale(1.f);
         ImGui::SameLine(ImGui::GetWindowWidth()-100);if(ImGui::SmallButton("Close"))visible=false;
         OptiShadeUpdates::DrawHeader();
         ImGui::TextColored(ImGui::GetStyleColorVec4(ImGuiCol_CheckMark),"powered by fusion engine");
@@ -7768,6 +7767,16 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
             }
 
             ImGui::TextWrapped("An installed NVIDIA DLL is not proof that DLSS or Neural Rendering is active. Enter a flight with supported upscaling enabled. If controls remain unavailable, save a diagnostic report in the launcher.");
+            if (ImGui::CollapsingHeader("Rendering device capabilities")) {
+                if (ctx.state.currentD3D12Device) {
+                    const auto caps = optishade::QueryD3D12Capabilities(ctx.state.currentD3D12Device);
+                    ImGui::Text("D3D12 native 16-bit shader operations: %s", optishade::EvidenceLabel(caps.native16));
+                    ImGui::Text("D3D12 wave operations: %s", optishade::EvidenceLabel(caps.waves));
+                    const char* blocked = optishade::NvidiaNeuralPreflight(caps);
+                    ImGui::TextWrapped("NVIDIA neural backend: %s", blocked ? blocked : "Eligible for runtime initialization; not proof of model support");
+                    ImGui::TextWrapped("Cross-vendor neural backend: not integrated. FSR/XeSS upscaling is a separate feature, not DLSS 5 Neural Rendering.");
+                } else ImGui::TextWrapped("D3D12 capability evidence is unavailable for the current graphics API.");
+            }
             ImGui::Spacing();ImGui::SeparatorText("Smoother motion");
             ImGui::TextWrapped("Frame generation adds frames between the ones the game draws. It can look smoother, but it does not make your controls respond faster.");
             if(ImGui::CollapsingHeader("Frame generation options")){RenderFrameGenerationSelection(ctx);RenderFrameGenerationRuntimeSettings(ctx);}

@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference='Stop'
+$ErrorActionPreference='Stop'
 Add-Type -AssemblyName PresentationFramework
 [xml]$xaml=Get-Content "$PSScriptRoot/../installer/manager.xaml" -Raw -Encoding UTF8
 $form=[Windows.Markup.XamlReader]::Load((New-Object Xml.XmlNodeReader $xaml))
@@ -31,8 +31,9 @@ foreach($width in @(1000,1100)){
  if($form.FindName('OpenXPlane12').IsEnabled){throw 'X-Plane coming-soon installation enabled'}
  if(-not $form.FindName('OpenMsfs2020').IsEnabled){throw 'Experimental MSFS 2020 entry disabled'}
 }
+$form.FindName('HomePage').Visibility='Collapsed';$form.FindName('SetupPage').Visibility='Visible';$form.Content.Measure([Windows.Size]::new(1100,740));$form.Content.Arrange([Windows.Rect]::new(0,0,1100,740));$form.Content.UpdateLayout();
 $bitmap=[Windows.Media.Imaging.RenderTargetBitmap]::new(1100,740,96,96,[Windows.Media.PixelFormats]::Pbgra32);$bitmap.Render($form.Content)
 $encoder=[Windows.Media.Imaging.PngBitmapEncoder]::new();$encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bitmap))
-$imagePath=Join-Path $PSScriptRoot '../test-run/home-page.png';$stream=[IO.File]::Create($imagePath);try{$encoder.Save($stream)}finally{$stream.Dispose()}
+$imagePath=Join-Path $PSScriptRoot '../test-run/setup-page.png';$stream=[IO.File]::Create($imagePath);try{$encoder.Save($stream)}finally{$stream.Dispose()}
 $form.Close()
 'PASS: WPF layout loaded, edition controls present, library hidden, manager syntax valid'

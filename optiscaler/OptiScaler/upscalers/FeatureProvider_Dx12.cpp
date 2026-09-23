@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "../../../shared/BackendSelection.h"
 #include "FeatureProvider_Dx12.h"
 
 #include "Util.h"
@@ -16,11 +17,15 @@
 #include <misc/IdentifyGpu.h>
 
 bool FeatureProvider_Dx12::GetFeature(Upscaler upscaler, UINT handleId, NVSDK_NGX_Parameter* parameters,
-                                      std::unique_ptr<IFeature_Dx12>* feature)
+                                      std::unique_ptr<IFeature_Dx12>* feature, ID3D12Device* device)
 {
     State& state = State::Instance();
     Config& cfg = *Config::Instance();
-    auto primaryGpu = IdentifyGpu::getPrimaryGpu();
+    const auto renderingGpu = IdentifyGpu::getGpuForDevice(device);
+    const auto requested = upscaler;
+    const auto hardware = renderingGpu.vendorId == VendorId::Invalid ? optishade::Evidence::Unknown :
+        renderingGpu.dlssCapable ? optishade::Evidence::Yes : optishade::Evidence::No;
+    const char* selectionReason = "Requested backend retained; initialization still required";
     ScopedSkipHeapCapture skipHeapCapture {};
 
     switch (upscaler)
@@ -42,32 +47,35 @@ bool FeatureProvider_Dx12::GetFeature(Upscaler upscaler, UINT handleId, NVSDK_NG
         break;
 
     case Upscaler::DLSS:
-        if (primaryGpu.dlssCapable && state.NVNGX_DLSS_Path.has_value())
+        if (!optishade::NvidiaUpscalerUnavailableReason(hardware, state.NVNGX_DLSS_Path.has_value()))
         {
             *feature = std::make_unique<DLSSFeatureDx12>(handleId, parameters);
             break;
         }
         else
         {
+            selectionReason = optishade::NvidiaUpscalerUnavailableReason(hardware, state.NVNGX_DLSS_Path.has_value());
             *feature = std::make_unique<FSR2FeatureDx12_212>(handleId, parameters);
             upscaler = Upscaler::FSR21;
             break;
         }
 
     case Upscaler::DLSSD:
-        if (primaryGpu.dlssCapable && state.NVNGX_DLSSD_Path.has_value())
+        if (!optishade::NvidiaUpscalerUnavailableReason(hardware, state.NVNGX_DLSSD_Path.has_value()))
         {
             *feature = std::make_unique<DLSSDFeatureDx12>(handleId, parameters);
             break;
         }
         else
         {
+            selectionReason = optishade::NvidiaUpscalerUnavailableReason(hardware, state.NVNGX_DLSSD_Path.has_value());
             *feature = std::make_unique<FSR2FeatureDx12_212>(handleId, parameters);
             upscaler = Upscaler::FSR21;
             break;
         }
 
     default:
+        selectionReason = "Unrecognized backend request; selecting existing FSR 2.1 fallback";
         *feature = std::make_unique<FSR2FeatureDx12_212>(handleId, parameters);
         upscaler = Upscaler::FSR21;
         break;
@@ -81,8 +89,13 @@ bool FeatureProvider_Dx12::GetFeature(Upscaler upscaler, UINT handleId, NVSDK_NG
         ImGui::InsertNotification({ ImGuiToastType::Warning, 10000, "Falling back to FSR 2.1.2" });
         *feature = std::make_unique<FSR2FeatureDx12_212>(handleId, parameters);
         upscaler = Upscaler::FSR21;
-        loaded = true; // Assuming the fallback always loads successfully
+        loaded = (*feature)->ModuleLoaded();
+        selectionReason = loaded ? "Requested module failed to load; FSR 2.1 fallback loaded" : "Requested module and FSR 2.1 fallback failed to load";
     }
+
+    LOG_INFO("OptiShade DX12 backend decision: requested={}; selected={}; GPU={}; LUID={:08X}:{:08X}; moduleLoaded={}; initialized=not-yet; reason={}",
+        UpscalerDisplayName(requested), UpscalerDisplayName(upscaler), renderingGpu.name.empty() ? "Unknown" : renderingGpu.name,
+        (UINT)renderingGpu.luid.HighPart, renderingGpu.luid.LowPart, loaded, selectionReason);
 
     // DLSSD is stored in the config as DLSS
     if (upscaler == Upscaler::DLSSD)
@@ -103,7 +116,7 @@ bool FeatureProvider_Dx12::ChangeFeature(Upscaler upscaler, ID3D12Device* device
     if (!state.changeBackend[handleId])
         return false;
 
-    const bool dlssOnNonCapable = !IdentifyGpu::getPrimaryGpu().dlssCapable && state.newBackend == Upscaler::DLSS;
+    const bool dlssOnNonCapable = !IdentifyGpu::getGpuForDevice(device).dlssCapable && state.newBackend == Upscaler::DLSS;
     if (state.newBackend == Upscaler::Reset || dlssOnNonCapable)
         state.newBackend = cfg.Dx12Upscaler.value_or_default();
 
@@ -175,7 +188,7 @@ bool FeatureProvider_Dx12::ChangeFeature(Upscaler upscaler, ID3D12Device* device
         LOG_INFO("Creating new {} upscaler", UpscalerDisplayName(state.newBackend));
         contextData->feature.reset();
 
-        if (!GetFeature(state.newBackend, handleId, contextData->createParams, &contextData->feature))
+        if (!GetFeature(state.newBackend, handleId, contextData->createParams, &contextData->feature, device))
         {
             LOG_ERROR("Upscaler can't created");
             return false;

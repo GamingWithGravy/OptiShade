@@ -86,7 +86,7 @@ function InstallPresetDependencies([string]$Preset,[string]$Game,[string]$Catalo
    if($uri.Scheme -ne 'https' -or $uri.Host -ne 'github.com' -or $uri.AbsolutePath -notmatch '^/[^/]+/[^/]+/archive/.+\.zip$'){throw 'Unexpected catalogue download URL.'}
    $zip=Join-Path $downloads ($selection.Package.Id+'.zip')
    # Stream with hard bounds; a partial archive never reaches the importer.
-   $request=[Net.HttpWebRequest]::Create($uri);$request.UserAgent='OptiShade/0.20.7';$request.Timeout=30000;$request.ReadWriteTimeout=30000
+   $request=[Net.HttpWebRequest]::Create($uri);$request.UserAgent='OptiShade/0.20.8';$request.Timeout=30000;$request.ReadWriteTimeout=30000
    $response=$request.GetResponse()
    try{
     if($response.ResponseUri.Scheme -ne 'https' -or $response.ResponseUri.Host -notin @('github.com','codeload.github.com')){throw 'Unexpected download redirect.'}
@@ -97,7 +97,11 @@ function InstallPresetDependencies([string]$Preset,[string]$Game,[string]$Catalo
   }
   foreach($header in @('ReShade.fxh','ReShadeUI.fxh')){
    $target=ImportSafePath (Join-Path $Game 'OptiShadeData') ('Shaders/'+$header)
-   if(-not(Test-Path -LiteralPath $target)){[IO.File]::Copy((Join-Path $PSScriptRoot ('StandardHeaders/'+$header)),$target,$false)}
+   if(-not(Test-Path -LiteralPath $target)){
+    $source=Join-Path $PSScriptRoot ('StandardHeaders/'+$header)
+    if(-not(Test-Path -LiteralPath $source)){$source=Join-Path $Game ('OptiShadeData/Tools/StandardHeaders/'+$header)}
+    [IO.File]::Copy($source,$target,$false)
+   }
   }
   $remaining=@(GetMissingPresetShaders $Preset $Game);if($remaining.Count){throw ('Still missing: '+($remaining -join ', '))}
  }finally{

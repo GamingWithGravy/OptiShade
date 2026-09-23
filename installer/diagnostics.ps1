@@ -3,15 +3,39 @@
  $stream=[IO.File]::Open($Path,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::ReadWrite)
  try{$size=[int][Math]::Min(65536,$stream.Length);[void]$stream.Seek(-$size,[IO.SeekOrigin]::End);$buffer=New-Object byte[] $size;$n=$stream.Read($buffer,0,$size);[Text.Encoding]::UTF8.GetString($buffer,0,$n)}finally{$stream.Dispose()}
 }
+function GetStartupEvidence([string]$Game){
+ $e=[ordered]@{Captured=(Get-Date).ToString('o');Context='Observed files and log tails, not proof of rendering';Logs=@{};Files=@();Settings=@{}}
+ foreach($relative in @('OptiShadeData/Performance.log','OptiShadeData/ReShade.log','OptiShadeData/OptiScaler.log','ReShade.log','OptiScaler.log')){
+  try{$path=OwnedPath $Game $relative;$item=Get-Item -LiteralPath $path -ErrorAction Stop;$e.Logs[$relative]=@{Bytes=$item.Length;LastWriteUtc=$item.LastWriteTimeUtc.ToString('o');Tail=(ReadDiagnosticTail $path)}}catch{$e.Logs[$relative]=@{Status='Missing or unreadable'}}
+ }
+ foreach($relative in @('winmm.dll','dxgi.dll','d3d12.dll','version.dll','OptiScaler.dll','ReShade64.dll','OptiShadeData/Engine/OptiScaler.dll','OptiShadeData/Engine/ReShade64.dll','sl.interposer.dll','nvngx_dlss.dll','nvngx_dlssg.dll','nvngx_dlssnr.dll')){
+  try{$item=Get-Item -LiteralPath (OwnedPath $Game $relative) -ErrorAction Stop;$e.Files+=@{Path=$relative;Bytes=$item.Length;Version=$item.VersionInfo.FileVersion;LastWriteUtc=$item.LastWriteTimeUtc.ToString('o')}}catch{$e.Files+=@{Path=$relative;Status='Missing or unreadable'}}
+ }
+ try{$section='';foreach($line in Get-Content -LiteralPath (OwnedPath $Game 'OptiScaler.ini') -ErrorAction Stop){if($line -match '^\[([^]]+)\]'){$section=$Matches[1]}elseif($section -in @('Menu','Upscalers','FrameGen','DlssNr','Plugins') -and $line -match '^([A-Za-z0-9]+)=(true|false|auto|[A-Za-z0-9_.-]{1,40})$'){$e.Settings[$section+'.'+$Matches[1]]=$Matches[2]}}}catch{}
+ return $e
+}
+function SavePreRestoreEvidence([string]$Game,[string]$Folder){
+ $e=GetStartupEvidence $Game;$e.Context='Captured before Restore; historical evidence, not current installed state'
+ $json=$e|ConvertTo-Json -Depth 8
+ foreach($pair in @(@($Game,'<GAME>'),@($env:USERPROFILE,'<USERPROFILE>'))){if($pair[0]){$json=$json.Replace(($pair[0]|ConvertTo-Json -Compress).Trim('"'),$pair[1])}}
+ if([Text.Encoding]::UTF8.GetByteCount($json) -gt 1MB){throw 'Pre-restore evidence exceeds size limit'}
+ $dest=OwnedPath $Folder 'PreRestoreDiagnostics.json';$tmp=OwnedPath $Folder 'PreRestoreDiagnostics.tmp'
+ try{[IO.File]::WriteAllText($tmp,$json,[Text.UTF8Encoding]::new($false));Move-Item -LiteralPath $tmp -Destination $dest -Force}finally{if(Test-Path -LiteralPath $tmp){Remove-Item -LiteralPath $tmp -Force}}
+}
 function GetDetailedSupportReport([string]$Game,[string]$Store){
  $report=GetOptiShadeSupportReport $Game $Store
- $report.SchemaVersion=2;$report.ReportId=[guid]::NewGuid().ToString('N');$report.RuntimeEvidence='Logs and optional process metadata. Installed files alone do not establish active features.'
- $report.Windows=[Environment]::OSVersion.VersionString
+ $report.SchemaVersion=3;$report.ReportId=[guid]::NewGuid().ToString('N');$report.RuntimeEvidence='Logs and optional process metadata. Installed files alone do not establish active features.'
+ $report.StartupEvidence=GetStartupEvidence $Game
+ $report.PreRestoreEvidence='No saved pre-restore evidence available'
+ try{if($Store){$saved=OwnedPath (Split-Path (ManifestPath $Store $Game)) 'PreRestoreDiagnostics.json';if((Get-Item -LiteralPath $saved -ErrorAction Stop).Length -le 1MB){$report.PreRestoreEvidence=Get-Content -LiteralPath $saved -Raw -Encoding UTF8|ConvertFrom-Json}}}catch{$report.PreRestoreEvidence='No readable pre-restore evidence available'}
+ $report.CaptureAdvice='For black screens, export while MSFS is running if possible. Otherwise close MSFS and export before Restore. Saved pre-restore evidence is historical and timestamped.'
+ # Environment.OSVersion can report the host manifest's compatibility version (6.2), not the installed OS.
+ try{$os=Get-CimInstance Win32_OperatingSystem -ErrorAction Stop|Select-Object -First 1;if($null -eq $os){throw 'No OS metadata'};$report.Windows=@{Name=$os.Caption;Version=$os.Version;Build=$os.BuildNumber}}catch{$report.Windows='Unavailable (OS metadata query failed)'}
  try{$gameExe=if(Test-Path -LiteralPath (OwnedPath $Game 'FlightSimulator2024.exe')){'FlightSimulator2024.exe'}else{'FlightSimulator.exe'};$exe=Get-Item -LiteralPath (OwnedPath $Game $gameExe);$report.GameExecutable=@{Name=$exe.Name;Version=$exe.VersionInfo.FileVersion;Bytes=$exe.Length}}catch{$report.GameExecutable='Unavailable'}
  try{$report.Displays=@(Get-CimInstance Win32_VideoController|Select-Object Name,DriverVersion,CurrentHorizontalResolution,CurrentVerticalResolution,CurrentRefreshRate,VideoModeDescription)}catch{$report.Displays='Unavailable'}
  try{Add-Type -AssemblyName System.Windows.Forms;$report.MonitorLayout=@([Windows.Forms.Screen]::AllScreens|ForEach-Object {@{Primary=$_.Primary;X=$_.Bounds.X;Y=$_.Bounds.Y;Width=$_.Bounds.Width;Height=$_.Bounds.Height}})}catch{$report.MonitorLayout='Unavailable'}
  $report.LogTails=@{}
- foreach($relative in @('OptiShadeData/Performance.log','ReShade.log','OptiScaler.log')){
+ foreach($relative in @('OptiShadeData/Performance.log','OptiShadeData/ReShade.log','OptiShadeData/OptiScaler.log','ReShade.log','OptiScaler.log')){
   try{$report.LogTails[$relative]=ReadDiagnosticTail (OwnedPath $Game $relative)}catch{$report.LogTails[$relative]='Unavailable or locked'}
  }
  try{$report.LogTails['Installer.log']=ReadDiagnosticTail (Join-Path $Store 'Installer.log')}catch{$report.LogTails['Installer.log']='Unavailable'}
@@ -23,23 +47,24 @@ function GetDetailedSupportReport([string]$Game,[string]$Store){
    elseif($section -in @('Menu','Upscalers','FrameGen','DlssNr','Plugins') -and $line -match '^([A-Za-z0-9]+)=(true|false|auto|[A-Za-z0-9_.-]{1,40})$'){$report.FeatureSettings[$section+'.'+$Matches[1]]=$Matches[2]}
   }
  }catch{}
- $report.RecentDisplayEvents=@()
+ $report.RecentDisplayEvents=@();$report.DisplayEventQuery='Completed; see matching events below'
  try{
   $report.RecentDisplayEvents=@(Get-WinEvent -FilterHashtable @{LogName='System';Id=4101;StartTime=(Get-Date).AddDays(-3)} -MaxEvents 5 -ErrorAction Stop|Where-Object Id -eq 4101|ForEach-Object {@{Time=$_.TimeCreated.ToString('o');EventId=$_.Id;Details=$_.Message.Substring(0,[Math]::Min(4096,$_.Message.Length))}})
- }catch{}
+ }catch{$report.DisplayEventQuery='No events returned or event log unavailable: '+$_.FullyQualifiedErrorId}
  $report.DisplayEventContext='Display-driver recovery events are system-wide; they do not prove MSFS or OptiShade caused the failure.'
- $report.LoadedModules=@();$report.ModuleInspection='Simulator not running or unavailable'
+ $report.LoadedModules=@();$report.Processes=@();$report.ModuleInspection='Simulator not running or unavailable'
  foreach($process in Get-Process FlightSimulator2024,FlightSimulator -ErrorAction SilentlyContinue){
   try{
-   $report.LoadedModules=@($process.Modules|Where-Object ModuleName -match '^(winmm|dxgi|d3d12|OptiScaler|ReShade64|nvngx.*|sl\..*|amd_fidelityfx.*|libxess.*)\.dll$'|ForEach-Object {@{Name=$_.ModuleName;Version=$_.FileVersionInfo.FileVersion}})
+   $report.Processes+=@{Name=$process.ProcessName;Id=$process.Id;Started=$process.StartTime.ToString('o');Responding=$process.Responding;WorkingSetBytes=$process.WorkingSet64;CpuSeconds=$process.TotalProcessorTime.TotalSeconds;HasMainWindow=($process.MainWindowHandle -ne 0)}
+   $report.LoadedModules+=@($process.Modules|Where-Object ModuleName -match '^(winmm|dxgi|d3d12|OptiScaler|ReShade64|nvngx.*|sl\..*|amd_fidelityfx.*|libxess.*)\.dll$'|ForEach-Object {@{ProcessId=$process.Id;Name=$_.ModuleName;Version=$_.FileVersionInfo.FileVersion;Location=$(if($_.FileName.StartsWith($Game,[StringComparison]::OrdinalIgnoreCase)){'Game folder'}elseif($_.FileName.StartsWith($env:WINDIR,[StringComparison]::OrdinalIgnoreCase)){'Windows folder'}else{'Other location'})}})
    $report.ModuleInspection='Observed loaded modules; not proof an optional feature rendered successfully'
   }catch{$report.ModuleInspection='Process access unavailable; no elevation requested'}
  }
- $report.RecentCrashEvents=@()
+ $report.RecentCrashEvents=@();$report.CrashEventQuery='Completed; see matching events below'
  try{
   $events=Get-WinEvent -FilterHashtable @{LogName='Application';Id=1000,1001;StartTime=(Get-Date).AddDays(-3)} -MaxEvents 100 -ErrorAction Stop
   $report.RecentCrashEvents=@($events|Where-Object {$_.Message -match 'FlightSimulator(2024)?\.exe'}|Select-Object -First 5|ForEach-Object {@{Time=$_.TimeCreated.ToString('o');Provider=$_.ProviderName;EventId=$_.Id;Details=$_.Message.Substring(0,[Math]::Min(4096,$_.Message.Length))}})
- }catch{}
+ }catch{$report.CrashEventQuery='No events returned or event log unavailable: '+$_.FullyQualifiedErrorId}
  $report.Limitations='No simulator/hardware reproduction is implied. No minidump is created or uploaded. Windows fault events may be unavailable; a faulting module is not proof of root cause. Active API/backend, swapchains, NR/FG and device-removed details are available only where runtime logs captured them.'
  $report.Note='Local report only. Paths for the selected game and user profile are redacted. Review all remaining log/event text before sharing. No credentials or automatic upload service are configured.'
  $json=$report|ConvertTo-Json -Depth 10

@@ -19,7 +19,7 @@ $script:cachePath=Join-Path $store 'msfs-2020-2024-cache.json'
 [xml]$xaml=Get-Content "$PSScriptRoot/manager.xaml" -Raw -Encoding UTF8
 $form=[Windows.Markup.XamlReader]::Load((New-Object Xml.XmlNodeReader $xaml))
 $path=$form.FindName('GamePath');$status=$form.FindName('Status')
-$buttons=@('Browse','Install','Repair','Restore','Runtime','Retry','Uninstall','Scan','Play','LibraryGames','GamePath','Method','AddGame','HomeNav','LibraryNav','SetupNav','SettingsNav','KeybindsNav','ChangeMenuKey','OpenLibrary','CheckCompatibility','TroubleshootingNav','ResetDefaults','ImportZip','InstallCinema','RecoveryRepair','RecoveryRestore','CheckUpdates','SaveMenuKeys','DefaultMenuKeys','LoadMenuKeys','IncludeEffects','PrepareOlderRtx','OpenMsfs2020')|ForEach-Object {$form.FindName($_)}
+$buttons=@('Browse','Install','Repair','Restore','Runtime','Retry','Uninstall','Scan','Play','LibraryGames','GamePath','Method','AddGame','HomeNav','LibraryNav','SetupNav','SettingsNav','KeybindsNav','ChangeMenuKey','OpenLibrary','CheckCompatibility','TroubleshootingNav','ResetDefaults','ImportZip','RecoveryRepair','RecoveryRestore','CheckUpdates','SaveMenuKeys','DefaultMenuKeys','LoadMenuKeys','IncludeEffects','OwnIniMode','ChooseOwnIni','ApplyFxChoice','PrepareOlderRtx','OpenMsfs2020')|ForEach-Object {$form.FindName($_)}
 $form.Icon=[Windows.Media.Imaging.BitmapFrame]::Create([uri](Join-Path $PSScriptRoot 'OptiShade-app.ico'))
 $form.FindName('BrandIcon').Source=[Windows.Media.Imaging.BitmapFrame]::Create([uri](Join-Path $PSScriptRoot 'OptiShade-icon.png'))
 $form.FindName('BrandIcon').Cursor='SizeAll'
@@ -63,15 +63,29 @@ $progress={param($text,[int]$completed=0,[int]$total=0)
  $form.Dispatcher.Invoke([Action]{},[Windows.Threading.DispatcherPriority]::Background)
 }
 $form.FindName('Browse').Add_Click({$d=New-Object Windows.Forms.FolderBrowserDialog;if($d.ShowDialog() -eq 'OK'){$path.Text=$d.SelectedPath};$d.Dispose()})
+$script:ownIni=''
+$form.FindName('OwnIniMode').Add_Checked({$form.FindName('OwnIniPicker').Visibility='Visible'})
+$form.FindName('IncludeEffects').Add_Checked({$form.FindName('OwnIniPicker').Visibility='Collapsed'})
+$form.FindName('ChooseOwnIni').Add_Click({$d=New-Object Windows.Forms.OpenFileDialog;$d.Filter='ReShade look preset (*.ini)|*.ini';try{if($d.ShowDialog() -eq 'OK'){$script:ownIni=$d.FileName;$form.FindName('OwnIniName').Text=[IO.Path]::GetFileName($d.FileName)}}finally{$d.Dispose()}})
+$form.FindName('ApplyFxChoice').Add_Click({RunAction {
+ AssertClosed $path.Text;$mp=ManifestPath $store $path.Text;$m=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json
+ if($m.Status -ne 'Installed'){throw 'Complete the OptiShade installation first.'}
+ $relative='';if($form.FindName('OwnIniMode').IsChecked){$relative=SaveOwnPreset $script:ownIni $path.Text (Join-Path $PSScriptRoot 'EffectPackages.ini')}
+ $m|Add-Member -NotePropertyName IncludeEffects -NotePropertyValue ([bool]$form.FindName('IncludeEffects').IsChecked) -Force
+ $m|Add-Member -NotePropertyName FxPresetRelative -NotePropertyValue $relative -Force;WriteState $m $mp
+ FinishOptionalDownloads $m (CheckGameCompatibility $m.LaunchExe)
+}})
 $form.FindName('Install').Add_Click({RunAction {
  if((GetFusionInstallState $store $path.Text) -match '^Installed|^Installation incomplete'){$status.Text='OptiShade is already installed. Use Repair, Restore or Troubleshooting to manage it.';return}
+ if($form.FindName('OwnIniMode').IsChecked){TestOwnPreset $script:ownIni $path.Text (Join-Path $PSScriptRoot 'EffectPackages.ini')}
  $exe=ChooseGameExe; if(-not $exe){return}; AssertFusionExecutable $exe
  AssertMsfsNvidiaTarget $exe (GetFusionGpu)
- if((GetMsfsTitle $path.Text) -match '2020'){if([Windows.MessageBox]::Show($form,'MSFS 2020 support is experimental. Test DX12 and DLSS first, with Neural Rendering and frame generation off. Install into this selected MSFS 2020 folder?','MSFS 2020 test','YesNo','Question','No') -ne 'Yes'){return}}
+ if((GetMsfsTitle $path.Text) -match '2020'){if([Windows.MessageBox]::Show($form,'Use DirectX 12 and DLSS in MSFS 2020. Start with Neural Rendering and frame generation off, then configure them in game. Install into this selected MSFS 2020 folder?','MSFS 2020 installation','YesNo','Question','No') -ne 'Yes'){return}}
  $proxy=[string]$form.FindName('Method').SelectedItem.Tag
  $plan=CheckGameCompatibility $exe
+ if(-not(ConfirmNvidiaDriver $form $script:gpu)){$status.Text='Installation cancelled. Update your NVIDIA driver, then run setup again.';return}
  if($proxy -eq 'auto'){$proxy=$plan.Proxy}
- if($script:gpu.Names -match '(?i)AMD|Radeon'){if(-not(ConfirmAmdExperimental $form)){return}}
+ if(ShouldWarnAmdExperimental $script:gpu){if(-not(ConfirmAmdExperimental $form)){return}}
  $optionalDlss=if($plan.DownloadNvidia){ConfirmOptionalDlss $form $true}else{$false}
  if($null -eq $optionalDlss){return}
  if(-not $plan.PossibleInput){if([Windows.MessageBox]::Show($form,(FormatFusionCompatibility $plan)+"`n`nContinue with image effects?",'Image effects only','YesNo','Information','No') -ne 'Yes'){return}}
@@ -86,7 +100,7 @@ $form.FindName('Install').Add_Click({RunAction {
  $script:manifest=InstallFusion $path.Text $Payload $store $Installer $proxy $replace -ReplaceExisting $existing -IncludeEffects ([bool]$form.FindName('IncludeEffects').IsChecked)
  $m=Get-Content $script:manifest -Raw|ConvertFrom-Json;$m|Add-Member -NotePropertyName LaunchExe -NotePropertyValue $exe -Force;$m|Add-Member -NotePropertyName Downloads -NotePropertyValue 'Pending' -Force;$m|Add-Member -NotePropertyName OptionalDlss -NotePropertyValue ([bool]$optionalDlss) -Force;WriteState $m $script:manifest
  SaveFusionCompatibility $path.Text $plan
- if($form.FindName('IncludeCinema').IsChecked -and $form.FindName('IncludeEffects').IsChecked){InstallFusionCinema $path.Text}
+ if($form.FindName('OwnIniMode').IsChecked){$relative=SaveOwnPreset $script:ownIni $path.Text (Join-Path $PSScriptRoot 'EffectPackages.ini');$m|Add-Member -NotePropertyName FxPresetRelative -NotePropertyValue $relative -Force;WriteState $m $script:manifest}
  FinishOptionalDownloads $m $plan
 }})
 $form.FindName('Restore').Add_Click({RunAction {$m=ManifestPath $store $path.Text;if(-not(Test-Path $m)){throw 'No recorded installation for this game.'};RestoreFusion $m;$status.Text='Game restored. Original files are back and OptiShade game files are removed.'}})
@@ -123,7 +137,7 @@ $form.FindName('Repair').Add_Click({RunAction {
  if(-not $proxy){throw 'The recorded loader is unknown. Repair was stopped.'}
  $mp=InstallFusion $path.Text $Payload $store $Installer $proxy @(FindFusionConflicts $path.Text) -ReplaceExisting $true -PreserveConfiguration $true
  $repaired=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json
- foreach($key in @('LaunchExe','Downloads','OptionalDlss')){if($previous.PSObject.Properties[$key]){$repaired|Add-Member -NotePropertyName $key -NotePropertyValue $previous.$key -Force}}
+ foreach($key in @('LaunchExe','Downloads','OptionalDlss','FxPresetRelative')){if($previous.PSObject.Properties[$key]){$repaired|Add-Member -NotePropertyName $key -NotePropertyValue $previous.$key -Force}}
  WriteState $repaired $mp
  $status.Text='OptiShade repaired from the manager. Saved looks and original backups are kept. You can close the manager and start your game.'
 }})
@@ -132,12 +146,13 @@ function FinishOptionalDownloads($Manifest,$Plan){
  $issues=New-Object 'System.Collections.Generic.List[string]'
  if(UseOptionalDlss $Manifest $Plan){try{EnsureNeuralRuntime (ManifestPath $store $path.Text) (GetFusionGpu) $progress}catch{$issues.Add('Neural model: '+$_.Exception.Message)};try{InstallNvidia $path.Text $progress}catch{$issues.Add('NVIDIA files: '+$_.Exception.Message)}}
  if(-not $Manifest.PSObject.Properties['IncludeEffects'] -or $Manifest.IncludeEffects){try{$null=InstallAllEffects $path.Text (Join-Path $PSScriptRoot 'EffectPackages.ini') $progress}catch{$issues.Add('Additional FX: '+$_.Exception.Message)}}
+ elseif($Manifest.PSObject.Properties['FxPresetRelative'] -and $Manifest.FxPresetRelative){try{$progress.Invoke('Installing the selected INI shader dependencies...');InstallPresetDependencies (OwnedPath $path.Text $Manifest.FxPresetRelative) $path.Text (Join-Path $PSScriptRoot 'EffectPackages.ini')}catch{$issues.Add('Preset FX: '+$_.Exception.Message)}}
  if($issues.Count){
   $mp=ManifestPath $store $path.Text;$m=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json
   $m|Add-Member -NotePropertyName Downloads -NotePropertyValue 'Pending' -Force;WriteState $m $mp
   foreach($issue in $issues){WriteInstallerLog $issue}
   $status.Text='OptiShade is installed. Some optional downloads are unfinished; installed effects can still be used. Choose Retry unfinished downloads. Details: %LOCALAPPDATA%\OptiShade\Installer.log'
- }else{CompleteDownloads}
+ }else{CompleteDownloads;if($Manifest.PSObject.Properties['FxPresetRelative'] -and $Manifest.FxPresetRelative){$status.Text='Preset and required FX installed. Select '+[IO.Path]::GetFileName($Manifest.FxPresetRelative)+' in game under Image effects > Saved look.'}}
  WriteInstallerLog $status.Text
  try{$updated=CheckGameCompatibility $Manifest.LaunchExe;SaveFusionCompatibility $path.Text $updated;if((UseOptionalDlss $Manifest $Plan) -and $updated.NeuralRuntime.State -ne 'Verified file'){$status.Text='OptiShade image effects are installed. Neural rendering is NOT ready: '+$updated.NeuralRuntime.Message+' Choose Retry unfinished downloads to retry the GPU-matched model download.';if($issues.Count){$status.Text+=' Some optional downloads also failed; use Retry unfinished downloads.'}}}catch{WriteInstallerLog ('Post-install diagnostics: '+$_.Exception.Message)}
 }
@@ -178,6 +193,7 @@ function RefreshHomeState{
  $installed=$state -match '^Installed';$incomplete=$state -match '^Installation incomplete'
  $install=$form.FindName('Install');$install.Content=if($installed){'Already installed'}elseif($incomplete){'Repair required'}else{'Install OptiShade'}
  $install.IsEnabled=(-not $script:busy -and -not $installed -and -not $incomplete -and $state -ne 'Invalid path' -and -not [string]::IsNullOrWhiteSpace($path.Text))
+ $form.FindName('ApplyFxChoice').Visibility=if($installed){'Visible'}else{'Collapsed'}
  $title=GetMsfsTitle $path.Text
  if($title){$form.FindName('SelectedTitle').Text=$title}
  foreach($entry in @(@('2024','HomeInstallState','HomeDetection'),@('2020','Home2020State','Home2020Detection'))){
@@ -185,6 +201,7 @@ function RefreshHomeState{
   $homeCopy=@($form.FindName('MsfsCopies').ItemsSource|Where-Object {$_.Name -match $entry[0]})|Select-Object -First 1
   $detected=($title -match $entry[0]) -or ($null -ne $homeCopy)
   $form.FindName($entry[2]).Text=if($detected){'MSFS '+$entry[0]+' detected'}else{'MSFS '+$entry[0]+' not detected'}
+  $form.FindName($entry[2]).Foreground=[Windows.Media.BrushConverter]::new().ConvertFromString('#C9B6DF')
   if($title -match $entry[0]){$homeState=$state}else{
    if($homeCopy){$homeState=$homeCopy.State}
   }
@@ -225,8 +242,8 @@ function OpenSimulator([bool]$Legacy){
  $copy=@($form.FindName('MsfsCopies').ItemsSource|Where-Object {$_.Name -match $wanted})|Select-Object -First 1
  if($copy){$form.FindName('MsfsCopies').SelectedItem=$copy;$path.Text=$copy.InstallFolder}
  else{$form.FindName('MsfsCopies').SelectedIndex=-1;$script:gameRoot='';$script:gameLauncher='';$path.Text=''}
- $form.FindName('SelectedTitle').Text=if($Legacy){'Microsoft Flight Simulator 2020 (experimental)'}else{'Microsoft Flight Simulator 2024'}
- $status.Text=if($Legacy){'Experimental MSFS 2020 test: choose the EXE folder, not Community/Official packages. Use DX12 and DLSS; restart after changing API. Xbox copies need an accessible executable folder; protected WindowsApps installs are not unlocked by this manager.'}else{'Select your MSFS 2024 copy below.'}
+ $form.FindName('SelectedTitle').Text=if($Legacy){'Microsoft Flight Simulator 2020'}else{'Microsoft Flight Simulator 2024'}
+ $status.Text=if($Legacy){'MSFS 2020: choose the EXE folder, not Community/Official packages. Use DX12 and DLSS; restart after changing API. Xbox copies need an accessible executable folder; protected WindowsApps installs are not unlocked by this manager.'}else{'Select your MSFS 2024 copy below.'}
  ShowPage 'Setup'
 }
 $form.FindName('OpenLibrary').Add_Click({OpenSimulator $false})
@@ -282,8 +299,7 @@ $script:startupTimer.Add_Tick({
  if($script:startupResult -and $script:startupResult.IsCompleted -and $elapsed -ge 6){
   try{
    $result=@($script:startup.EndInvoke($script:startupResult))[-1];$script:gpu=$result.Gpu;$script:cachedSystem=$result;SaveStartupCache $result
-   $advice=if($script:gpu.Nvidia){'Start with image effects or DLSS upscaling where the game supports it. Neural rendering needs the matching RTX hardware and runtime.'}elseif($script:gpu.Names -match '(?i)AMD|Radeon'){'AMD: image effects and available FSR/XeSS paths can be used. NVIDIA Neural Rendering is unavailable. AMD in-game compatibility still needs testing.'}else{'Supported graphics card not detected. Restore and uninstall remain available.'}
-   $form.FindName('Hardware').Text="$($script:gpu.Names) | $($result.Ram) GB RAM | $($result.OS)`n$advice"
+   $form.FindName('Hardware').Text="$($script:gpu.Names) | $($result.Ram) GB RAM | $($result.OS)"
    $form.FindName('IntroStatus').Text='Your setup is ready.'
    $form.FindName('IntroProgress').IsIndeterminate=$false;$form.FindName('IntroProgress').Value=100
    $copies=@($result.Games)
@@ -326,10 +342,6 @@ $form.FindName('ImportZip').Add_Click({RunAction {
  AssertClosed $path.Text
  $dialog=New-Object Windows.Forms.OpenFileDialog;$dialog.Filter='FX and INI packages (*.zip)|*.zip'
  try{if($dialog.ShowDialog() -eq 'OK'){$count=ImportEffectsZip $dialog.FileName $path.Text;$status.Text="Imported $count files into OptiShadeData. In game, choose your imported INI under Image effects > Saved look. Required FX must be installed and compile. Your current look is unchanged. ZIPs containing DLLs do not install those DLLs."}}finally{$dialog.Dispose()}
-}})
-$form.FindName('InstallCinema').Add_Click({RunAction {
- $mp=ManifestPath $store $path.Text;if(-not(Test-Path -LiteralPath $mp)){throw 'Install OptiShade first.'}
- InstallFusionCinema $path.Text;$status.Text='Fusion Cinema installed. Select Gravy - Fusion Cinema Custom v1 under saved looks in game. REX presets are separate; see the addon guide.'
 }})
 $form.FindName('CheckUpdates').Add_Click({RunAction {
  $status.Text='Checking GitHub releases...';$form.Dispatcher.Invoke([Action]{},[Windows.Threading.DispatcherPriority]::Background)

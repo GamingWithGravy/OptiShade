@@ -55,8 +55,8 @@ if($form.FindName('Install').IsEnabled){throw 'Install enabled without a game pa
 $form.Close()
 
 
-$combo.ItemsSource=@([pscustomobject]@{Name='Microsoft Flight Simulator 2024';State='Installed';Folder='D:\2024';Launcher='Xbox'},[pscustomobject]@{Name='Microsoft Flight Simulator 2020 (experimental)';State='Not installed';Folder='D:\2020';Launcher='Steam'})
-function GetMsfsTitle($Game){if($Game -match '2020'){'Microsoft Flight Simulator 2020 (experimental)'}else{'Microsoft Flight Simulator 2024'}}
+$combo.ItemsSource=@([pscustomobject]@{Name='Microsoft Flight Simulator 2024';State='Installed';Folder='D:\2024';Launcher='Xbox'},[pscustomobject]@{Name='Microsoft Flight Simulator 2020';State='Not installed';Folder='D:\2020';Launcher='Steam'})
+function GetMsfsTitle($Game){if($Game -match '2020'){'Microsoft Flight Simulator 2020'}else{'Microsoft Flight Simulator 2024'}}
 foreach($selected in @('D:\2020','D:\2024')){
  $path.Text=$selected;RefreshHomeState
  if($form.FindName('HomeDetection').Text -ne 'MSFS 2024 detected' -or $form.FindName('Home2020Detection').Text -ne 'MSFS 2020 detected'){throw 'Detection label follows selected game instead of its own card'}
@@ -64,3 +64,5 @@ foreach($selected in @('D:\2020','D:\2024')){
 $combo.ItemsSource=@();$path.Text='D:\2020';RefreshHomeState
 if($form.FindName('HomeDetection').Text -ne 'MSFS 2024 not detected' -or $form.FindName('Home2020Detection').Text -ne 'MSFS 2020 detected'){throw 'Single manually selected simulator is attributed to the wrong card'}
 'PASS: each Home card reports its own simulator, with both installed or one manually selected'
+if($form.FindName('HomeDetection').Foreground.Color.ToString() -ne '#FFC9B6DF' -or $form.FindName('Home2020Detection').Foreground.Color.ToString() -ne '#FFC9B6DF'){throw 'Detection colors do not match detection state'}
+'PASS: detection labels use muted colours'

@@ -730,7 +730,11 @@ void reshade::runtime::on_present()
 	if (_input != nullptr)
 		input_lock = _input->lock();
 
-	if (osfx_impl::Pump(this, is_loading())) reload_effects(false);
+	const bool previousPerformanceMode = _performance_mode;
+	if (osfx_impl::Pump(this, is_loading(), _performance_mode)) {
+		if (previousPerformanceMode != _performance_mode) save_config();
+		reload_effects(false);
+	}
 	update_effects();
 
 	_current_time = std::chrono::system_clock::now();
@@ -755,7 +759,7 @@ void reshade::runtime::on_present()
 	if (_should_save_screenshot)
 		save_screenshot(_screenshot_save_before ? "After" : nullptr);
 
-	osfx_impl::Publish(this, is_loading(), _last_reload_successful, _effects_rendered_this_frame);
+	osfx_impl::Publish(this, is_loading(), _last_reload_successful, _effects_rendered_this_frame, _performance_mode);
 	_frame_count++;
 	const auto current_time = std::chrono::high_resolution_clock::now();
 	_last_frame_duration = current_time - _last_present_time; _last_present_time = current_time;

@@ -10,7 +10,7 @@ class FeatureProvider_Dx11
 {
   public:
     static bool GetFeature(Upscaler upscaler, UINT handleId, NVSDK_NGX_Parameter* parameters,
-                           std::unique_ptr<IFeature_Dx11>* feature);
+                           std::unique_ptr<IFeature_Dx11>* feature, ID3D11Device* device);
 
     static bool ChangeFeature(Upscaler upscaler, ID3D11Device* device, ID3D11DeviceContext* cmdList, UINT handleId,
                               NVSDK_NGX_Parameter* parameters, ContextData<IFeature_Dx11>* contextData);

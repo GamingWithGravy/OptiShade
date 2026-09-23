@@ -12,8 +12,16 @@ public:
         if (!candidate) return true; // Preserve existing windowless/VR routing.
         std::lock_guard<std::mutex> lock(mutex);
         if (window && !IsWindow(window)) { window = nullptr; swapchain = nullptr; }
-        if (!window && claim) {
+        // Instrument/tool windows must not win ownership simply by presenting first.
+        // Apply this while unclaimed (including non-claiming resize/status calls),
+        // leaving an established owner's behaviour stable until explicit retirement.
+        if (!window) {
+            if (!IsWindow(candidate)) return false;
             if (GetWindowLongPtrW(candidate, GWL_STYLE) & WS_CHILD) return false;
+            if (GetWindowLongPtrW(candidate, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) return false;
+            if (GetWindow(candidate, GW_OWNER)) return false;
+        }
+        if (!window && claim) {
             window = candidate;
             swapchain = identity;
         }

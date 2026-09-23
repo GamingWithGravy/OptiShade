@@ -1,4 +1,5 @@
 #include <pch.h>
+#include "../../../shared/BackendSelection.h"
 #include "FeatureProvider_Dx11.h"
 
 #include "Util.h"
@@ -20,11 +21,15 @@
 #include <imgui/ImGuiNotify.hpp>
 
 bool FeatureProvider_Dx11::GetFeature(Upscaler upscaler, UINT handleId, NVSDK_NGX_Parameter* parameters,
-                                      std::unique_ptr<IFeature_Dx11>* feature)
+                                      std::unique_ptr<IFeature_Dx11>* feature, ID3D11Device* device)
 {
     State& state = State::Instance();
     Config& cfg = *Config::Instance();
-    auto primaryGpu = IdentifyGpu::getPrimaryGpu();
+    const auto renderingGpu = IdentifyGpu::getGpuForDx11Device(device);
+    const auto requested = upscaler;
+    const auto hardware = renderingGpu.vendorId == VendorId::Invalid ? optishade::Evidence::Unknown :
+        renderingGpu.dlssCapable ? optishade::Evidence::Yes : optishade::Evidence::No;
+    const char* reason = "Requested backend retained; initialization still required";
 
     switch (upscaler)
     {
@@ -59,7 +64,7 @@ bool FeatureProvider_Dx11::GetFeature(Upscaler upscaler, UINT handleId, NVSDK_NG
     case Upscaler::DLSS_on12:
         // DLSS across the bridge. The only way a D3D11 game can have both DLSS and Neural
         // Rendering, because the model will not initialise on a D3D11 device.
-        if (primaryGpu.dlssCapable && state.NVNGX_DLSS_Path.has_value())
+        if (renderingGpu.dlssCapable && state.NVNGX_DLSS_Path.has_value())
         {
             *feature = std::make_unique<DLSSFeatureDx11on12>(handleId, parameters);
             break;
@@ -68,7 +73,7 @@ bool FeatureProvider_Dx11::GetFeature(Upscaler upscaler, UINT handleId, NVSDK_NG
         [[fallthrough]];
 
     case Upscaler::DLSS:
-        if (primaryGpu.dlssCapable && state.NVNGX_DLSS_Path.has_value())
+        if (renderingGpu.dlssCapable && state.NVNGX_DLSS_Path.has_value())
         {
             *feature = std::make_unique<DLSSFeatureDx11>(handleId, parameters);
             break;
@@ -81,7 +86,7 @@ bool FeatureProvider_Dx11::GetFeature(Upscaler upscaler, UINT handleId, NVSDK_NG
         }
 
     case Upscaler::DLSSD:
-        if (primaryGpu.dlssCapable && state.NVNGX_DLSSD_Path.has_value())
+        if (renderingGpu.dlssCapable && state.NVNGX_DLSSD_Path.has_value())
         {
             *feature = std::make_unique<DLSSDFeatureDx11>(handleId, parameters);
             break;
@@ -107,9 +112,18 @@ bool FeatureProvider_Dx11::GetFeature(Upscaler upscaler, UINT handleId, NVSDK_NG
         ImGui::InsertNotification({ ImGuiToastType::Warning, 10000, "Falling back to FSR 2.2" });
         *feature = std::make_unique<FSR2FeatureDx11>(handleId, parameters);
         upscaler = Upscaler::FSR22;
-        loaded = true; // Assuming the fallback always loads successfully
+        loaded = (*feature)->ModuleLoaded();
+        reason = loaded ? "Requested module failed; FSR 2.2 fallback loaded" : "Requested module and FSR 2.2 fallback failed to load";
     }
 
+    if (requested != upscaler && (requested == Upscaler::DLSS || requested == Upscaler::DLSS_on12 || requested == Upscaler::DLSSD)) {
+        const auto unavailable = optishade::NvidiaUpscalerUnavailableReason(hardware,
+            requested == Upscaler::DLSSD ? state.NVNGX_DLSSD_Path.has_value() : state.NVNGX_DLSS_Path.has_value());
+        if (unavailable) reason = unavailable;
+    }
+    LOG_INFO("OptiShade DX11 backend decision: requested={}; selected={}; GPU={}; LUID={:08X}:{:08X}; moduleLoaded={}; initialized=not-yet; reason={}",
+        UpscalerDisplayName(requested), UpscalerDisplayName(upscaler), renderingGpu.name.empty() ? "Unknown" : renderingGpu.name,
+        (UINT)renderingGpu.luid.HighPart, renderingGpu.luid.LowPart, loaded, reason);
     // DLSSD is stored in the config as DLSS
     if (upscaler == Upscaler::DLSSD)
         upscaler = Upscaler::DLSS;
@@ -126,7 +140,7 @@ bool FeatureProvider_Dx11::ChangeFeature(Upscaler upscaler, ID3D11Device* device
     State& state = State::Instance();
     Config& cfg = *Config::Instance();
 
-    const bool dlssOnNonCapable = !IdentifyGpu::getPrimaryGpu().dlssCapable && state.newBackend == Upscaler::DLSS;
+    const bool dlssOnNonCapable = !IdentifyGpu::getGpuForDx11Device(device).dlssCapable && state.newBackend == Upscaler::DLSS;
     if (state.newBackend == Upscaler::Reset || dlssOnNonCapable)
         state.newBackend = cfg.Dx11Upscaler.value_or_default();
 
@@ -203,7 +217,7 @@ bool FeatureProvider_Dx11::ChangeFeature(Upscaler upscaler, ID3D11Device* device
 
         contextData->feature.reset();
 
-        if (!GetFeature(state.newBackend, handleId, contextData->createParams, &contextData->feature))
+        if (!GetFeature(state.newBackend, handleId, contextData->createParams, &contextData->feature, device))
         {
             LOG_ERROR("Upscaler can't created");
             return false;

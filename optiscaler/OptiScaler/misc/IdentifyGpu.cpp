@@ -1,4 +1,6 @@
 #include "pch.h"
+#include "../../../shared/D3D11Adapter.h"
+#include "../../../shared/BackendSelection.h"
 #include "IdentifyGpu.h"
 
 #include <magic_enum.hpp>
@@ -354,6 +356,24 @@ std::vector<GpuInformation> IdentifyGpu::getAllGpus()
 
     // TODO: try to reactivate DxgiSpoofing if was auto on Nvidia cards without DLSS
     return cache;
+}
+
+GpuInformation IdentifyGpu::getGpuByLuid(LUID luid)
+{
+    const auto all = getAllGpus();
+    const auto* match = optishade::FindRenderingAdapter(all, luid);
+    return match ? *match : GpuInformation {};
+}
+
+GpuInformation IdentifyGpu::getGpuForDevice(ID3D12Device* device)
+{
+    return device ? getGpuByLuid(device->GetAdapterLuid()) : GpuInformation {};
+}
+
+GpuInformation IdentifyGpu::getGpuForDx11Device(ID3D11Device* device)
+{
+    const auto luid = optishade::D3D11AdapterLuid(device);
+    return luid ? getGpuByLuid(*luid) : GpuInformation {};
 }
 
 GpuInformation IdentifyGpu::getPrimaryGpu()

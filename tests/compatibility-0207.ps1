@@ -13,12 +13,12 @@ $gpu=[pscustomobject]@{Known=$true;Nvidia=$true;Names='NVIDIA GeForce RTX 3080'}
 AssertMsfsNvidiaTarget "$game/FlightSimulator.exe" $gpu
 $exe=@(FindFusionExecutable $game 'Steam')[0].Path
 Check ($exe -eq "$game\FlightSimulator.exe") '2020 Steam resolves its own EXE'
-Check ((GetMsfsTitle $game) -match '2020.*experimental') '2020 is explicitly experimental'
+Check ((GetMsfsTitle $game) -eq 'Microsoft Flight Simulator 2020') '2020 title has no test label'
 Check ((GetMsfsTitle $other) -match '2024') '2024 identity retained'
 Check ((ManifestPath $store $game) -ne (ManifestPath $store $other)) 'Separate simulator receipts'
 $plan=GetFusionCompatibility $game $exe $gpu 'Steam'
 Check ($plan.PossibleInput -and $plan.DownloadNvidia -and $plan.Proxy -eq 'dxgi.dll') '2020 temporal input candidate and Steam loader'
-Check ($plan.Performance -match 'experimental.*DirectX 12') 'DX12 test instructions, not an activation claim'
+Check ($plan.Performance -match 'MSFS 2020: select DirectX 12') 'DX12 setup guidance retained'
 Check ((@(FindFusionExecutable $game 'Xbox')[0].Path) -like '*FlightSimulator.exe') 'Accessible legacy Xbox 2020 main EXE accepted without helper'
 Check ((GetFusionCompatibility $game $exe $gpu 'Xbox').Proxy -eq 'winmm.dll') 'Legacy Xbox loader uses platform evidence'
 Copy-Item "$PSScriptRoot/../installer/FusionSetup.exe" "$game/gamelaunchhelper.exe"

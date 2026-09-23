@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "../../../../shared/D3D12FrameContext.h"
+#include "../../../../shared/D3D12Capabilities.h"
 #include <dlssnr/PassProfiles.h>
 
 #include <set>
@@ -208,6 +209,7 @@ struct NrState
     std::string modelError;
 
     NVSDK_NGX_Parameter* capabilityParams = nullptr;
+    Microsoft::WRL::ComPtr<IUnknown> capabilityDevice;
     void* feature = nullptr;
     bool featurePendingSubmission = false;
     unsigned long long featureCreateEpoch = 0;
@@ -593,23 +595,22 @@ void ReportScalingRatios();
 
 bool EnsureCapabilityParams(ID3D12Device* device)
 {
-    if (g_nr.capabilityParams != nullptr)
-        return true;
-
-    // Check the actual render device, rather than the first GPU listed in Windows.
-    Microsoft::WRL::ComPtr<IDXGIFactory4> factory;
-    Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
-    DXGI_ADAPTER_DESC1 adapterDesc{};
-    if (FAILED(CreateDXGIFactory1(IID_PPV_ARGS(&factory))) ||
-        FAILED(factory->EnumAdapterByLuid(device->GetAdapterLuid(), IID_PPV_ARGS(&adapter))) ||
-        FAILED(adapter->GetDesc1(&adapterDesc)))
-    {
-        g_nr.reason = "Neural Rendering could not identify the rendering adapter";
+    Microsoft::WRL::ComPtr<IUnknown> identity;
+    if (!device || FAILED(device->QueryInterface(IID_PPV_ARGS(&identity)))) {
+        g_nr.reason = "Neural backend device identity is unavailable";
         return false;
     }
-    if (adapterDesc.VendorId != 0x10de)
-    {
-        g_nr.reason = "NVIDIA Neural Rendering is unavailable on this rendering adapter. Use image effects or supported FSR/XeSS paths.";
+    if (g_nr.capabilityParams != nullptr) {
+        if (g_nr.capabilityDevice.Get() == identity.Get()) return true;
+        g_nr.reason = "Neural runtime belongs to another device; restart before changing rendering devices";
+        return false;
+    }
+    const auto caps = optishade::QueryD3D12Capabilities(device);
+    LOG_INFO("Neural backend preflight: vendor={:04X}, device={:04X}, LUID={:08X}:{:08X}, native16={}, waves={}, health={:08X}",
+        caps.vendor, caps.device, (UINT)caps.adapter.HighPart, caps.adapter.LowPart,
+        optishade::EvidenceLabel(caps.native16), optishade::EvidenceLabel(caps.waves), (UINT)caps.health);
+    if (const char* reason = optishade::NvidiaNeuralPreflight(caps)) {
+        g_nr.reason = reason;
         return false;
     }
 
@@ -632,6 +633,8 @@ bool EnsureCapabilityParams(ID3D12Device* device)
         g_nr.reason = "the NGX core refused its capability parameters";
         return false;
     }
+
+    g_nr.capabilityDevice = identity;
 
     // Before anything is written to it, work out where this block keeps floats.
     DiscoverFloatSlot(g_nr.capabilityParams);
@@ -1702,11 +1705,19 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
 
     const optishade::D3D12FrameContext inputs {cmdList, colour, depth, motion, output,
         static_cast<ID3D12Resource*>(frame.ExposureTexture), timingQueue};
-    if (const char* reason = inputs.ValidateDeviceIdentity()) {
+    if (const char* reason = inputs.ValidateDeviceIdentity(_device)) {
         ReportSkipOnce(reason);
         return; // No state changes or GPU commands have been recorded.
     }
 
+    if (g_nr.capabilityDevice) {
+        Microsoft::WRL::ComPtr<IUnknown> identity;
+        if (!_device || FAILED(_device->QueryInterface(IID_PPV_ARGS(&identity))) ||
+            identity.Get() != g_nr.capabilityDevice.Get()) {
+            ReportSkipOnce("neural runtime belongs to another device; restart before changing devices");
+            return;
+        }
+    }
     ID3D12Resource* target = output;
 
     // Feature creation records GPU work too, and may return before the first evaluate.
@@ -1851,7 +1862,12 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
         ProbeProxyDispatch(cmdList);
 
     bool runtimeReady=false;
-    try { runtimeReady=EnsureForwarder()&&EnsureCapabilityParams(device); }
+    try {
+        const char* blocked = g_nr.capabilityParams ? nullptr :
+            optishade::NvidiaNeuralPreflight(optishade::QueryD3D12Capabilities(device));
+        if (blocked) g_nr.reason = blocked;
+        else runtimeReady=EnsureForwarder()&&EnsureCapabilityParams(device);
+    }
     catch(const std::exception& error){g_nr.reason="Optional Neural Rendering initialization threw a C++ exception. See Performance.log; restart before retrying.";LOG_ERROR("NR initialization exception: {}",error.what());}
     catch(...){g_nr.reason="Optional Neural Rendering initialization threw an exception. Restart before retrying.";LOG_ERROR("NR initialization exception (unknown type)");}
     if (!runtimeReady)

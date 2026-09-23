@@ -11,7 +11,7 @@ function GetMsfsTitle([string]$Game){
  try{$folder=ResolveFusionInstallFolder $Game}catch{return ''}
  if(-not $folder){return ''}
  if(Test-Path -LiteralPath (Join-Path $folder 'FlightSimulator2024.exe') -PathType Leaf){return 'Microsoft Flight Simulator 2024'}
- if(Test-Path -LiteralPath (Join-Path $folder 'FlightSimulator.exe') -PathType Leaf){return 'Microsoft Flight Simulator 2020 (experimental)'}
+ if(Test-Path -LiteralPath (Join-Path $folder 'FlightSimulator.exe') -PathType Leaf){return 'Microsoft Flight Simulator 2020'}
  return ''
 }
 function GetFusionInstallState([string]$Store,[string]$Game){
@@ -150,7 +150,7 @@ function GetFusionGameArtwork($Games){
 
 function AssertMsfsNvidiaTarget([string]$Exe,$Gpu){
  if(-not $Gpu.Known -or (-not $Gpu.Nvidia -and $Gpu.Names -notmatch '(?i)AMD|Radeon')){throw 'This patch supports detected NVIDIA or AMD graphics cards. Restore and uninstall remain available.'}
- if(-not $Exe -or (Split-Path $Exe -Leaf) -notin @('FlightSimulator2024.exe','FlightSimulator.exe','gamelaunchhelper.exe')){throw 'This edition supports Microsoft Flight Simulator 2024 and experimental MSFS 2020.'}
+ if(-not $Exe -or (Split-Path $Exe -Leaf) -notin @('FlightSimulator2024.exe','FlightSimulator.exe','gamelaunchhelper.exe')){throw 'This edition supports Microsoft Flight Simulator 2024 and MSFS 2020.'}
  if(-not (GetMsfsTitle (Split-Path $Exe))){throw 'Choose the simulator executable folder containing FlightSimulator2024.exe or FlightSimulator.exe.'}
 }
 

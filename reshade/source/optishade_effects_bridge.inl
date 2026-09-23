@@ -18,7 +18,7 @@ static void Remember(const osfx::Command& c){
 }
 static void OnEffectsReloaded(reshade::api::effect_runtime* runtime){std::lock_guard guard(lock);if(owner==runtime)pending.insert(pending.begin(),edits.begin(),edits.end());}
 static void Retire(reshade::api::effect_runtime* runtime){std::lock_guard guard(lock);if(owner==runtime){owner=nullptr;pending.clear();enableAfterLoad.clear();edits.clear();std::memset(&snapshot,0,sizeof(snapshot));}}
-static bool Pump(reshade::api::effect_runtime* runtime,bool loading){
+static bool Pump(reshade::api::effect_runtime* runtime,bool loading,bool& performanceMode){
  std::deque<osfx::Command> work;
  {std::lock_guard guard(lock);if(owner&&owner!=runtime)return false;if(!owner){owner=runtime;std::memset(&snapshot,0,sizeof(snapshot));snapshot.version=osfx::Version;snapshot.generation=++serial;pending.clear();enableAfterLoad.clear();edits.clear();}if(loading)return false;work.swap(pending);}
  // Finish requested activation on the render thread even if the menu has been closed.
@@ -33,12 +33,14 @@ static bool Pump(reshade::api::effect_runtime* runtime,bool loading){
   auto c=work.front();work.pop_front();
   bool ok=true;
   switch(c.kind){
+  case osfx::PerformanceMode:{bool dirty;{std::lock_guard guard(lock);dirty=snapshot.dirty!=0;}if(dirty&&c.enabled){ok=false;break;}performanceMode=c.enabled!=0;reload=true;break;}
   case osfx::Effects:runtime->set_effects_state(c.enabled!=0);break;
   case osfx::Reload:reload=true;break;
-  case osfx::Load:runtime->reload_effect_next_frame(c.effect);if(c.enabled)enableAfterLoad.emplace_back(c.effect,0);break;
+  case osfx::Load:if(performanceMode){ok=false;break;}runtime->reload_effect_next_frame(c.effect);if(c.enabled)enableAfterLoad.emplace_back(c.effect,0);break;
   case osfx::Inspect:strcpy_s(inspected,c.effect);break;
   case osfx::Save:
   case osfx::SaveAs:{
+   if(performanceMode){std::lock_guard guard(lock);++snapshot.saveSerial;snapshot.saveOK=0;ok=false;break;}
    char current[1024]{};size_t length=sizeof(current);runtime->get_current_preset_path(current,&length);
    auto path=std::filesystem::u8path(c.kind==osfx::Save?current:c.path);std::error_code ec;
    ok=path.is_absolute()&&path.extension()==L".ini"&&std::filesystem::is_directory(path.parent_path(),ec);
@@ -55,8 +57,8 @@ static bool Pump(reshade::api::effect_runtime* runtime,bool loading){
    if(ok){enableAfterLoad.clear();{std::lock_guard guard(lock);edits.clear();snapshot.dirty=0;}reshade::ini_file::clear_cache(path);runtime->set_current_preset_path(current);}break;
   }
   case osfx::Preset:{std::error_code ec;auto path=std::filesystem::u8path(c.path);if(path.extension()==L".ini"&&std::filesystem::is_regular_file(path,ec)){enableAfterLoad.clear();{std::lock_guard guard(lock);edits.clear();snapshot.dirty=0;}runtime->set_current_preset_path(c.path);}else ok=false;break;}
-  case osfx::Technique:{auto t=runtime->find_technique(c.effect,c.name);if(t.handle)runtime->set_technique_state(t,c.enabled!=0);else ok=false;break;}
-  case osfx::Uniform:{auto u=runtime->find_uniform_variable(c.effect,c.name);if(!u.handle){ok=false;break;}reshade::api::format type;uint32_t rows,columns,array;runtime->get_uniform_variable_type(u,&type,&rows,&columns,&array);auto n=std::min<uint32_t>(16,rows*columns*std::max(1u,array));if(c.count!=n){ok=false;break;}if((type==reshade::api::format::r32_float||type==reshade::api::format::r16_float))runtime->set_uniform_value_float(u,c.value,n);else if((type==reshade::api::format::r32_sint||type==reshade::api::format::r16_sint)){int32_t v[16]{};for(unsigned i=0;i<n;i++)v[i]=(int32_t)c.value[i];runtime->set_uniform_value_int(u,v,n);}else if((type==reshade::api::format::r32_uint||type==reshade::api::format::r16_uint)){uint32_t v[16]{};for(unsigned i=0;i<n;i++)v[i]=(uint32_t)std::max(0.f,c.value[i]);runtime->set_uniform_value_uint(u,v,n);}else{bool v[16]{};for(unsigned i=0;i<n;i++)v[i]=c.value[i]!=0;runtime->set_uniform_value_bool(u,v,n);}break;}
+  case osfx::Technique:{if(performanceMode){ok=false;break;}auto t=runtime->find_technique(c.effect,c.name);if(t.handle)runtime->set_technique_state(t,c.enabled!=0);else ok=false;break;}
+  case osfx::Uniform:{if(performanceMode){ok=false;break;}auto u=runtime->find_uniform_variable(c.effect,c.name);if(!u.handle){ok=false;break;}reshade::api::format type;uint32_t rows,columns,array;runtime->get_uniform_variable_type(u,&type,&rows,&columns,&array);auto n=std::min<uint32_t>(16,rows*columns*std::max(1u,array));if(c.count!=n){ok=false;break;}if((type==reshade::api::format::r32_float||type==reshade::api::format::r16_float))runtime->set_uniform_value_float(u,c.value,n);else if((type==reshade::api::format::r32_sint||type==reshade::api::format::r16_sint)){int32_t v[16]{};for(unsigned i=0;i<n;i++)v[i]=(int32_t)c.value[i];runtime->set_uniform_value_int(u,v,n);}else if((type==reshade::api::format::r32_uint||type==reshade::api::format::r16_uint)){uint32_t v[16]{};for(unsigned i=0;i<n;i++)v[i]=(uint32_t)std::max(0.f,c.value[i]);runtime->set_uniform_value_uint(u,v,n);}else{bool v[16]{};for(unsigned i=0;i<n;i++)v[i]=c.value[i]!=0;runtime->set_uniform_value_bool(u,v,n);}break;}
   default:ok=false;
   }
   if(ok&&(c.kind==osfx::Uniform||c.kind==osfx::Technique))Remember(c);
@@ -65,9 +67,9 @@ static bool Pump(reshade::api::effect_runtime* runtime,bool loading){
  }
  return reload;
 }
-static void Publish(reshade::api::effect_runtime* runtime,bool loading,bool compileOK,bool rendered){
+static void Publish(reshade::api::effect_runtime* runtime,bool loading,bool compileOK,bool rendered,bool performanceMode){
  std::lock_guard guard(lock);if(owner!=runtime)return;
- snapshot.connected=1;snapshot.loading=loading;snapshot.compileOK=compileOK;snapshot.enabled=runtime->get_effects_state();++snapshot.frames;if(rendered)++snapshot.effectFrames;
+ snapshot.performanceMode=performanceMode;snapshot.connected=1;snapshot.loading=loading;snapshot.compileOK=compileOK;snapshot.enabled=runtime->get_effects_state();++snapshot.frames;if(rendered)++snapshot.effectFrames;
  if(loading){snapshot.techniques=snapshot.uniforms=0;return;}
  if(!requested||snapshot.frames%6!=0)return;requested=false;
  snapshot.techniques=snapshot.uniforms=snapshot.truncated=0;size_t size=sizeof(snapshot.preset);runtime->get_current_preset_path(snapshot.preset,&size);snapshot.preset[1023]=0;

@@ -3,22 +3,22 @@
     "FileVersion": {
       "Major": 0,
       "Minor": 20,
-      "Patch": 7,
+      "Patch": 8,
       "Build": 0
     },
     "ProductVersion": {
       "Major": 0,
       "Minor": 20,
-      "Patch": 7,
+      "Patch": 8,
       "Build": 0
     }
   },
   "StringFileInfo": {
     "CompanyName": "created by gravy",
-    "FileDescription": "Optishade - Microsoft Flight Simulator 2024 - NVIDIA and AMD",
-    "ProductName": "Optishade - Microsoft Flight Simulator 2024",
-    "FileVersion": "0.20.7.0",
-    "ProductVersion": "0.20.7.0"
+    "FileDescription": "OptiShade Manager - Your simulator. Your way.",
+    "ProductName": "OptiShade Manager",
+    "FileVersion": "0.20.8.0",
+    "ProductVersion": "0.20.8.0"
   },
   "IconPath": "OptiShade.ico"
 }

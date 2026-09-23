@@ -31,3 +31,12 @@ Copy-Item -LiteralPath "$payload/winmm.dll" -Destination "$game/dxgi.dll" -Force
 RestoreFusion $mp
 if(Test-Path "$game/dxgi.dll"){throw 'Restored status skipped leftover loader'}
 'PASS: already-restored installations recheck remaining known loaders'
+$saved=Join-Path (Split-Path $mp) 'PreRestoreDiagnostics.json'
+if(-not(Test-Path -LiteralPath $saved)){throw 'Restore did not preserve diagnostics'}
+$e=Get-Content -LiteralPath $saved -Raw|ConvertFrom-Json
+if($e.Context -notmatch 'before Restore' -or -not $e.Captured){throw 'Snapshot lacks historical context'}
+if(-not($e.Files|Where-Object {$_.Path -eq 'winmm.dll' -and $_.Bytes -gt 0})){throw 'Snapshot missed installed loader before removal'}
+$before=[IO.File]::ReadAllText($saved)
+RestoreFusion $mp
+if([IO.File]::ReadAllText($saved) -ne $before){throw 'Repeat restore overwrote useful evidence'}
+'PASS: pre-restore installed evidence survives cleanup and repeated Restore'

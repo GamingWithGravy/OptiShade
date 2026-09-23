@@ -16,4 +16,35 @@ namespace ImGui{static Font font;static DrawList draw;Font* GetFont(){return &fo
 #else
 #include "../optiscaler/OptiScaler/menu/optishade_update_notice.inl"
 #endif
-int main(){using namespace OptiShadeUpdates;assert(NeedsFrame());nextCheck=301000;assert(!NeedsFrame());testNow=301000;assert(NeedsFrame());running=true;assert(!NeedsFrame());Draw(false);assert(running);running=false;available=false;DrawHeader();assert(ImGui::draw.text.empty());available=true;DrawHeader();assert(ImGui::draw.text.size()==2);assert(ImGui::draw.text[0]=="UPDATE AVAILABLE");assert(ImGui::draw.text[1]=="please check OptiShade manager");testNow+=900000;ImGui::draw.text.clear();DrawHeader();assert(ImGui::draw.text.size()==2);std::cout<<"PASS: periodic scheduling, no concurrent check, persistent two-line header notice\n";}
+int main(){
+using namespace OptiShadeUpdates;
+assert(ApplyReleaseResponse("{\"tag_name\":\"v" OPTISHADE_VERSION_TEXT "\"}"));
+assert(!available);
+assert(ApplyReleaseResponse("{\"tag_name\":\"v0.20.7\"}"));
+assert(!available);
+assert(ApplyReleaseResponse("{\"tag_name\":\"v0.20.9\"}"));
+assert(available);
+assert(ApplyReleaseResponse("{\"tag_name\":\"v" OPTISHADE_VERSION_TEXT "\"}"));
+assert(!available);
+assert(ApplyReleaseResponse("{\"tag_name\":\"v0.21.0\"}"));
+assert(available);
+assert(ApplyReleaseResponse("{\"tag_name\":\"v1.0.0\"}"));
+assert(available);
+assert(ApplyReleaseResponse("{\"tag_name\":\"0.20\"}"));
+assert(!available);
+assert(!ApplyReleaseResponse("{\"tag_name\":\"v0.20.9-beta\"}"));
+assert(!available);
+assert(!ApplyReleaseResponse("{}"));
+assert(!available);
+assert(!ApplyReleaseResponse("{\"tag_name\":\"v999999999999999999.0.0\"}"));
+assert(!available);
+assert(NeedsFrame());nextCheck=301000;
+assert(!NeedsFrame());testNow=301000;
+assert(NeedsFrame());running=true;
+assert(!NeedsFrame());Draw(false);
+assert(running);running=false;available=false;DrawHeader();
+assert(ImGui::draw.text.empty());available=true;DrawHeader();
+assert(ImGui::draw.text.size()==2);
+assert(ImGui::draw.text[0]=="UPDATE AVAILABLE");
+assert(ImGui::draw.text[1]=="please check OptiShade manager");testNow+=900000;ImGui::draw.text.clear();DrawHeader();
+assert(ImGui::draw.text.size()==2);std::cout<<"PASS: equal/older/newer versions, stale notice clearing, malformed tags, scheduling and header notice\n";}

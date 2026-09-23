@@ -80,7 +80,8 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
         }
     }
     foreach($entry in $catalog){
-        if(-not $IncludeEffects -and $entry.Path -match '^OptiShadeData[\\/](Shaders|Textures|Presets)[\\/]' -and $entry.Path -notmatch 'Presets[\\/]My look.ini$'){continue}
+        $bundledLook=$entry.Path -match '^OptiShadeData[\\/](Shaders[\\/]Custom[\\/]Gravy_FusionCinema\.fx|Presets[\\/](My look\.ini|Gravy - Fusion Cinema Custom v1\.ini))$'
+        if(-not $IncludeEffects -and $entry.Path -match '^OptiShadeData[\\/](Shaders|Textures|Presets)[\\/]' -and -not $bundledLook){continue}
         $source=OwnedPath $Payload $entry.Path;$relative=if($entry.Path -eq 'winmm.dll'){$Proxy}else{$entry.Path};$dest=OwnedPath $Game $relative
         if((HashFile $source) -ne $entry.Hash){throw "Installer payload is damaged: $($entry.Path)"}
         # Keep download receipts on repair/reinstall; bundled defaults must not erase them.
@@ -119,7 +120,7 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
         if($hash){Copy-Item -LiteralPath $dest -Destination $copy;if((HashFile $copy) -ne $hash){throw 'Rollback snapshot verification failed.'}}
         $rollback+=@{Path=$entry.Path;Hash=$hash;Copy=$copy}
     }
-    $manifest=@{Version='P0.20.7-MSFS24';Game=$Game;Installer=(FullPath $Installer);Status='Installing';Files=$files;OwnedDirectories=@('OptiShadeData');IncludeEffects=$IncludeEffects;PreserveThirdParty=$true;Created=(Get-Date -Format o)}
+    $manifest=@{Version='P0.20.8-MSFS24';Game=$Game;Installer=(FullPath $Installer);Status='Installing';Files=$files;OwnedDirectories=@('OptiShadeData');IncludeEffects=$IncludeEffects;PreserveThirdParty=$true;Created=(Get-Date -Format o)}
     WriteState $manifest $mp
     try{
         # The entry-point proxy is copied last so an incomplete install cannot start.
@@ -194,6 +195,11 @@ function RestoreFusion([string]$ManifestPath,[bool]$KeepPresets=$true){
         $dir=OwnedPath $m.Game $relative
         if(Test-Path -LiteralPath $dir){if(Get-ChildItem -LiteralPath $dir -Force -Recurse|Where-Object {$_.Attributes -band [IO.FileAttributes]::ReparsePoint}){throw 'A linked item was found in OptiShade data. Cleanup stopped.'}}
     }
+    # Preserve bounded evidence outside game files before cleanup. Diagnostics must never block recovery.
+    try{
+        if(-not(Get-Command SavePreRestoreEvidence -ErrorAction SilentlyContinue)){. "$PSScriptRoot/diagnostics.ps1"}
+        SavePreRestoreEvidence $m.Game $folder
+    }catch{Write-Warning 'Could not preserve pre-restore diagnostics. Restore will continue.'}
     $presets=OwnedPath $m.Game 'OptiShadeData/Presets'
     foreach($f in $m.Files){$dest=OwnedPath $m.Game $f.Path;if($KeepPresets -and $dest.StartsWith($presets+'\',[StringComparison]::OrdinalIgnoreCase) -and [IO.Path]::GetExtension($dest) -eq '.ini'){continue};if($f.Backup){Copy-Item -LiteralPath (OwnedPath $folder $f.Backup) -Destination $dest -Force}elseif(Test-Path -LiteralPath $dest){Remove-Item -LiteralPath $dest -Force}}
     $restoredPaths=@($m.Files|Where-Object Backup|ForEach-Object {OwnedPath $m.Game $_.Path})

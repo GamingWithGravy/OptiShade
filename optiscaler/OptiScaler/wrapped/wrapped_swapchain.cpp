@@ -382,8 +382,9 @@ static HRESULT LocalPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT 
     else
         presentResult = ((IDXGISwapChain1*) pSwapChain)->Present1(SyncInterval, Flags, pPresentParameters);
 
-    if (presentResult == S_OK)
+    if (SUCCEEDED(presentResult))
     {
+        // DXGI_STATUS_OCCLUDED and mode changes are success statuses, not device failures.
         LOG_DEBUG("Original present result: {:X}", (UINT) presentResult);
     }
     else

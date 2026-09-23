@@ -35,13 +35,15 @@ Expand $form.Content
 $form.Content.Measure([Windows.Size]::new(1100,1100));$form.Content.Arrange([Windows.Rect]::new(0,0,1100,1100));$form.Content.UpdateLayout()
 function Texts($node){if($node -is [Windows.Controls.TextBlock]){$node.Text};for($i=0;$i -lt [Windows.Media.VisualTreeHelper]::GetChildrenCount($node);$i++){Texts ([Windows.Media.VisualTreeHelper]::GetChild($node,$i))}}
 if(@(Texts $picker) -notcontains 'F7'){throw 'Selected key not visibly rendered'}
-$check=$form.FindName('IncludeEffects');$check.IsChecked=$true;$check.ApplyTemplate()|Out-Null
-$mark=$check.Template.FindName('CheckMark',$check)
-if($mark.Visibility -ne 'Visible'){throw 'Check mark missing'}
-$check.IsChecked=$false;if($mark.Visibility -ne 'Collapsed'){throw 'Unchecked mark visible'}
+$check=$form.FindName('IncludeEffects');$own=$form.FindName('OwnIniMode')
+$check.IsChecked=$true;$check.ApplyTemplate()|Out-Null;$own.ApplyTemplate()|Out-Null
+$choice=$check.Template.FindName('Choice',$check)
+if($choice.Background.ToString() -ne '#FF54346F'){throw 'Selected FX option not highlighted'}
+$own.IsChecked=$true
+if($check.IsChecked -or $choice.Background.ToString() -ne '#FF282238'){throw 'FX options are not mutually exclusive'}
 $check.IsChecked=$true
 $bitmap=[Windows.Media.Imaging.RenderTargetBitmap]::new(1100,1100,96,96,[Windows.Media.PixelFormats]::Pbgra32);$bitmap.Render($form.Content)
 $encoder=[Windows.Media.Imaging.PngBitmapEncoder]::new();$encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bitmap))
 $stream=[IO.File]::Create((Join-Path $PSScriptRoot '../test-run/menu-keys-ui.png'));try{$encoder.Save($stream)}finally{$stream.Dispose()}
 $form.Close()
-'PASS: visible default and installed key labels, retained fallback, no backup picker, checkbox states'
+'PASS: visible default and installed key labels, retained fallback, no backup picker, exclusive FX selection states'

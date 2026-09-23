@@ -2,9 +2,20 @@
 #include <winhttp.h>
 #include <atomic>
 #include <regex>
+#include "../../../shared/OptiShadeVersion.h"
 namespace OptiShadeUpdates {
 static std::atomic<bool> running=false,available=false;
 static std::atomic<ULONGLONG> nextCheck{0};
+static bool ApplyReleaseResponse(const std::string& body){
+ try{
+  std::smatch match;
+  static const std::regex tag("\"tag_name\"\\s*:\\s*\"v?([0-9]+)\\.([0-9]+)(?:\\.([0-9]+))?\"");
+  if(!std::regex_search(body,match,tag))return false;
+  const std::array<int,3> release{std::stoi(match[1]),std::stoi(match[2]),match[3].matched?std::stoi(match[3]):0};
+  available=release>OptiShadeVersion::Current;
+  return true;
+ }catch(...){return false;}
+}
 static DWORD WINAPI Check(void* reference){
  bool succeeded=false;
  HMODULE http=LoadLibraryExW(L"winhttp.dll",nullptr,LOAD_LIBRARY_SEARCH_SYSTEM32);
@@ -13,7 +24,9 @@ static DWORD WINAPI Check(void* reference){
   OS_HTTP(WinHttpOpen);OS_HTTP(WinHttpSetTimeouts);OS_HTTP(WinHttpConnect);OS_HTTP(WinHttpOpenRequest);OS_HTTP(WinHttpSendRequest);OS_HTTP(WinHttpReceiveResponse);OS_HTTP(WinHttpReadData);OS_HTTP(WinHttpCloseHandle);OS_HTTP(WinHttpQueryHeaders);
 #undef OS_HTTP
   if(WinHttpOpen&&WinHttpSetTimeouts&&WinHttpConnect&&WinHttpOpenRequest&&WinHttpSendRequest&&WinHttpReceiveResponse&&WinHttpReadData&&WinHttpCloseHandle&&WinHttpQueryHeaders){
-   HINTERNET session=WinHttpOpen(L"OptiShade/0.20.7",WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,nullptr,nullptr,0);
+   const std::string agent="OptiShade/" OPTISHADE_VERSION_TEXT;
+   const std::wstring wideAgent(agent.begin(),agent.end());
+   HINTERNET session=WinHttpOpen(wideAgent.c_str(),WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,nullptr,nullptr,0);
    if(session){
     WinHttpSetTimeouts(session,3000,3000,3000,3000);
     HINTERNET connection=WinHttpConnect(session,L"api.github.com",INTERNET_DEFAULT_HTTPS_PORT,0);
@@ -25,9 +38,7 @@ static DWORD WINAPI Check(void* reference){
        if(WinHttpQueryHeaders(request,WINHTTP_QUERY_STATUS_CODE|WINHTTP_QUERY_FLAG_NUMBER,nullptr,&status,&length,nullptr)&&status==200){
         std::string body;char buffer[4096];DWORD count=0;ULONGLONG deadline=GetTickCount64()+10000;
         while(body.size()<262144&&GetTickCount64()<deadline&&WinHttpReadData(request,buffer,sizeof(buffer),&count)&&count)body.append(buffer,count);
-        try{std::smatch match;std::regex tag("\"tag_name\"\\s*:\\s*\"v?([0-9]+)\\.([0-9]+)(?:\\.([0-9]+))?\"");
-         if(std::regex_search(body,match,tag)){int major=std::stoi(match[1]),minor=std::stoi(match[2]),patch=match[3].matched?std::stoi(match[3]):0;available=(major>0||(major==0&&(minor>20||(minor==20&&patch>5))));succeeded=true;}
-        }catch(...){}
+        succeeded=ApplyReleaseResponse(body);
        }
       }
       WinHttpCloseHandle(request);
