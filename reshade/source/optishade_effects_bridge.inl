@@ -20,7 +20,7 @@ static void OnEffectsReloaded(reshade::api::effect_runtime* runtime){std::lock_g
 static void Retire(reshade::api::effect_runtime* runtime){std::lock_guard guard(lock);if(owner==runtime){owner=nullptr;pending.clear();enableAfterLoad.clear();edits.clear();std::memset(&snapshot,0,sizeof(snapshot));}}
 static bool Pump(reshade::api::effect_runtime* runtime,bool loading){
  std::deque<osfx::Command> work;
- {std::lock_guard guard(lock);if(owner!=runtime){owner=runtime;std::memset(&snapshot,0,sizeof(snapshot));snapshot.version=osfx::Version;snapshot.generation=++serial;pending.clear();enableAfterLoad.clear();edits.clear();}if(loading)return false;work.swap(pending);}
+ {std::lock_guard guard(lock);if(owner&&owner!=runtime)return false;if(!owner){owner=runtime;std::memset(&snapshot,0,sizeof(snapshot));snapshot.version=osfx::Version;snapshot.generation=++serial;pending.clear();enableAfterLoad.clear();edits.clear();}if(loading)return false;work.swap(pending);}
  // Finish requested activation on the render thread even if the menu has been closed.
  for(auto it=enableAfterLoad.begin();it!=enableAfterLoad.end();){
   uint32_t found=0;runtime->enumerate_techniques(it->first.c_str(),[](auto* r,reshade::api::effect_technique t,void* data){

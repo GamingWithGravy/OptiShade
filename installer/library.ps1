@@ -100,9 +100,9 @@ function FindFusionAntiCheat([string]$Game){
 function GetFusionGpu{
   $devices=@(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue)
  $cards=@($devices|ForEach-Object Name)
- $drivers=@(foreach($device in $devices|Where-Object Name -match 'NVIDIA'){
+ $drivers=@(foreach($device in $devices){
   $raw=[string]$device.DriverVersion;$display=$raw
-  if($raw -match '^\d+\.\d+\.(\d+)\.(\d{1,4})$'){$number=(([int]$Matches[1]%10)*10000)+[int]$Matches[2];$display=('{0}.{1:00}' -f [math]::Floor($number/100),($number%100))}
+  if($device.Name -match 'NVIDIA' -and $raw -match '^\d+\.\d+\.(\d+)\.(\d{1,4})$'){$number=(([int]$Matches[1]%10)*10000)+[int]$Matches[2];$display=('{0}.{1:00}' -f [math]::Floor($number/100),($number%100))}
   [pscustomobject]@{Name=$device.Name;Version=$display;WindowsVersion=$raw}
  })
  [pscustomobject]@{Names=($cards -join ', ');Nvidia=[bool]($cards -match 'NVIDIA');Known=($cards.Count -gt 0);Drivers=$drivers}
@@ -141,7 +141,7 @@ function GetFusionGameArtwork($Games){
 }
 
 function AssertMsfsNvidiaTarget([string]$Exe,$Gpu){
- if(-not $Gpu.Known -or -not $Gpu.Nvidia){throw 'Optishade requires an NVIDIA graphics card. Restore and uninstall remain available.'}
+ if(-not $Gpu.Known -or (-not $Gpu.Nvidia -and $Gpu.Names -notmatch '(?i)AMD|Radeon')){throw 'This patch supports detected NVIDIA or AMD graphics cards. Restore and uninstall remain available.'}
  if(-not $Exe -or (Split-Path $Exe -Leaf) -notin @('FlightSimulator2024.exe','gamelaunchhelper.exe')){throw 'This edition supports Microsoft Flight Simulator 2024 only.'}
  if(-not (Test-Path -LiteralPath (Join-Path (Split-Path $Exe) 'FlightSimulator2024.exe') -PathType Leaf)){throw 'Choose the Microsoft Flight Simulator 2024 installation folder containing FlightSimulator2024.exe.'}
 }

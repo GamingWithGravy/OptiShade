@@ -11,7 +11,7 @@ import (
  "unsafe"
 )
 
-//go:embed dialog-theme.xaml release-notes.ps1 neural-download.ps1 recovery.ps1 FusionCinema/* Help/*.txt updates.ps1 update-worker.ps1 update-install.ps1 compatibility.ps1 manager.ps1 library.ps1 ownership.ps1 effects.ps1 consent.ps1 EffectPackages.ini all:PayloadFusion FusionSetup.exe manager.xaml OptiShade.ico OptiShade-app.ico OptiShade-icon.png nvidia.ps1 nvidia-files.json streamline-files.json
+//go:embed diagnostics.ps1 menu-settings.ps1 import-effects.ps1 dialog-theme.xaml release-notes.ps1 neural-download.ps1 recovery.ps1 FusionCinema/* Help/*.txt updates.ps1 update-worker.ps1 update-install.ps1 compatibility.ps1 manager.ps1 library.ps1 ownership.ps1 effects.ps1 consent.ps1 EffectPackages.ini all:PayloadFusion FusionSetup.exe manager.xaml OptiShade.ico OptiShade-app.ico OptiShade-icon.png nvidia.ps1 nvidia-files.json streamline-files.json
 var bundle embed.FS
 
 func main() {

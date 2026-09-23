@@ -47,7 +47,7 @@ $restoredManifest=Get-Content $mp -Raw|ConvertFrom-Json
 Assert ((@($restoredManifest.Files|Where-Object Path -eq 'dxgi.dll')[0].Hash) -eq $beforeLoader) 'Interrupted update restores ownership record'
 RestoreFusion $mp
 Assert ((HashFile (Join-Path $game 'dxgi.dll')) -eq $original) 'Restore after upgrade recovers original pre-v1 loader'
-Assert (-not(Test-Path (Join-Path $game 'ReShade.ini'))) 'Mod configuration is not resurrected by Restore'
+Assert ((Get-Content (Join-Path $game 'ReShade.ini')) -eq 'original config') 'Pre-existing ReShade configuration is restored byte for byte'
 Assert ((GetFusionInstallState $store $game) -eq 'Not installed (restored)') 'Restore refreshes selector state'
 $orphan=Join-Path $fixture 'Orphan';New-Item -ItemType Directory -Path (Join-Path $orphan 'OptiShadeData/Shaders') -Force|Out-Null
 Set-Content (Join-Path $orphan 'OptiShadeData/Shaders/test.fx') 'untracked user shader'

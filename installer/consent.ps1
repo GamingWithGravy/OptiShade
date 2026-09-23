@@ -45,3 +45,22 @@ function ConfirmOptionalDlss($Owner,[bool]$Supported){
  if($dialog.Tag -eq 'Yes'){return $true};if($dialog.Tag -eq 'No'){return $false};return $null
 }
 function UseOptionalDlss($Manifest,$Plan){return ($Manifest.OptionalDlss -eq $true -and $Plan.DownloadNvidia -eq $true)}
+
+function ConfirmAmdExperimental($Owner){
+ [xml]$markup=@'
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="AMD experimental support" Width="550" SizeToContent="Height" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" Background="#17121F" Foreground="#F3EFFB" FontFamily="Segoe UI" ShowInTaskbar="False">
+ <StackPanel Margin="28">
+  <TextBlock Text="AMD GPU detected" FontSize="23" FontWeight="SemiBold"/>
+  <TextBlock Margin="0,16,0,12" Text="AMD support is currently in a very early experimental stage. Please report any issues to Gravy." TextWrapping="Wrap" Foreground="#FFBE83"/>
+  <TextBlock Text="This patch enables image effects and available FSR/XeSS paths. NVIDIA DLSS Neural Rendering is not available on AMD in this build. Compatibility, performance and image quality still need testing on AMD hardware." TextWrapping="Wrap" Foreground="#C2B0D7"/>
+  <TextBlock Text="If you encounter an issue, save a diagnostic report from Troubleshooting and review it before sharing with Gravy." TextWrapping="Wrap" Foreground="#C2B0D7" Margin="0,12,0,0"/>
+  <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0"><Button Name="Cancel" Content="Cancel" MinWidth="100" Margin="0,0,12,0" IsCancel="True"/><Button Name="Continue" Content="Continue" MinWidth="100"/></StackPanel>
+ </StackPanel>
+</Window>
+'@
+ $dialog=[Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($markup));$dialog.Owner=$Owner
+ foreach($name in @('Cancel','Continue')){$dialog.FindName($name).Style=$Owner.FindResource([Windows.Controls.Button])}
+ $dialog.FindName('Cancel').Add_Click({$dialog.DialogResult=$false}.GetNewClosure())
+ $dialog.FindName('Continue').Add_Click({$dialog.DialogResult=$true}.GetNewClosure())
+ return $dialog.ShowDialog() -eq $true
+}

@@ -1,5 +1,5 @@
 ﻿OPTISHADE - GETTING STARTED
-Microsoft Flight Simulator 2024 | NVIDIA ONLY
+Microsoft Flight Simulator 2024 | NVIDIA + AMD (AMD early experimental)
 
 1. Close Microsoft Flight Simulator 2024 and open the Optishade installer.
 2. Open Setup. Your Steam or Xbox installation should be detected automatically. If both are installed, select your copy. Browse is available if detection misses your folder.
@@ -7,13 +7,13 @@ Microsoft Flight Simulator 2024 | NVIDIA ONLY
 4. When asked whether to install DLSS 5, choose Yes to include optional NVIDIA files, or No for image effects and presets without those additional files. Yes does not automatically turn neural rendering on. Compatible RTX hardware, a matching model and a supported game connection are required.
 5. Wait for installation and downloads to finish. Use Retry unfinished downloads under Advanced options if a download fails.
 6. Close the installer and start your game. Optishade runs independently inside the simulator.
-7. Press Insert to open or close the in-game menu.
+7. Press Insert or Ctrl+Shift+O to open or close the menu. Change keys in launcher Keybinds; restart MSFS.
 
 BUILD YOUR LOOK
 Open Image effects. Search for an effect and switch it on to see its settings. Adjust the available controls. Active first moves enabled effects to the top when you press it.
 
 IMPORT A PRESET
-Select Import INI..., find your downloaded INI and choose Copy INI and load look. The preset is copied into the game's presets folder; your original download stays in place. Required FX files must already be installed.
+Select Import INI..., find your downloaded INI and choose Copy INI and load look. The preset is copied into the game's presets folder; your original download stays in place. Missing FX files trigger an offer to install uniquely matched catalogue packages and load the look. Unknown or ambiguous shaders need the author's ZIP.
 
 SAVE YOUR PRESET
 Choose Save preset, enter a name and save your look. Existing names trigger a warning. Use a new name to keep both versions. Changes are not saved automatically. Revert changes returns to the saved look.
@@ -39,5 +39,17 @@ VERSION 0.19.18: IMPORT, REPAIR AND UPDATE
 Import INI... opens a folder browser for downloaded looks. Install FX... opens the same browser for shaders. Choose a drive or shortcut, or paste a full folder path and press Enter / Go. Imports copy files; originals are kept. INI name collisions get a new filename; duplicate FX names are refused to avoid ambiguous shader loading.
 Rescan installed FX list finds files already in the game folder. Recompile installed FX reloads shader code. Neither button downloads or imports files.
 Standard and SweetFX packs are bundled offline. Retry unfinished downloads retries additional packs that did not finish. An unfinished download does not mean the core app is uninstalled.
-Repair OptiShade restores application defaults from this installer and preserves saved look INIs. Restore original files undoes the installation using the local backups. GitHub releases contain OptiShade files, not your original game files.
-When a newer stable release is available, the overlay says Update available - check the installer. Close MSFS, open setup and click its update button. The update window verifies and replaces the EXE, updates tracked MSFS installations while preserving presets and configuration, then reopens setup. Updates require internet access. Older versions without this updater need one manual upgrade to 0.19.18 first.
+Repair OptiShade replaces application files while preserving configuration, menu keys and saved look INIs. Reset settings is a separate Troubleshooting action. Restore original files undoes the installation using the local backups. GitHub releases contain OptiShade files, not your original game files.
+When a newer stable release is available, the overlay says Update available - check the installer. Close MSFS, open setup and click its update button. The update window verifies and replaces the EXE, updates tracked MSFS installations while preserving presets and configuration, then waits for Open manager or Close. Updates require internet access. Versions 0.19.19 and earlier require a manual upgrade; 0.20 and newer have manager update checks.
+
+VERSION 0.20.5
+- Image-effects packages are optional at install time. Existing installs retain their choice.
+- In game, Image effects > Install ZIP installs FX, INI, includes and textures without overwriting existing shaders.
+- ZIP looks appear under Saved look, including import subfolders. Select one to apply it.
+- Import INI can offer catalogue downloads for missing FX while MSFS is open. Declining leaves the current look active.
+- AMD: early experimental image effects and supported FSR/XeSS. No Neural Rendering on AMD in this build. Please report issues to Gravy.
+- See release notes for possible fixes and remaining hardware validation.
+
+Diagnostics: Troubleshooting > Save diagnostics ZIP for Discord. Includes Report.txt, recent log tails and Reproduction-notes.txt. Choose plain TXT in the save dialog if preferred. Review before attaching; nothing is uploaded automatically.
+
+Menu key: close MSFS, open Keybinds, click Change, press the primary key and save. Restart MSFS. Insert is the default; Ctrl+Shift+O is the default recovery shortcut. Existing recovery bindings are shown and preserved. Restore default shortcuts resets both. Avoid simulator/other-overlay conflicts.

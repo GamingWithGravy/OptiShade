@@ -1,4 +1,4 @@
-$ErrorActionPreference='Stop'
+﻿$ErrorActionPreference='Stop'
 . "$PSScriptRoot/../installer/ownership.ps1"
 . "$PSScriptRoot/../installer/recovery.ps1"
 function AssertClosed([string]$Game){}
@@ -7,6 +7,7 @@ $fixture=Join-Path $env:TEMP ('OptiShade-recovery-'+[guid]::NewGuid().ToString('
 $game=Join-Path $fixture 'Game';$store=Join-Path $fixture 'Store';$payload=Join-Path $fixture 'Payload'
 New-Item -ItemType Directory -Path $game,$payload,(Join-Path $game 'OptiShadeData/Shaders') -Force|Out-Null
 Set-Content (Join-Path $game 'FlightSimulator2024.exe') 'fixture'
+Set-Content (Join-Path $game 'OptiScaler.ini') '[Menu]'
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 function MakeZip($file,$entries){$zip=[IO.Compression.ZipFile]::Open($file,'Create');try{foreach($name in $entries){$e=$zip.CreateEntry($name);$w=[IO.StreamWriter]::new($e.Open());$w.Write('fixture');$w.Dispose()}}finally{$zip.Dispose()}}
 $zip=Join-Path $fixture 'valid.zip';MakeZip $zip @('pack/Shaders/Test.fx','pack/Shaders/include/Common.fxh','pack/Textures/Test.png','pack/Look.ini','ignored.dll')

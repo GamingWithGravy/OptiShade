@@ -1,4 +1,4 @@
-$ErrorActionPreference='Stop'
+﻿$ErrorActionPreference='Stop'
 . "$PSScriptRoot/../installer/ownership.ps1"
 $fixture=Join-Path $env:TEMP ('OptiShade-lifecycle-'+[guid]::NewGuid().ToString('N'))
 $game=Join-Path $fixture 'Game';$payload=Join-Path $fixture 'Payload';$store=Join-Path $fixture 'OptiShade';$installer=Join-Path $fixture 'OriginalInstaller.exe'
@@ -16,7 +16,7 @@ Set-Content (Join-Path $payload 'OptiShadeData/Engine/backend.dll') 'test backen
 $catalog=@(Get-ChildItem $payload -Recurse -File|ForEach-Object {@{Path=$_.FullName.Substring($payload.Length+1);Hash=(HashFile $_.FullName)}})
 $catalog|ConvertTo-Json|Set-Content (Join-Path $payload 'files.json')
 $original=HashFile (Join-Path $game 'ReShade.ini')
-$mp=InstallFusion $game $payload $store $installer
+$mp=InstallFusion $game $payload $store $installer -ReplaceMods @(FindFusionConflicts $game)
 Assert (Test-Path (Join-Path $game 'winmm.dll')) 'Install writes the recorded files'
 Set-Content (Join-Path $game 'ReShade.ini') 'user changed setting'
 Set-Content (Join-Path $game 'OptiShadeData/imported.ini') 'imported preset'
@@ -29,7 +29,7 @@ Assert ((HashFile (Join-Path $game 'ReShade.ini')) -eq $original) 'Restore recov
 Assert (-not(Test-Path (Join-Path $game 'winmm.dll'))) 'Restore removes the proxy'
 Assert (-not(Test-Path (Join-Path $game 'OptiShadeData'))) 'Restore removes generated files and imports'
 Assert (-not(Test-Path (Join-Path $game 'OptiShadeData/Engine'))) 'Restore removes backend folder'
-$mp=InstallFusion $game $payload $store $installer
+$mp=InstallFusion $game $payload $store $installer -ReplaceMods @(FindFusionConflicts $game)
 Set-Content (Join-Path $game 'winmm.dll') 'another program replaced this file'
 $blocked=$false;try{RestoreFusion $mp}catch{$blocked=$true}
 Assert $blocked 'Changed DLL blocks restore'
@@ -42,7 +42,7 @@ AssertGameData 'Uninstall'
 Assert (-not(Test-Path $store)) 'Uninstall removes the complete application store'
 Assert (Test-Path $installer) 'Uninstall preserves the original installer'
 Assert ((HashFile (Join-Path $game 'ReShade.ini')) -eq $original) 'Uninstall also restores the game'
-$mp=InstallFusion $game $payload $store $installer 'dxgi.dll'
+$mp=InstallFusion $game $payload $store $installer -Proxy 'dxgi.dll' -ReplaceMods @(FindFusionConflicts $game)
 Assert ((Test-Path (Join-Path $game 'dxgi.dll')) -and -not(Test-Path (Join-Path $game 'winmm.dll'))) 'Alternate installation method records the actual proxy name'
 RestoreFusion $mp
 Assert (-not(Test-Path (Join-Path $game 'dxgi.dll'))) 'Restore removes the alternate proxy'
@@ -53,10 +53,10 @@ try{UninstallFusion $store $installer $session;Assert (Test-Path (Join-Path $ses
 $existing=Join-Path $game 'dxgi.dll'
 Copy-Item "$PSScriptRoot/../reshade/bin/x64/Release/ReShade64.dll" $existing
 $before=HashFile $existing;$conflicts=@(FindFusionConflicts $game)
-Assert ($conflicts.Count -eq 1 -and $conflicts[0].Recognised) 'Detect existing ReShade using file identity'
+Assert (@($conflicts|Where-Object {$_.Path -eq 'dxgi.dll' -and $_.Recognised}).Count -eq 1) 'Detect existing ReShade using file identity'
 $blocked=$false;try{InstallFusion $game $payload $store $installer|Out-Null}catch{$blocked=$true}
 Assert ($blocked -and (HashFile $existing) -eq $before) 'Existing mod remains untouched without consent'
-$mp=InstallFusion $game $payload $store $installer 'winmm.dll' $conflicts
+$mp=InstallFusion $game $payload $store $installer -Proxy 'winmm.dll' -ReplaceMods $conflicts
 Assert (-not(Test-Path $existing)) 'Approved existing mod is disabled after verified backup'
 RestoreFusion $mp
 Assert ((HashFile $existing) -eq $before) 'Restore recovers the other mod byte for byte'

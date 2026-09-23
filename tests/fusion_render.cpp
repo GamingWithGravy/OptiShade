@@ -56,9 +56,20 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,LPWSTR args,int){
         ComPtr<ID3D12Fence> fence;Check(device->CreateFence(0,D3D12_FENCE_FLAG_NONE,IID_PPV_ARGS(&fence)));HANDLE event=CreateEventW(nullptr,FALSE,FALSE,nullptr);UINT64 serial=0;
         auto finish=[&](){Check(queue->Signal(fence.Get(),++serial));Check(fence->SetEventOnCompletion(serial,event));if(WaitForSingleObject(event,5000)!=WAIT_OBJECT_0)throw std::runtime_error("Host GPU timeout");};
         auto submit=[&](){Check(cmd->Close());ID3D12CommandList* list[]={cmd.Get()};queue->ExecuteCommandLists(1,list);finish();};
+        ComPtr<IDXGISwapChain1> secondary;HWND secondWindow=nullptr;uint64_t ownerGeneration=0;
         for(int tick=0;!quitting&&(!automatic||tick<900);tick++){
             read(&snapshot,sizeof(snapshot)); // Request a fresh published snapshot, as the menu does.
             MSG msg;while(PeekMessageW(&msg,nullptr,0,0,PM_REMOVE)){TranslateMessage(&msg);DispatchMessageW(&msg);}
+            if(automatic&&wcsstr(args,L"--multi")){
+                if(tick==50){
+                    ownerGeneration=snapshot.generation;
+                    secondWindow=CreateWindowW(L"STATIC",L"Secondary test",WS_OVERLAPPEDWINDOW,0,0,400,300,nullptr,nullptr,instance,nullptr);
+                    auto secondDesc=desc;secondDesc.Width=400;secondDesc.Height=300;
+                    Check(factory->CreateSwapChainForHwnd(queue.Get(),secondWindow,&secondDesc,nullptr,nullptr,&secondary));
+                }
+                if(secondary){Check(secondary->Present(0,0));if(tick==65)Check(secondary->ResizeBuffers(3,450,320,DXGI_FORMAT_UNKNOWN,0));}
+                if(tick==550){finish();secondary.Reset();DestroyWindow(secondWindow);if(snapshot.generation!=ownerGeneration)throw std::runtime_error("Secondary runtime stole the effects controls");fprintf(report,"Secondary Present, resize and teardown keep primary effects owner: PASS\n");}
+            }
             if(automatic&&tick==180){bool range=false;for(uint32_t i=0;i<snapshot.uniforms;i++){auto& u=snapshot.uniform[i];if(!strcmp(u.effect,"OptiShade_Test.fx")&&!strcmp(u.name,"Gain"))range=u.hasRange&&u.minimum==0.f&&u.maximum==4.f;}if(!range)throw std::runtime_error("Shader slider range was not published");fprintf(report,"Shader-authored slider limits reach the UI: PASS\n");}
             if(automatic&&(tick==200||tick==320||tick==360)){
                 if(!read(&snapshot,sizeof(snapshot)))throw std::runtime_error("Effects runtime not connected");
@@ -78,6 +89,12 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,LPWSTR args,int){
                 read(&snapshot,sizeof(snapshot));osfx::Command c{};c.version=osfx::Version;c.generation=snapshot.generation;c.kind=osfx::SaveAs;strcpy_s(c.path,snapshot.savePath);if(!send(&c,sizeof(c)))throw std::runtime_error("Save collision request rejected before processing");
             }
             if(automatic&&tick==390){read(&snapshot,sizeof(snapshot));if(snapshot.saveSerial!=2||snapshot.saveOK)throw std::runtime_error("Save-as overwrote an existing preset");fprintf(report,"Save-as protects existing preset: PASS\n");}
+            if(automatic&&tick==395){
+                if(!snapshot.dirty)throw std::runtime_error("Unsaved preset test has no edits");
+                osfx::Command c{};c.version=osfx::Version;c.generation=snapshot.generation;c.kind=osfx::Preset;strcpy_s(c.path,"OptiShadeData/Presets/Does-not-exist.ini");send(&c,sizeof(c));
+            }
+            if(automatic&&tick==399&&!snapshot.dirty)throw std::runtime_error("Invalid INI discarded unsaved edits");
+            if(automatic&&tick==425){if(snapshot.dirty)throw std::runtime_error("Confirmed INI switch kept stale edits");fprintf(report,"INI switch clears unsaved edits only for a valid preset: PASS\n");}
             if(automatic&&tick==400){
                 read(&snapshot,sizeof(snapshot));osfx::Command c{};c.version=osfx::Version;c.generation=snapshot.generation;c.kind=osfx::Preset;strcpy_s(c.path,snapshot.savePath);if(!send(&c,sizeof(c)))throw std::runtime_error("Saved preset reload rejected");
             }

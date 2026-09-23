@@ -1,5 +1,8 @@
 ﻿# File discovery is evidence of a possible input, never proof of rendered support.
 function GetNeuralRuntimeStatus([string]$Game,$Gpu){
+ if($Gpu.Names -notmatch '(?i)NVIDIA.*RTX'){
+  return [pscustomobject]@{Family='Non-RTX';Expected='Not applicable';Path='';Version='';SHA256='';State='Unsupported on this hardware';Message='This build does not provide Neural Rendering on AMD/Intel. Image effects and supported FSR/XeSS paths are separate features.';DriverAssessment='No NVIDIA runtime is required for these features.'}
+ }
  $cards=@($Gpu.Names -split ',\s*'|Where-Object {$_ -match '(?i)NVIDIA.*RTX'})
  $family=if($cards.Count -ne 1){'Unknown / multiple RTX GPUs'}elseif($cards[0] -match 'RTX\s*50\d\d'){'RTX 50'}elseif($cards[0] -match 'RTX\s*[234]0\d\d'){'RTX 20/30/40'}else{'Unknown RTX family'}
  $expected=if($family -eq 'RTX 50'){'Original verified RTX 50 model'}elseif($family -eq 'RTX 20/30/40'){'Verified 310.8 compatibility model (experimental)'}else{'Identify the GPU used by MSFS before choosing a model'}

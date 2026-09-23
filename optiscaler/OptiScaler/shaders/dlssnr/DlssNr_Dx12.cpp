@@ -595,6 +595,23 @@ bool EnsureCapabilityParams(ID3D12Device* device)
     if (g_nr.capabilityParams != nullptr)
         return true;
 
+    // Check the actual render device, rather than the first GPU listed in Windows.
+    Microsoft::WRL::ComPtr<IDXGIFactory4> factory;
+    Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
+    DXGI_ADAPTER_DESC1 adapterDesc{};
+    if (FAILED(CreateDXGIFactory1(IID_PPV_ARGS(&factory))) ||
+        FAILED(factory->EnumAdapterByLuid(device->GetAdapterLuid(), IID_PPV_ARGS(&adapter))) ||
+        FAILED(adapter->GetDesc1(&adapterDesc)))
+    {
+        g_nr.reason = "Neural Rendering could not identify the rendering adapter";
+        return false;
+    }
+    if (adapterDesc.VendorId != 0x10de)
+    {
+        g_nr.reason = "NVIDIA Neural Rendering is unavailable on this rendering adapter. Use image effects or supported FSR/XeSS paths.";
+        return false;
+    }
+
     if (!NVNGXProxy::IsDx12Inited() && !NVNGXProxy::InitDx12(device))
     {
         g_nr.reason = "the NGX core would not initialise";
@@ -1825,7 +1842,11 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
     if (cfg.DlssNrProxyProbe.value_or_default())
         ProbeProxyDispatch(cmdList);
 
-    if (!EnsureForwarder() || !EnsureCapabilityParams(device))
+    bool runtimeReady=false;
+    try { runtimeReady=EnsureForwarder()&&EnsureCapabilityParams(device); }
+    catch(const std::exception& error){g_nr.reason="Optional Neural Rendering initialization threw a C++ exception. See Performance.log; restart before retrying.";LOG_ERROR("NR initialization exception: {}",error.what());}
+    catch(...){g_nr.reason="Optional Neural Rendering initialization threw an exception. Restart before retrying.";LOG_ERROR("NR initialization exception (unknown type)");}
+    if (!runtimeReady)
     {
         g_nr.failed = true;
         LOG_ERROR("DLSS-NR unavailable: {}", g_nr.reason);

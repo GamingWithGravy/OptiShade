@@ -1,7 +1,54 @@
-﻿OptiShade Manager 0.20.4
+﻿OptiShade Manager 0.20.5
 
-- Setup now shows Already installed and disables Install for installed copies, including installations with optional downloads still pending.
-- Incomplete installations show Repair required instead of allowing another normal installation.
-- Repair, Restore, troubleshooting and unfinished-download recovery remain available.
-- The Install button refreshes after actions, when switching installations and when changing the game directory. Restoring enables installation again.
-- Added a second installation-state check when Install is clicked to prevent an accidental reinstall if the state changed after the screen loaded.
+Manager and menu access
+- Primary menu key can be changed on the dedicated Keybinds tab above Settings before launching MSFS, including function keys suitable for compact keyboards.
+- Keybinds uses Change, press a key, then Save. Escape cancels capture. Insert appears for defaults; installed bindings are shown when reading or switching installations.
+- Removed the backup-key dropdown. Ctrl+Shift+O remains the default recovery shortcut; any previously configured backup is preserved and displayed as text.
+- Read installed keys, Save shortcuts and Restore default shortcuts are available. Saving requires MSFS to be closed; restart the simulator to apply the change.
+- Reject invalid keys, overlapping primary/recovery bindings and primary keys already assigned to FPS display/cycling or frame-generation shortcuts.
+- Shortcut changes preserve other settings and survive repair/update. The fallback uses the existing menu handler; it cannot open an overlay that failed to load.
+- Refreshed optional-package checkboxes with larger rounded purple controls, visible ticks, keyboard-focus feedback and disabled styling.
+- Home has a horizontal row of simulator install buttons. MSFS 2024 shows detection status and opens Setup. X-Plane 12 and MSFS 2020 are disabled and marked Coming soon.
+- Repair now accepts an interrupted installation with a valid Installing receipt, keeping its ownership and configuration instead of rejecting the Repair required state.
+- Existing installed-state labels, disabled reinstall button, repair, restore, troubleshooting and update controls remain available as appropriate.
+
+Image effects and preset imports
+- Importing an INI with unsaved edits now asks Yes/No instead of blocking the action. No keeps your edits; Yes allows the new look to replace them when it loads. Failed preparation leaves the current look intact.
+- Image-effects shader packages are optional during installation. Declining omits bundled shader/texture packages and the catalogue FX downloads.
+- Repair and update retain the recorded package choice. Existing installations with completed downloads and a removed shader folder are treated as opted out.
+- This option does not delete existing imported shaders. Files on disk are distinct from compiled/loaded effects and their GPU memory usage.
+- Fusion Cinema labels explain its bundled shader and preset, dependencies, and how to select the look after installation. Installing it does not silently activate it.
+- The in-game Image effects browser accepts ZIP packages containing FX, INI presets, includes and textures. Saved looks include imported subfolders.
+- ZIP import rejects unsafe paths, oversized archives and duplicate shader names. Existing files are preserved; DLLs and EXEs are not installed from effect ZIPs.
+- Imported INIs with explicit FX references can request missing catalogue packages after consent. Downloads run in the background; the look is selected only after successful preparation.
+- Unknown or ambiguous shader names require the author's package rather than a guessed download. Older technique-only presets cannot reliably identify their dependencies.
+- Cancelled/failed preparation keeps the current look. A multi-package failure can leave successfully imported packages on disk; compilation/depth requirements still need checking in game.
+
+Compatibility changes - POSSIBLE FIXES, not confirmed on affected MSFS PCs
+- Possible fix: secondary simulator windows bypass shared overlay, finished-picture/NR and frame-generation presentation processing instead of disturbing the primary window.
+- Possible fix: secondary resize/cleanup no longer resets the primary window's shared state; the image-effects control bridge retains its runtime owner until retirement.
+- Possible fix: guard unsupported overlay buffer counts and missing render resources before indexing them. This is not a general DEVICE_HUNG cure.
+- Possible fix: catch C++ exceptions in optional Neural Rendering runtime discovery/capability checks and report initialization failure. The RTX 3060 startup-crash cause is not proven, and failures outside that boundary remain possible.
+- Possible fix: retain verified pre-install graphics-file backups through upgrades and restore. Backups discarded by older versions cannot be reconstructed. Recognized conflicts still require replacement approval.
+- NVIDIA Neural Rendering checks the actual rendering adapter. Non-NVIDIA adapters receive an unavailable explanation instead of claiming support.
+- AMD installation is early experimental for image effects and supported FSR/XeSS paths, with an explicit warning and cancellation option. No AMD Neural Rendering or native AMD DLSS support is claimed.
+- RTX 50 behaviour and existing experimental older-RTX paths are retained. No new cross-vendor model, general other-game support or dependency-wide upgrade is included.
+
+Diagnostics and clearer status
+- Upscaling distinguishes waiting for game input, detected but not initialized, initialized without recent frames, and active.
+- The 5080 screenshot shows an existing disconnected-backend message. Added clearer MSFS DLSS activation steps and instructions for reporting a persistent missing connection; no driver-specific fix is claimed.
+- Settings/status shows overlay and input initialization, focus and connected backend. Runtime logs record menu-key activity and upscaler-state changes.
+- Device hung/reset/driver-error diagnostics identify the failing swapchain, window, buffers, API/FG context and device-removed reason where available.
+- Troubleshooting exports a Discord-ready ZIP: readable Report.txt, four bounded diagnostic log tails and a reproduction checklist. Standalone TXT and lightweight support export remain available.
+- Reports include an anonymous report ID, game/build metadata, GPU/drivers, display details, selected settings, accessible module metadata and recent Windows crash/display-driver events.
+- Selected game/profile paths are redacted. Review remaining free-form logs before sharing. Nothing uploads automatically; no public GitHub credential or private-report service is embedded.
+
+What still needs testing
+- Flicker and blue aircraft trails have been investigated but not reproduced or fixed conclusively. Compare image effects, Neural Rendering and frame generation separately; diagnostics are not a rendering fix.
+- Multi-monitor/popout, HDR, VR, real frame generation, NR execution and individual RTX/AMD configurations still require simulator/hardware tests.
+- Synthetic tests and successful builds do not prove those reported issues are resolved. Runtime logs may be incomplete after a fatal crash; no minidump capture is included.
+
+Local validation
+- Installer regression tests, real WPF layout/shortcut rendering, configuration persistence, package opt-out, import safety, backup/restore/update and diagnostic export checks passed.
+- Native presentation-owner regression passed. Native engines and D3D12 effects integration were checked separately; these are not live MSFS tests.
+- Affected hardware configurations still need user validation.

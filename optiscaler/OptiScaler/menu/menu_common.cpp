@@ -56,6 +56,7 @@ static ImVec4 SdrColors[ImGuiCol_COUNT];
 
 static bool inputMenu = false;
 static bool freshMenuPress=false;
+static bool backupMenuArmed=false;
 static bool inputFG = false;
 static bool inputFps = false;
 static bool inputFpsCycle = false;
@@ -271,7 +272,7 @@ void MenuCommon::UpdateManualInput(HWND targetHwnd)
             lastKey = vk;
             // receivingWmInputs = false;
             inputFlag = true;
-            LOG_DEBUG("{}", logMessage);
+            if(isMenu)LOG_INFO("{}",logMessage);else LOG_DEBUG("{}", logMessage);
         }
     };
 
@@ -280,7 +281,15 @@ void MenuCommon::UpdateManualInput(HWND targetHwnd)
 
     if (!capturingKey && canAcceptInputs)
     {
-        CheckShortcut(config->ShortcutKey.value_or_default(), inputMenu, "Menu key pressed, will be switching menu");
+        const int backup=config->BackupShortcutKey.value_or_default();
+        if(!OptiInput::IsFocused())backupMenuArmed=false;
+        const bool chord=OptiInput::IsFocused()&&(OptiInput::IsKeyDown(VK_CONTROL)||OptiInput::IsKeyDown(VK_LCONTROL)||OptiInput::IsKeyDown(VK_RCONTROL))&&(OptiInput::IsKeyDown(VK_SHIFT)||OptiInput::IsKeyDown(VK_LSHIFT)||OptiInput::IsKeyDown(VK_RSHIFT));
+        if(backup>0&&backup<256&&OptiInput::IsKeyPressed(backup)&&chord)backupMenuArmed=true;
+        if(backupMenuArmed&&OptiInput::IsKeyReleased(backup)){
+            inputMenu=true;backupMenuArmed=false;freshMenuPress=false;
+            LOG_INFO("OptiShade backup menu shortcut received (Ctrl+Shift+{})",backup);
+        }
+        CheckShortcut(config->ShortcutKey.value_or_default(), inputMenu, "Primary menu shortcut received");
         CheckShortcut(config->FpsShortcutKey.value_or_default(), inputFps, "Menu key pressed, will be switching FPS");
         CheckShortcut(config->FGShortcutKey.value_or_default(), inputFG, "Menu key pressed, will be switching FG mode");
         CheckShortcut(config->FpsCycleShortcutKey.value_or_default(), inputFpsCycle,
@@ -7133,7 +7142,7 @@ void MenuCommon::RenderKeybindSettings(RenderMenuContext& ctx)
         ScopedIndent indent {};
         ImGui::Spacing();
 
-        ImGui::Text("Key combinations are currently NOT supported!");
+        ImGui::Text("Primary keys are single keys. Backup: Ctrl+Shift+letter (configure in the launcher).");
         ImGui::Text("Escape to cancel, Backspace to unbind");
         ImGui::Spacing();
 
@@ -7143,6 +7152,7 @@ void MenuCommon::RenderKeybindSettings(RenderMenuContext& ctx)
         static auto fgEnable = Keybind("Frame Generation", 13);
         static auto dlssNrToggle = Keybind("Neural Rendering", 14);
 
+        ImGui::Text("Backup menu: Ctrl+Shift+%s",Keybind::KeyNameFromVirtualKeyCode(config->BackupShortcutKey.value_or_default()).c_str());
         menu.Render(config->ShortcutKey);
         fpsOverlay.Render(config->FpsShortcutKey);
         fpsOverlayCycle.Render(config->FpsCycleShortcutKey);
@@ -7689,7 +7699,7 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
     ImGui::SetNextWindowPos(ImVec2(15,15),ImGuiCond_FirstUseEver);
     bool visible=_isVisible;static bool saved=false;
     if(ImGui::Begin("optishade | fusion engine",&visible,ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar)){
-        ImGui::SetWindowFontScale(1.75f);ImGui::TextUnformatted("optishade  0.20.4");ImGui::SetWindowFontScale(1.f);
+        ImGui::SetWindowFontScale(1.75f);ImGui::TextUnformatted("optishade  0.20.5");ImGui::SetWindowFontScale(1.f);
         ImGui::SameLine(ImGui::GetWindowWidth()-100);if(ImGui::SmallButton("Close"))visible=false;
         OptiShadeUpdates::DrawHeader();
         ImGui::TextColored(ImGui::GetStyleColorVec4(ImGuiCol_CheckMark),"powered by fusion engine");
@@ -7703,13 +7713,24 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
         if(page==0){
             ImGui::TextWrapped("Get a sharper picture, a smoother frame rate, or a balance of both. Some options depend on the game.");
             ImGui::Spacing();ImGui::SeparatorText("Upscaling");
-            if(ctx.currentFeature && ctx.currentFeature->IsInited()){
+            const char* backendStatus = !ctx.currentFeature ? "Waiting for game upscaling input" :
+                !ctx.currentFeature->IsInited() ? "Detected, not initialized" :
+                ctx.currentFeature->IsFrozen() ? "Initialized, no recent upscaling frames" : "Active";
+            static std::string lastBackendStatus;
+            if(lastBackendStatus != backendStatus){
+                LOG_INFO("Performance page backend: {}; API: {}", backendStatus, (int)ctx.state.api);
+                lastBackendStatus = backendStatus;
+            }
+            if(ctx.currentFeature && ctx.currentFeature->IsInited() && !ctx.currentFeature->IsFrozen()){
                 ImGui::Text("Connected: %s",ctx.currentFeature->ShortName().c_str());
                 ImGui::TextWrapped("Choose the picture quality in your game's graphics settings. Higher quality keeps more detail; performance modes give the GPU less work.");
                 if(ImGui::CollapsingHeader("Change upscaling method and fine-tune"))RenderActiveUpscalerSettings(ctx);
             }else{
-                ImGui::TextWrapped("No upscaler is connected. If this game offers DLSS, FSR 2/3 or XeSS, enable it and enter gameplay. If it has none, copying runtime files cannot add upscaling. Image effects work separately.");
+                ImGui::TextWrapped("Upscaling controls are waiting for an active game upscaler. In MSFS graphics settings, select DLSS Super Resolution (or another supported upscaler), apply the change, then enter a flight. TAA does not connect the DLSS upscaling controls.");
+                ImGui::TextWrapped("If DLSS is already selected while flying, this may be a connection or initialization problem. Save a detailed support report from the launcher and include your MSFS graphics settings. Image effects work separately.");
             }
+            ImGui::TextDisabled("Backend state: %s",backendStatus);
+            ImGui::TextWrapped("An installed NVIDIA DLL is not proof that DLSS or Neural Rendering is active. Enter a flight with supported upscaling enabled. If controls remain unavailable, save a diagnostic report in the launcher.");
             ImGui::Spacing();ImGui::SeparatorText("Smoother motion");
             ImGui::TextWrapped("Frame generation adds frames between the ones the game draws. It can look smoother, but it does not make your controls respond faster.");
             if(ImGui::CollapsingHeader("Frame generation options")){RenderFrameGenerationSelection(ctx);RenderFrameGenerationRuntimeSettings(ctx);}
@@ -7755,12 +7776,16 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
             if(ImGui::Button("Reset to purple"))setAccent(palette[0]);
             ImGui::TextDisabled("Preview changes instantly. Use Save settings below to keep your choice for this game.");
             ImGui::Spacing();ImGui::Separator();
+            const auto inputStatus=OptiInput::GetDebugState();
+            ImGui::Text("Overlay initialized | Input: %s | Focus: %s",inputStatus.Initialized?"initialized":"not initialized",inputStatus.Focused?"game":"other window");
+            ImGui::Text("Graphics API: %d | Upscaler: %s",(int)ctx.state.swapchainApi,ctx.currentFeature?ctx.currentFeature->ShortName().c_str():"not connected");
+            ImGui::TextWrapped("For flicker or trails, compare one change at a time: image effects, Neural Rendering, then frame generation. Keep the setting that avoids the artifact and export diagnostics. No universal artifact fix has been confirmed.");
             RenderMainMenuGraphs(ctx);RenderKeybindSettings(ctx);RenderLoggingSettings(ctx);
             if(ImGui::CollapsingHeader("Advanced compatibility")){RenderQuirksSettings(ctx);RenderAdvancedSettings(ctx);RenderUpscalerInputsSettings(ctx);RenderApiAndTextureSettings(ctx);}
         }
         ImGui::EndChild();ImGui::Separator();
         if(ImGui::Button("Save settings",ImVec2(160,34)))saved=config->SaveIni();
-        ImGui::SameLine();ImGui::TextDisabled(saved?"Settings saved. Neural rendering will start off.":"Insert to close   |   Save your look on Image effects");
+        ImGui::SameLine();if(saved)ImGui::TextDisabled("Settings saved. Neural rendering will start off.");else ImGui::TextDisabled("Menu: %s / Ctrl+Shift+%s",Keybind::KeyNameFromVirtualKeyCode(config->ShortcutKey.value_or_default()).c_str(),Keybind::KeyNameFromVirtualKeyCode(config->BackupShortcutKey.value_or_default()).c_str());
     }
     ImGui::End();if(!visible)HideMenu();
 }
@@ -7912,7 +7937,7 @@ void MenuCommon::Init(HWND InHwnd, bool isUWP)
     }
 
     _handle = InHwnd;
-    _isVisible = false;inputMenu=false;freshMenuPress=false;
+    _isVisible = false;inputMenu=false;freshMenuPress=false;backupMenuArmed=false;
     _isUWP = isUWP;
     lastPosition = { -1000.0f, -1000.0f };
 
@@ -8002,6 +8027,7 @@ void MenuCommon::Init(HWND InHwnd, bool isUWP)
     auto& style=ImGui::GetStyle();style.WindowPadding=ImVec2(18,16);style.FramePadding=ImVec2(10,7);style.ItemSpacing=ImVec2(10,9);style.WindowRounding=10;style.FrameRounding=5;style.GrabRounding=5;
     style.Colors[ImGuiCol_WindowBg]=ImVec4(.055f,.055f,.085f,.98f);
     _isInited = true;
+    LOG_INFO("OptiShade overlay initialized on window {:X}; menu key {}, backup Ctrl+Shift+{}",(size_t)_handle,Config::Instance()->ShortcutKey.value_or_default(),Config::Instance()->BackupShortcutKey.value_or_default());
 }
 
 void MenuCommon::Shutdown()

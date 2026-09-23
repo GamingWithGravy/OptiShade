@@ -1,9 +1,15 @@
-﻿// OptiShade additions, GPL-3.0-or-later.
+// OptiShade additions, GPL-3.0-or-later.
 #include "../../../shared/EffectsBridge.h"
 #include <cctype>
+#include <fstream>
+#include <set>
 #include <unordered_set>
 #include "optishade_update_notice.inl"
 namespace OptiShadeUI {
+static std::string MenuKeyLabel(int vk){
+ char name[64]{};UINT scan=MapVirtualKeyA(vk,MAPVK_VK_TO_VSC);if(vk>=VK_PRIOR&&vk<=VK_DELETE)scan|=0x100;
+ if(GetKeyNameTextA((LONG)(scan<<16),name,sizeof(name)))return name;return std::to_string(vk);
+}
 static osfx::Snapshot fx{};
 static char feedback[256]="";
 static uint64_t seenSave=0;
@@ -38,7 +44,8 @@ static bool DrawStartup(bool menuRequested){
   if(ImGui::Begin("OptiShade startup",nullptr,ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoInputs|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoFocusOnAppearing|ImGuiWindowFlags_NoNav)){
    ImGui::TextColored(ImGui::GetStyleColorVec4(ImGuiCol_CheckMark),"optishade");ImGui::TextDisabled("powered by fusion engine");ImGui::Separator();
    ImGui::TextUnformatted("Fusion Engine connected");
-   ImGui::TextUnformatted(ready?"Ready - press Insert":connected?"Preparing effects...":timeout?"Waiting for image effects - Insert opens the menu":"Connecting image effects...");
+   ImGui::TextUnformatted(ready?"Ready":connected?"Preparing effects...":timeout?"Waiting for image effects":"Connecting image effects...");
+   ImGui::Text("Menu: %s / Ctrl+Shift+%s",MenuKeyLabel(Config::Instance()->ShortcutKey.value_or_default()).c_str(),MenuKeyLabel(Config::Instance()->BackupShortcutKey.value_or_default()).c_str());
    // A moving segment means work is in progress; only a ready runtime fills the bar.
    ImGui::Dummy(ImVec2(0,5));
    auto bar=ImGui::GetCursorScreenPos();const float width=300.f,height=6.f;
@@ -57,6 +64,7 @@ static bool DrawStartup(bool menuRequested){
  return readyAt>=0||timeout;
 }
 static void DrawEffects(){
+ PollZipImport();
  auto module=GetModuleHandleW(L"ReShade64.dll");auto read=module?(osfx::Read)GetProcAddress(module,"OptiShadeEffectsRead"):nullptr;
  bool connected=read&&read(&fx,sizeof(fx));
  if(!connected){ImGui::TextColored({1,.7f,.3f,1},"Waiting for image effects to become available.");return;}
@@ -68,7 +76,7 @@ static void DrawEffects(){
   else ++it;
  }
 
- ImGui::BeginDisabled(fx.loading!=0);
+ ImGui::BeginDisabled(fx.loading!=0||zipProcess!=nullptr);
  bool enabled=fx.enabled!=0;if(ImGui::Checkbox("Image effects",&enabled)){osfx::Command c{};c.kind=osfx::Effects;c.enabled=enabled;Send(c);}
  ImGui::SameLine();if(ImGui::Button("Recompile installed FX")){osfx::Command c{};c.kind=osfx::Reload;Send(c);}if(ImGui::IsItemHovered())ImGui::SetTooltip("Reload shader code already installed in the game. This does not import or download files.");
 
@@ -112,13 +120,15 @@ static void DrawEffects(){
   ImGui::EndPopup();
  }
 
+ DrawDependencyPrompt();
  DrawPresetBrowser(root);
+ if(zipProcess)ImGui::TextWrapped("Installing files in the background... You can keep flying; reopen Image effects to see the result.");
  ImGui::TextWrapped("Import INI / Install FX adds files. Saved looks below load an installed preset.");
  static char nextPreset[1024]="";static bool askSwitch=false,waitingSwitch=false;static uint64_t switchSaveSerial=0;
  ImGui::TextUnformatted("Saved look");ImGui::SameLine();ImGui::SetNextItemWidth(300);
  if(ImGui::BeginCombo("##Look presets",std::filesystem::path(fx.preset).filename().string().c_str())){
-  for(std::filesystem::directory_iterator i(root/L"Presets",error),end;i!=end&&!error;i.increment(error)){
-   if(i->path().extension()!=L".ini")continue;auto label=i->path().filename().string();if(ImGui::Selectable(label.c_str())){auto path=i->path().u8string();if(fx.dirty){strncpy_s(nextPreset,(const char*)path.c_str(),_TRUNCATE);askSwitch=true;}else{osfx::Command c{};c.kind=osfx::Preset;strncpy_s(c.path,(const char*)path.c_str(),_TRUNCATE);Send(c);}}
+  for(std::filesystem::recursive_directory_iterator i(root/L"Presets",error),end;i!=end&&!error;i.increment(error)){
+   if(i->path().extension()!=L".ini")continue;auto label=i->path().lexically_relative(root/L"Presets").string();if(ImGui::Selectable(label.c_str())){auto path=i->path().u8string();if(fx.dirty){strncpy_s(nextPreset,(const char*)path.c_str(),_TRUNCATE);askSwitch=true;}else{osfx::Command c{};c.kind=osfx::Preset;strncpy_s(c.path,(const char*)path.c_str(),_TRUNCATE);Send(c);}}
   }ImGui::EndCombo();
  }
  if(askSwitch){ImGui::OpenPopup("Unsaved preset changes");askSwitch=false;}
@@ -135,7 +145,7 @@ static void DrawEffects(){
  if(fx.dirty){ImGui::TextColored(ImVec4(1.f,.3f,.4f,1.f),"Unsaved changes - your INI has not been overwritten.");ImGui::SameLine();}
  ImGui::BeginDisabled(!fx.dirty);if(ImGui::Button("Revert changes")){osfx::Command c{};c.kind=osfx::Discard;if(Send(c))preparing.clear();}ImGui::EndDisabled();
  if(ImGui::CollapsingHeader("Advanced: import using a full file path")){
- static char importPath[1024]="";ImGui::InputTextWithHint("##import","Full path to an .fx shader or .ini preset",importPath,sizeof(importPath));ImGui::SameLine();
+ static char importPath[1024]="";ImGui::InputTextWithHint("##import","Full path to an .fx shader, .ini preset or .zip package",importPath,sizeof(importPath));ImGui::SameLine();
  if(ImGui::Button("Import")){
   if(fx.dirty){strcpy_s(feedback,"Save or discard your preset changes before importing another file.");}
   else{

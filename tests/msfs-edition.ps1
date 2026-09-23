@@ -1,4 +1,4 @@
-$ErrorActionPreference='Stop'
+﻿$ErrorActionPreference='Stop'
 . "$PSScriptRoot/../installer/library.ps1"
 $fixture=Join-Path $env:TEMP ('OptiShade-discovery-'+[guid]::NewGuid().ToString('N'))
 $binary="$PSScriptRoot/../installer/FusionSetup.exe"
@@ -18,7 +18,7 @@ AssertTarget $steam 'Steam' 'FlightSimulator2024.exe' 'Steam MSFS selects the ma
 $nvidia=[pscustomobject]@{Known=$true;Nvidia=$true}
 AssertMsfsNvidiaTarget (Join-Path $steam 'FlightSimulator2024.exe') $nvidia
 'PASS: NVIDIA MSFS installation accepted'
-foreach($case in @(@((Join-Path $steam 'FlightSimulator2024.exe'),[pscustomobject]@{Known=$true;Nvidia=$false}),@((Join-Path $steam 'FlightSimulator2024.exe'),[pscustomobject]@{Known=$false;Nvidia=$false}),@((Join-Path $generic 'other.exe'),$nvidia))){
+foreach($case in @(@((Join-Path $steam 'FlightSimulator2024.exe'),[pscustomobject]@{Known=$true;Nvidia=$false;Names='Intel Graphics'}),@((Join-Path $steam 'FlightSimulator2024.exe'),[pscustomobject]@{Known=$false;Nvidia=$false}),@((Join-Path $generic 'other.exe'),$nvidia))){
  $rejected=$false;try{AssertMsfsNvidiaTarget $case[0] $case[1]}catch{$rejected=$true};if(-not $rejected){throw 'Unsupported target accepted'}
  'PASS: Unsupported target rejected'
 }

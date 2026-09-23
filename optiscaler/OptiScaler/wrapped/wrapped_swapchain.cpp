@@ -45,6 +45,34 @@ static double _lastFrameTime = 0;
 static bool _dx11Device = false;
 static bool _dx12Device = false;
 
+static void ReportPresentDeviceFailure(IDXGISwapChain* swapChain, HRESULT result)
+{
+    if (result != DXGI_ERROR_DEVICE_REMOVED && result != DXGI_ERROR_DEVICE_HUNG &&
+        result != DXGI_ERROR_DEVICE_RESET && result != DXGI_ERROR_DRIVER_INTERNAL_ERROR)
+        return;
+
+    DXGI_SWAP_CHAIN_DESC desc {};
+    swapChain->GetDesc(&desc);
+    LOG_ERROR("Graphics device failure: HRESULT={:08X}; swapchain={:X}; window={:X}; buffers={}; format={}; API={}; FG output={}",
+              (UINT)result, (size_t)swapChain, (size_t)desc.OutputWindow, desc.BufferCount,
+              (int)desc.BufferDesc.Format, (int)State::Instance().api, (int)State::Instance().activeFgOutput);
+    LOG_ERROR("Neural Rendering state: {}", DlssNr::FinishedPictureStatus());
+    // Query the failing swapchain's device, not a global device from another window.
+    ID3D12Device* dx12 = nullptr;
+    ID3D11Device* dx11 = nullptr;
+    if (SUCCEEDED(swapChain->GetDevice(IID_PPV_ARGS(&dx12))))
+    {
+        Util::GetDeviceRemovedReason(dx12);
+        dx12->Release();
+    }
+    else if (SUCCEEDED(swapChain->GetDevice(IID_PPV_ARGS(&dx11))))
+    {
+        Util::GetDeviceRemovedReason(dx11);
+        dx11->Release();
+    }
+    if (auto logger = spdlog::default_logger()) logger->flush();
+}
+
 const GUID IID_IUnwrappedDXGISwapChain = {
     0xe8a33b4a, 0x1405, 0x424c, { 0xae, 0x88, 0xd, 0x3e, 0x9d, 0x46, 0xc9, 0x14 }
 };
@@ -151,7 +179,7 @@ void ReportD3D12LiveObjects(ID3D12Device* device)
 static HRESULT LocalPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags,
                             const DXGI_PRESENT_PARAMETERS* pPresentParameters, IUnknown* pDevice, HWND hWnd, bool isUWP)
 {
-    if (State::Instance().isShuttingDown)
+    if (State::Instance().isShuttingDown || !MenuOverlayDx::IsPrimaryWindow(hWnd,(Flags & DXGI_PRESENT_TEST)==0))
     {
         if (pPresentParameters == nullptr)
             return pSwapChain->Present(SyncInterval, Flags);
@@ -345,22 +373,10 @@ static HRESULT LocalPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT 
 
             LOG_TRACE("3 {}", (UINT) presentResult);
         }
-        else if (presentResult == DXGI_ERROR_DEVICE_REMOVED)
-        {
-            if (isD3D11)
-            {
-                if (State::Instance().currentD3D11Device != nullptr)
-                    Util::GetDeviceRemovedReason(State::Instance().currentD3D11Device);
-            }
-            else
-            {
-                if (State::Instance().currentD3D12Device != nullptr)
-                    Util::GetDeviceRemovedReason(State::Instance().currentD3D12Device);
-            }
-        }
         else
         {
             LOG_ERROR("3 {:X}", (UINT) presentResult);
+            ReportPresentDeviceFailure(pSwapChain, presentResult);
         }
 
         return presentResult;
@@ -424,8 +440,7 @@ static HRESULT LocalPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT 
     {
         LOG_ERROR("Original present result: {:X}", (UINT) presentResult);
 
-        if (presentResult == DXGI_ERROR_DEVICE_REMOVED && State::Instance().currentD3D12Device != nullptr)
-            Util::GetDeviceRemovedReason(State::Instance().currentD3D12Device);
+        ReportPresentDeviceFailure(pSwapChain, presentResult);
     }
 
     return presentResult;
@@ -584,7 +599,7 @@ ULONG STDMETHODCALLTYPE WrappedIDXGISwapChain4::Release()
             State::Instance().currentRealSwapchain = nullptr;
 
         auto fg = State::Instance().currentFG;
-        if (fg != nullptr && fg->Mutex.getOwner() != 1 && fg->SwapchainContext() != nullptr)
+        if (MenuOverlayDx::IsPrimaryWindow(_handle) && fg != nullptr && fg->Mutex.getOwner() != 1 && fg->SwapchainContext() != nullptr)
         {
             fg->Deactivate();
             fg->ReleaseSwapchain(_handle);
@@ -754,6 +769,7 @@ HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::GetDesc(DXGI_SWAP_CHAIN_DESC* 
 HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::ResizeBuffers(UINT BufferCount, UINT Width, UINT Height,
                                                                 DXGI_FORMAT NewFormat, UINT SwapChainFlags)
 {
+    if(!MenuOverlayDx::IsPrimaryWindow(_handle))return _real->ResizeBuffers(BufferCount,Width,Height,NewFormat,SwapChainFlags);
     if (!DlssNr::WaitForFinishedPicture())
         return DXGI_ERROR_WAS_STILL_DRAWING;
     LOG_DEBUG("");
@@ -1182,6 +1198,7 @@ HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::ResizeBuffers1(UINT BufferCoun
                                                                  const UINT* pCreationNodeMask,
                                                                  IUnknown* const* ppPresentQueue)
 {
+    if(!MenuOverlayDx::IsPrimaryWindow(_handle))return _real3->ResizeBuffers1(BufferCount,Width,Height,Format,SwapChainFlags,pCreationNodeMask,ppPresentQueue);
     if (!DlssNr::WaitForFinishedPicture())
         return DXGI_ERROR_WAS_STILL_DRAWING;
     LOG_DEBUG("");

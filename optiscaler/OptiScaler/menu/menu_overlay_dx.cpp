@@ -10,6 +10,9 @@
 #include <imgui/imgui_impl_dx12.h>
 #include <imgui/imgui_impl_win32.h>
 
+#include "../../../shared/PresentationOwner.h"
+static optishade::PresentationOwner presentationOwner;
+bool MenuOverlayDx::IsPrimaryWindow(HWND window,bool claim){return presentationOwner.Accept(window,claim);}
 // menu
 static int const NUM_BACK_BUFFERS = 8;
 static int const SRV_HEAP_SIZE = 64;
@@ -86,6 +89,12 @@ static void CreateRenderTargetDx12(ID3D12Device* device, IDXGISwapChain* pSwapCh
     if (hr != S_OK)
     {
         LOG_ERROR("pSwapChain->GetDesc: {0:X}", (unsigned long) hr);
+        return;
+    }
+
+    if (sd.BufferCount == 0 || sd.BufferCount > NUM_BACK_BUFFERS)
+    {
+        LOG_ERROR("Overlay unsupported buffer count: {} (capacity {})", sd.BufferCount, NUM_BACK_BUFFERS);
         return;
     }
 
@@ -442,6 +451,13 @@ static void RenderImGui_DX12(IDXGISwapChain* pSwapChainPlain)
                 ImGui::Render();
 
                 UINT backBufferIdx = pSwapChain->GetCurrentBackBufferIndex();
+                if (backBufferIdx >= NUM_BACK_BUFFERS || !g_commandAllocators[backBufferIdx] ||
+                    !g_mainRenderTargetResource[backBufferIdx])
+                {
+                    LOG_ERROR("Overlay render resources unavailable for buffer {}", backBufferIdx);
+                    pSwapChain->Release();
+                    return;
+                }
                 ID3D12CommandAllocator* commandAllocator = g_commandAllocators[backBufferIdx];
 
                 auto result = commandAllocator->Reset();
@@ -509,6 +525,7 @@ ID3D12GraphicsCommandList* MenuOverlayDx::MenuCommandList() { return g_pd3dComma
 
 void MenuOverlayDx::CleanupRenderTarget(bool clearQueue, HWND hWnd)
 {
+    if(!IsPrimaryWindow(hWnd))return;
     LOG_FUNC();
 
     auto fg = State::Instance().currentFG;
@@ -528,6 +545,7 @@ void MenuOverlayDx::CleanupRenderTarget(bool clearQueue, HWND hWnd)
 void MenuOverlayDx::Present(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags,
                             const DXGI_PRESENT_PARAMETERS* pPresentParameters, IUnknown* pDevice, HWND hWnd, bool isUWP)
 {
+    if(!IsPrimaryWindow(hWnd,true))return;
     if (!Config::Instance()->OverlayMenu.value_or_default())
     {
         MenuOverlayBase::Present();

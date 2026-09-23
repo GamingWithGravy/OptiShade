@@ -30,3 +30,10 @@ __pycache__/
 /optiscaler/external/xess/bin/basic_sample_*.exe
 /reshade/deps/stb/tests/oversample/oversample.exe
 /reshade/deps/vma/bin/VmaSample_*.exe
+
+# Private planning and local audit material
+/docs/v0.20.5-test-notes.md
+*Codex_Prompt*
+/Screenshots/
+/.research/
+/tests/render-release-local.ps1

@@ -1,4 +1,4 @@
-$ErrorActionPreference='Stop'
+﻿$ErrorActionPreference='Stop'
 . "$PSScriptRoot/../installer/compatibility.ps1"
 $fixture=Join-Path $env:TEMP ('OptiShade-compatibility-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $fixture | Out-Null
@@ -31,7 +31,7 @@ $plan=GetFusionCompatibility $fixture $exe $unknown
 Check (-not $plan.DownloadNvidia) 'Unknown hardware fails closed'
 $gtx=[pscustomobject]@{Known=$true;Names='NVIDIA GeForce GTX 1080'}
 Check (-not (GetFusionCompatibility $fixture $exe $gtx).DownloadNvidia) 'GTX is not mistaken for RTX'
-$plan=GetFusionCompatibility $fixture (Join-Path $fixture 'FlightSimulator2024.exe') $rtx 'Xbox'
+$plan=GetFusionCompatibility $fixture (Join-Path $fixture 'gamelaunchhelper.exe') $rtx 'Xbox'
 Check ($plan.Proxy -eq 'winmm.dll') 'Xbox loader preserved'
 Check ((FormatFusionCompatibility $plan) -match '310.9.1') 'Pinned tested runtime versions shown'
 Check (@(GetFusionInstalledVersions $fixture).Count -eq 1) 'Stored runtime inventory stays separate'

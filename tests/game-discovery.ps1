@@ -1,4 +1,4 @@
-$ErrorActionPreference='Stop'
+﻿$ErrorActionPreference='Stop'
 . "$PSScriptRoot/../installer/library.ps1"
 $fixture=Join-Path $env:TEMP ('OptiShade-discovery-'+[guid]::NewGuid().ToString('N'))
 $binary="$PSScriptRoot/../installer/FusionSetup.exe"
@@ -16,5 +16,5 @@ AssertTarget $xbox '' 'gamelaunchhelper.exe' 'Manually selected Xbox folder is d
 AssertTarget (Split-Path $xbox) 'Xbox' 'Content/gamelaunchhelper.exe' 'Xbox parent folder resolves Content automatically'
 AssertTarget $steam 'Steam' 'FlightSimulator2024.exe' 'Steam MSFS selects the main EXE even with a helper present'
 Copy-Item $binary (Join-Path $generic 'Binaries/Win64/OtherGame-Win64-Shipping.exe')
-AssertTarget $generic '' 'Binaries/Win64/OtherGame-Win64-Shipping.exe' 'Other games resolve their nested main EXE'
+$rejected=$false;try{FindFusionExecutable $generic}catch{$rejected=$true};if(-not $rejected){throw 'Non-MSFS target accepted'}; 'PASS: Other games remain unavailable in this MSFS-only patch'
 "Fixture: $fixture"

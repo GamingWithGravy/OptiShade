@@ -7,6 +7,7 @@
 
 namespace MenuOverlayDx
 {
+bool IsPrimaryWindow(HWND window,bool claim=false);
 ID3D12GraphicsCommandList* MenuCommandList();
 void CleanupRenderTarget(bool clearQueue, HWND hWnd);
 void Present(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags,

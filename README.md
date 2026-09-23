@@ -4,18 +4,18 @@
   <p><strong>Microsoft Flight Simulator 2024</strong></p>
   <p>Created by gravy · Powered by Fusion Engine</p>
   <p>
-    <img src="https://img.shields.io/badge/Version-0.20.4-9755E9?style=flat-square" alt="Version 0.20.4">
+    <img src="https://img.shields.io/badge/Version-0.20.5-9755E9?style=flat-square" alt="Version 0.20.5">
     <img src="https://img.shields.io/badge/Windows-x64-272133?style=flat-square" alt="Windows x64">
     <img src="https://img.shields.io/badge/Graphics-NVIDIA-76B900?style=flat-square" alt="NVIDIA graphics">
   </p>
   <p><a href="https://github.com/GamingWithGravy/OptiShade/releases/latest"><strong>Download OptiShade Manager</strong></a> · <a href="docs/Tutorial.txt">Getting started</a> · <a href="docs/Features.txt">Features</a> · <a href="BUILDING.md">Build from source</a></p>
 </div>
 
-![OptiShade Manager 0.20.4](docs/images/installer.png)
+![OptiShade Manager 0.20.5](docs/images/installer.png)
 
 ## Your flight. Your look.
 
-Optishade brings image effects, saved looks and optional NVIDIA neural rendering together in one custom in-game menu. This edition is built for **Microsoft Flight Simulator 2024 on NVIDIA graphics cards**, with automatic Steam and Xbox detection.
+Optishade brings image effects, saved looks and optional NVIDIA neural rendering together in one custom in-game menu. This edition is built for **Microsoft Flight Simulator 2024 on NVIDIA and AMD graphics cards (AMD support is early experimental)**, with automatic Steam and Xbox detection.
 
 ### Image effects
 
@@ -31,7 +31,7 @@ Choose **Yes or No** when setup asks about DLSS 5. Neural rendering requires com
 
 ### An interface you can make your own
 
-Press **Insert** to open the menu. Purple is the default; choose a different overlay accent in Settings & status and save it for your game. Close the installer after setup finishes—the in-game menu runs independently.
+Press **Insert** or **Ctrl+Shift+O** to open the menu. Shortcuts are configurable in launcher Setup. Purple is the default; choose a different overlay accent in Settings & status and save it for your game. Close the installer after setup finishes—the in-game menu runs independently.
 
 ## Install in a few steps
 
@@ -98,6 +98,6 @@ OptiShade Manager adds staged payload validation, free-space checks and per-stag
 
 Home reflects installation status and opens Setup to manage it. The upper drag tooltip is removed. In-game update checks repeat without blocking rendering, and a persistent two-line purple notice appears under Close in the menu. The updater remains borderless with Open manager and Close buttons.
 
-## Version 0.20.4
+## Version 0.20.5
 
 Setup disables Install and shows Already installed for installed copies, including pending optional downloads. Incomplete installations show Repair required. Repair, Restore and troubleshooting remain available. Install becomes available again after restoring and refreshes when changing the selected game directory.

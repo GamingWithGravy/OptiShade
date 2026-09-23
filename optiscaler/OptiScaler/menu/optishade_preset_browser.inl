@@ -1,10 +1,12 @@
 // In-game file browser. Directory contents are refreshed only on navigation.
 static std::string BrowserText(const std::filesystem::path& path){auto s=path.u8string();return std::string((const char*)s.c_str());}
 static bool importedShader=false;
-static bool ImportLook(const std::filesystem::path& source,const std::filesystem::path& root){
- if(fx.dirty){strcpy_s(feedback,"Save or revert your current changes before importing a preset.");return false;}
+#include "optishade_zip_import.inl"
+static bool ImportLook(const std::filesystem::path& source,const std::filesystem::path& root,bool discardApproved=false){
+ if(fx.dirty&&!discardApproved){strcpy_s(feedback,"Save or revert your current changes before importing a preset.");return false;}
  std::error_code ec;auto ext=source.extension().wstring();for(auto& ch:ext)ch=(wchar_t)towlower(ch);
- if((ext!=L".ini"&&ext!=L".fx")||!std::filesystem::is_regular_file(source,ec)){strcpy_s(feedback,"Choose an INI preset or FX shader.");return false;}
+ if(ext==L".zip")return StartZipImport(source,root);
+ if((ext!=L".ini"&&ext!=L".fx")||!std::filesystem::is_regular_file(source,ec)){strcpy_s(feedback,"Choose an INI preset, FX shader or ZIP package.");return false;}
  if(ext==L".fx"){
   for(std::filesystem::recursive_directory_iterator it(root/L"Shaders",ec),end;it!=end&&!ec;it.increment(ec)){
    auto name=it->path().filename().wstring(),wanted=source.filename().wstring();for(auto& c:name)c=(wchar_t)towlower(c);for(auto& c:wanted)c=(wchar_t)towlower(c);
@@ -24,15 +26,18 @@ static bool ImportLook(const std::filesystem::path& source,const std::filesystem
   if(!std::filesystem::copy_file(source,dest,std::filesystem::copy_options::none,ec)){strcpy_s(feedback,"Could not copy this file. Existing presets were kept.");return false;}
  }
  auto encoded=BrowserText(dest);if(encoded.size()>=1024){strcpy_s(feedback,"This path is too long.");return false;}
- osfx::Command c{};c.kind=ext==L".ini"?osfx::Preset:osfx::Reload;strcpy_s(c.path,encoded.c_str());bool queued=Send(c);if(ext==L".fx")importedShader=true;return queued;
+ if(ext==L".ini")return RequestPresetLoad(dest,root,discardApproved); osfx::Command c{};c.kind=osfx::Reload;strcpy_s(c.path,encoded.c_str());bool queued=Send(c);if(ext==L".fx")importedShader=true;return queued;
 }
 static void DrawPresetBrowser(const std::filesystem::path& root){
  static char folderText[1024]="",filter[128]="";
  static std::filesystem::path folder,selected;
  static std::vector<std::filesystem::path> entries;
- static bool refresh=false,shaders=false;static std::string issue;
+ static bool refresh=false,shaders=false,archives=false;static std::string issue;
+ static bool askDiscard=false;static std::filesystem::path pendingIni,pendingRoot;
  bool openIni=ImGui::Button("Import INI...");ImGui::SameLine();bool openFx=ImGui::Button("Install FX...");
- if(openIni||openFx){
+ ImGui::SameLine();bool openZip=ImGui::Button("Install ZIP...");
+ if(openIni||openFx||openZip){
+  archives=openZip;
   shaders=openFx;
   wchar_t home[32768]{};GetEnvironmentVariableW(L"USERPROFILE",home,32768);folder=std::filesystem::path(home)/L"Downloads";
   std::error_code ec;if(!std::filesystem::is_directory(folder,ec))folder=root/L"Presets";
@@ -44,8 +49,8 @@ static void DrawPresetBrowser(const std::filesystem::path& root){
  ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetWorkCenter(),ImGuiCond_Appearing,ImVec2(.5f,.5f));
  ImGui::SetNextWindowSizeConstraints(ImVec2((std::min)(600.0f,area.x-24),(std::min)(400.0f,area.y-24)),ImVec2(area.x-24,area.y-24));
  if(ImGui::BeginPopupModal("Browse files to install",nullptr,ImGuiWindowFlags_NoCollapse)){
-  ImGui::TextWrapped(shaders?"Install an FX shader: copy it into Shaders/Custom, then recompile installed effects. Enable it in the effect list when ready.":"Import an INI look: copy it into Presets and load it. Required shaders must already be installed. The original file is kept.");
-  ImGui::TextWrapped("For ZIP packages containing FX, includes, textures or INI files, use Setup > Advanced options > Install FX / INI from ZIP in the installer.");
+  ImGui::TextWrapped(archives?"Install FX and INI from a ZIP, including supplied headers and textures. Your current look stays selected.":shaders?"Install an FX shader: copy it into Shaders/Custom, then recompile installed effects. Enable it in the effect list when ready.":"Import an INI look: copy it into Presets and load it. Missing shaders can be installed from the catalogue with your approval. The original file is kept.");
+  ImGui::TextWrapped("ZIPs are extracted in the background. Executable files are excluded; existing shaders are never overwritten. After import choose the INI under Saved look.");
   auto go=[&](const std::filesystem::path& path){std::error_code ec;if(!path.is_absolute()||!std::filesystem::is_directory(path,ec)){issue="Enter an existing full folder path, for example D:\\My presets.";return;}folder=path;refresh=true;selected.clear();};
   if(ImGui::Button("Downloads")){wchar_t home[32768]{};GetEnvironmentVariableW(L"USERPROFILE",home,32768);go(std::filesystem::path(home)/L"Downloads");}
   ImGui::SameLine();if(ImGui::Button("Desktop")){wchar_t home[32768]{};GetEnvironmentVariableW(L"USERPROFILE",home,32768);go(std::filesystem::path(home)/L"Desktop");}
@@ -59,7 +64,7 @@ static void DrawPresetBrowser(const std::filesystem::path& root){
    entries.clear();issue.clear();auto text=BrowserText(folder);strncpy_s(folderText,text.c_str(),_TRUNCATE);
    std::error_code ec;for(std::filesystem::directory_iterator it(folder,ec),end;it!=end&&!ec;it.increment(ec)){
     auto ext=it->path().extension().wstring();for(auto& ch:ext)ch=(wchar_t)towlower(ch);
-    std::error_code typeError;if(it->is_directory(typeError)||ext==(shaders?L".fx":L".ini"))entries.push_back(it->path());
+    std::error_code typeError;if(it->is_directory(typeError)||ext==(archives?L".zip":shaders?L".fx":L".ini"))entries.push_back(it->path());
     if(entries.size()>=3000){issue="This folder is very large. Open a smaller folder to see more files.";break;}
    }
    if(ec)issue="Could not read this folder. Check the location and access permissions.";
@@ -67,7 +72,7 @@ static void DrawPresetBrowser(const std::filesystem::path& root){
   }
   ImGui::TextUnformatted("Folder path (paste a folder, then press Enter or Go)");
   ImGui::SetNextItemWidth(-80);bool enter=ImGui::InputText("##folder",folderText,sizeof(folderText),ImGuiInputTextFlags_EnterReturnsTrue);ImGui::SameLine();bool navigate=ImGui::Button("Go");if(enter||navigate)go(std::filesystem::u8path(folderText));
-  ImGui::InputTextWithHint("##findpreset",shaders?"Find an FX file...":"Find an INI preset...",filter,sizeof(filter));
+  ImGui::InputTextWithHint("##findpreset",archives?"Find a ZIP package...":shaders?"Find an FX file...":"Find an INI preset...",filter,sizeof(filter));
   ImGui::BeginChild("Preset files",ImVec2(0,(std::max)(60.0f,ImGui::GetContentRegionAvail().y-ImGui::GetTextLineHeightWithSpacing()*9)),true);
   for(const auto& entry:entries){
    auto name=BrowserText(entry.filename());std::string match=name,query=filter;
@@ -78,11 +83,23 @@ static void DrawPresetBrowser(const std::filesystem::path& root){
   }
   ImGui::EndChild();
   if(!issue.empty())ImGui::TextWrapped("%s",issue.c_str());
-  ImGui::TextWrapped(shaders?"This installs one .fx file. Copy any supplied include files and textures with their original folder structure into OptiShadeData/Shaders/Custom and OptiShadeData/Textures. Existing FX files are not overwritten.":"Existing presets are kept; an imported duplicate gets a new name. This does not download missing effects.");
-  ImGui::BeginDisabled(selected.empty()||fx.dirty||fx.loading);
-  if(ImGui::Button(shaders?"Copy FX and recompile":"Copy INI and load look")){if(ImportLook(selected,root))ImGui::CloseCurrentPopup();}
+  ImGui::TextWrapped(archives?"Extracts up to 256 MB / 5000 entries. Duplicate shader names are rejected. Download a ZIP first, then select it here.":shaders?"This installs one .fx file. Copy any supplied include files and textures with their original folder structure into OptiShadeData/Shaders/Custom and OptiShadeData/Textures. Existing FX files are not overwritten.":"Existing presets are kept; an imported duplicate gets a new name. Missing FX files trigger an offer to install matching catalogue packages.");
+  ImGui::BeginDisabled(selected.empty()||(fx.dirty&&(shaders||archives))||fx.loading||zipProcess);
+  if(ImGui::Button(archives?"Extract ZIP and recompile":shaders?"Copy FX and recompile":"Copy INI and load look")){if(fx.dirty&&!shaders&&!archives){pendingIni=selected;pendingRoot=root;askDiscard=true;ImGui::CloseCurrentPopup();}else if(ImportLook(selected,root))ImGui::CloseCurrentPopup();}
   ImGui::EndDisabled();ImGui::SameLine();if(ImGui::Button("Cancel"))ImGui::CloseCurrentPopup();
-  if(fx.dirty)ImGui::TextColored(ImVec4(1,.3f,.4f,1),"Save or revert your unsaved changes first.");
+  if(fx.dirty)ImGui::TextWrapped(shaders||archives?"Save or revert your unsaved changes first.":"Loading this INI will ask before discarding unsaved changes.");
   if(feedback[0])ImGui::TextWrapped("%s",feedback);ImGui::EndPopup();
  }
+ if(askDiscard){ImGui::OpenPopup("Unsaved changes");askDiscard=false;}
+ if(ImGui::BeginPopupModal("Unsaved changes",nullptr,ImGuiWindowFlags_AlwaysAutoResize)){
+  ImGui::TextWrapped("Some changes are not saved. Would you like to install this INI anyway?");
+  ImGui::TextWrapped("Unsaved changes will be lost when the new look loads.");
+  ImGui::BeginDisabled(fx.loading||zipProcess);
+  if(ImGui::Button("Yes")){if(ImportLook(pendingIni,pendingRoot,true)){pendingIni.clear();pendingRoot.clear();ImGui::CloseCurrentPopup();}}
+  ImGui::EndDisabled();ImGui::SameLine();
+  if(ImGui::Button("No")){pendingIni.clear();pendingRoot.clear();ImGui::CloseCurrentPopup();}
+  if(feedback[0])ImGui::TextWrapped("%s",feedback);
+  ImGui::EndPopup();
+ }
+
 }

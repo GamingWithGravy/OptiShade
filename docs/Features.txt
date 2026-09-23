@@ -1,5 +1,5 @@
 ﻿OPTISHADE FEATURES
-Microsoft Flight Simulator 2024 | NVIDIA ONLY
+Microsoft Flight Simulator 2024 | NVIDIA + AMD (AMD early experimental)
 
 SETUP
 - Automatic Steam and Xbox installation detection.
@@ -32,7 +32,7 @@ RECOVERY
 - Uninstall offers a choice to keep saved presets.
 
 REQUIREMENTS
-This edition is for Microsoft Flight Simulator 2024 and NVIDIA graphics cards. Neural rendering requires compatible RTX hardware, a matching model and a supported game connection. Presets need their required shaders. Additional effects and neural passes can reduce frame rate; performance gains are not guaranteed.
+This edition is for Microsoft Flight Simulator 2024 and NVIDIA or AMD graphics cards (AMD support is early experimental). Neural rendering requires compatible RTX hardware, a matching model and a supported game connection. Presets need their required shaders. Additional effects and neural passes can reduce frame rate; performance gains are not guaranteed.
 
 VERSION 0.19.18
 - INI and FX import browsers with drive selection and editable folder paths.
@@ -43,3 +43,13 @@ VERSION 0.19.18
 - Stable-release notifications in setup and in game.
 - Verified self-update for the installer and recorded MSFS installations.
 - Optional Fusion Cinema addon and public REX preset instructions on GitHub.
+
+VERSION 0.20.5
+- Image-effects packages are optional at install time. Existing installs retain their choice.
+- In game, Image effects > Install ZIP installs FX, INI, includes and textures without overwriting existing shaders.
+- ZIP looks appear under Saved look, including import subfolders. Select one to apply it.
+- Import INI can offer catalogue downloads for missing FX while MSFS is open. Declining leaves the current look active.
+- AMD: early experimental image effects and supported FSR/XeSS. No Neural Rendering on AMD in this build. Please report issues to Gravy.
+- No publication before personal PC testing. See release notes for possible fixes.
+
+Diagnostics: Troubleshooting > Save diagnostics ZIP for Discord. Includes Report.txt, recent log tails and Reproduction-notes.txt. Choose plain TXT in the save dialog if preferred. Review before attaching; nothing is uploaded automatically.

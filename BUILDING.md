@@ -23,7 +23,9 @@ powershell -NoProfile -File .\package.ps1
 
 Use a PowerShell environment permitted to run your locally reviewed build scripts. Network access is needed for the pinned Go resource generator on its first run. Check each command succeeds before continuing.
 
-The first two commands compile the engine DLLs. The third builds the WPF/PowerShell host and icon resources. package.ps1 assembles the payload, verifies embedded hashes and script encoding, and builds `dist/OptiShade_Version_0.19.18.exe`. The three text guides under installer/Help are embedded in the EXE.
+The first two commands compile the engine DLLs. The third builds the WPF/PowerShell host and icon resources. package.ps1 assembles the payload, verifies embedded hashes and script encoding, and builds `dist/OptiShade_Version_0.20.5.exe`. The three text guides under installer/Help are embedded in the EXE. Packaging does not publish or deploy it.
+
+For this build, the ignored `optiscaler/OptiScaler/library` directory and `reshade/res/version.h` were restored from the existing local development inputs because they were absent from the public checkout. Keep these matching inputs to reproduce this build; do not substitute newer libraries.
 
 Generated executables, objects, payload staging and dist are excluded from Git. Go tests run during packaging, after payload generation. An engine build is required before packaging a clean checkout. The release source was prepared from the tested workspace; a complete clean-room engine rebuild from this publication folder has not yet been performed.
 

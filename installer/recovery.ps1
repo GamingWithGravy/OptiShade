@@ -1,36 +1,5 @@
-﻿function ImportEffectsZip([string]$Archive,[string]$Game){
- AssertClosed $Game
- if(-not(Test-Path -LiteralPath (Join-Path $Game 'FlightSimulator2024.exe'))){throw 'Choose the MSFS Content folder first.'}
- Add-Type -AssemblyName System.IO.Compression.FileSystem
- $zip=[IO.Compression.ZipFile]::OpenRead($Archive)
- $created=New-Object 'System.Collections.Generic.List[string]'
- try{
-  $id=[guid]::NewGuid().ToString('N').Substring(0,8);$plan=@();$size=0L
-  foreach($entry in $zip.Entries){
-   $name=$entry.FullName.Replace('\','/');if($name.EndsWith('/')){continue}
-   if($name.StartsWith('/') -or $name.Contains(':') -or $name.Split('/') -contains '..'){throw 'Unsafe archive path. Nothing was installed.'}
-   $size+=$entry.Length;if($size -gt 256MB -or $zip.Entries.Count -gt 5000){throw 'Archive exceeds the 256 MB / 5000 entry limit.'}
-   $ext=[IO.Path]::GetExtension($name).ToLowerInvariant()
-   $relative=$null
-   if($ext -eq '.ini'){$relative='Presets/Imported-'+$id+'/'+$name}
-   elseif($ext -in @('.fx','.fxh')){$relative='Shaders/Imported-'+$id+'/'+($name -replace '^.*?(?i:reshade-shaders/)?(?i:shaders/)','')}
-   elseif($ext -in @('.png','.jpg','.jpeg','.dds','.bmp','.tga')){$relative='Textures/Imported-'+$id+'/'+($name -replace '^.*?(?i:reshade-shaders/)?(?i:textures/)','')}
-   if($relative){$dest=OwnedPath (Join-Path $Game 'OptiShadeData') $relative;$plan+=@{Entry=$entry;Dest=$dest}}
-  }
-  if(-not($plan|Where-Object {$_.Dest -match '\.(ini|fx)$'})){throw 'No INI presets or FX shaders were found.'}
-  $names=@{};$shaderNames=@{}
-  foreach($item in $plan){
-   if($names.ContainsKey($item.Dest)){throw 'Duplicate archive destinations. Nothing was installed.'};$names[$item.Dest]=$true
-   if(Test-Path -LiteralPath $item.Dest){throw 'Import destination already exists.'}
-   if($item.Dest -match '\.fx$'){
-    $leaf=[IO.Path]::GetFileName($item.Dest);if($shaderNames.ContainsKey($leaf)){throw "Duplicate shader name in archive: $leaf"};$shaderNames[$leaf]=$true
-    if(Get-ChildItem -LiteralPath (Join-Path $Game 'OptiShadeData/Shaders') -Recurse -File -ErrorAction SilentlyContinue|Where-Object Name -eq $leaf){throw "Shader already installed: $leaf. Existing files were kept."}
-   }
-  }
-  foreach($item in $plan){New-Item -ItemType Directory -Path (Split-Path $item.Dest) -Force|Out-Null;$created.Add($item.Dest);[IO.Compression.ZipFileExtensions]::ExtractToFile($item.Entry,$item.Dest,$false)}
-  return $plan.Count
- }catch{foreach($file in $created){if(Test-Path -LiteralPath $file){Remove-Item -LiteralPath $file -Force}};throw}finally{$zip.Dispose()}
-}
+﻿. "$PSScriptRoot/import-effects.ps1"
+function ImportEffectsZip([string]$Archive,[string]$Game){AssertClosed $Game;ImportEffectsArchive $Archive $Game}
 function ResetOptiShadeSettings([string]$Game,[string]$Payload,[string]$Store){
  AssertClosed $Game
  $mp=ManifestPath $Store $Game
@@ -69,7 +38,7 @@ function GetOptiShadeSupportReport([string]$Game,[string]$Store){
    }
   }
  }
- [ordered]@{InstallerVersion='0.20.4';Created=(Get-Date -Format o);GameFolder=$Game;InstallationState=(GetFusionInstallState $Store $Game);GPU=$gpu;NeuralModel=(GetNeuralRuntimeStatus $Game $gpu);Files=$files;Note='Stored files only. This report does not confirm loaded DLLs or rendered output. No presets or log contents included.'}
+ [ordered]@{InstallerVersion='0.20.5';Created=(Get-Date -Format o);GameFolder=$Game;InstallationState=(GetFusionInstallState $Store $Game);GPU=$gpu;NeuralModel=(GetNeuralRuntimeStatus $Game $gpu);Files=$files;Note='Stored files only. This report does not confirm loaded DLLs or rendered output. No presets or log contents included.'}
 }
 
 function InstallFusionCinema([string]$Game){
