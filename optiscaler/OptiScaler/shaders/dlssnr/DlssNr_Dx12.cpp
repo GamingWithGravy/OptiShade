@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "../../../../shared/D3D12FrameContext.h"
 #include <dlssnr/PassProfiles.h>
 
 #include <set>
@@ -1697,6 +1698,13 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
     {
         ReportSkipOnce(g_nr.failed ? "it already failed this session" : "a resource was missing");
         return;
+    }
+
+    const optishade::D3D12FrameContext inputs {cmdList, colour, depth, motion, output,
+        static_cast<ID3D12Resource*>(frame.ExposureTexture), timingQueue};
+    if (const char* reason = inputs.ValidateDeviceIdentity()) {
+        ReportSkipOnce(reason);
+        return; // No state changes or GPU commands have been recorded.
     }
 
     ID3D12Resource* target = output;

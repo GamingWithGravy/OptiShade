@@ -1,19 +1,30 @@
 #pragma once
 #include <Windows.h>
-#include <atomic>
+#include <mutex>
 namespace optishade {
+// Identity is borrowed only while the swapchain exists; its owner must call Retire.
 class PresentationOwner {
-    std::atomic<HWND> window{nullptr};
+    std::mutex mutex;
+    HWND window = nullptr;
+    const void* swapchain = nullptr;
 public:
-    bool Accept(HWND candidate,bool claim=false){
-        if(!candidate)return true; // Preserve windowless/VR paths.
-        HWND owner=window.load();
-        if(owner&&!IsWindow(owner)){window.compare_exchange_strong(owner,nullptr);owner=window.load();}
-        if(!owner&&claim){
-            if(GetWindowLongPtrW(candidate,GWL_STYLE)&WS_CHILD)return false;
-            HWND empty=nullptr;window.compare_exchange_strong(empty,candidate);owner=window.load();
+    bool Accept(HWND candidate, bool claim = false, const void* identity = nullptr) {
+        if (!candidate) return true; // Preserve existing windowless/VR routing.
+        std::lock_guard<std::mutex> lock(mutex);
+        if (window && !IsWindow(window)) { window = nullptr; swapchain = nullptr; }
+        if (!window && claim) {
+            if (GetWindowLongPtrW(candidate, GWL_STYLE) & WS_CHILD) return false;
+            window = candidate;
+            swapchain = identity;
         }
-        return !owner||owner==candidate;
+        if (window && window != candidate) return false;
+        if (swapchain && identity && swapchain != identity) return false;
+        if (window && claim && !swapchain) swapchain = identity;
+        return true;
+    }
+    void Retire(HWND candidate, const void* identity) {
+        std::lock_guard<std::mutex> lock(mutex);
+        if (window == candidate && swapchain == identity) { window = nullptr; swapchain = nullptr; }
     }
 };
 }

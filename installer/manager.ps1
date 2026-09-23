@@ -15,11 +15,11 @@ $ErrorActionPreference='Stop'
 Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase,System.Windows.Forms
 Add-Type -TypeDefinition 'public class FusionGameCard { public string Name {get;set;} public string Folder {get;set;} public string Launcher {get;set;} public string State {get;set;} public string InstallFolder {get;set;} public string Label {get;set;} public string Artwork {get;set;} public System.Windows.Media.ImageSource Thumbnail {get;set;} }' -ReferencedAssemblies @([Windows.Media.ImageSource].Assembly.Location,[Windows.Threading.DispatcherObject].Assembly.Location)
 $store=Join-Path $env:LOCALAPPDATA 'OptiShade'
-$script:cachePath=Join-Path $store 'msfs24-cache.json'
+$script:cachePath=Join-Path $store 'msfs-2020-2024-cache.json'
 [xml]$xaml=Get-Content "$PSScriptRoot/manager.xaml" -Raw -Encoding UTF8
 $form=[Windows.Markup.XamlReader]::Load((New-Object Xml.XmlNodeReader $xaml))
 $path=$form.FindName('GamePath');$status=$form.FindName('Status')
-$buttons=@('Browse','Install','Repair','Restore','Runtime','Retry','Uninstall','Scan','Play','LibraryGames','GamePath','Method','AddGame','HomeNav','LibraryNav','SetupNav','SettingsNav','KeybindsNav','ChangeMenuKey','OpenLibrary','CheckCompatibility','TroubleshootingNav','ResetDefaults','ImportZip','InstallCinema','RecoveryRepair','RecoveryRestore','CheckUpdates','SaveMenuKeys','DefaultMenuKeys','LoadMenuKeys','IncludeEffects')|ForEach-Object {$form.FindName($_)}
+$buttons=@('Browse','Install','Repair','Restore','Runtime','Retry','Uninstall','Scan','Play','LibraryGames','GamePath','Method','AddGame','HomeNav','LibraryNav','SetupNav','SettingsNav','KeybindsNav','ChangeMenuKey','OpenLibrary','CheckCompatibility','TroubleshootingNav','ResetDefaults','ImportZip','InstallCinema','RecoveryRepair','RecoveryRestore','CheckUpdates','SaveMenuKeys','DefaultMenuKeys','LoadMenuKeys','IncludeEffects','PrepareOlderRtx','OpenMsfs2020')|ForEach-Object {$form.FindName($_)}
 $form.Icon=[Windows.Media.Imaging.BitmapFrame]::Create([uri](Join-Path $PSScriptRoot 'OptiShade-app.ico'))
 $form.FindName('BrandIcon').Source=[Windows.Media.Imaging.BitmapFrame]::Create([uri](Join-Path $PSScriptRoot 'OptiShade-icon.png'))
 $form.FindName('BrandIcon').Cursor='SizeAll'
@@ -37,7 +37,7 @@ $form.FindName('Minimize').Add_Click({$form.WindowState='Minimized'})
 $script:busy=$false
 $form.FindName('UpdateAvailable').Add_Click({
  if($script:busy -or -not $script:availableUpdate){return}
- if(Get-Process FlightSimulator2024 -ErrorAction SilentlyContinue){$status.Text='Close Microsoft Flight Simulator 2024 before updating.';return}
+ if(Get-Process FlightSimulator2024,FlightSimulator -ErrorAction SilentlyContinue){$status.Text='Close Microsoft Flight Simulator before updating.';return}
  $updateDir=Join-Path $store ('Updates/'+[guid]::NewGuid().ToString('N'));New-Item -ItemType Directory -Path $updateDir -Force|Out-Null
  $worker=Join-Path $updateDir 'update-worker.ps1';Copy-Item -LiteralPath "$PSScriptRoot/update-worker.ps1" -Destination $worker
  Copy-Item -LiteralPath "$PSScriptRoot/dialog-theme.xaml" -Destination (Join-Path $updateDir 'dialog-theme.xaml')
@@ -67,6 +67,7 @@ $form.FindName('Install').Add_Click({RunAction {
  if((GetFusionInstallState $store $path.Text) -match '^Installed|^Installation incomplete'){$status.Text='OptiShade is already installed. Use Repair, Restore or Troubleshooting to manage it.';return}
  $exe=ChooseGameExe; if(-not $exe){return}; AssertFusionExecutable $exe
  AssertMsfsNvidiaTarget $exe (GetFusionGpu)
+ if((GetMsfsTitle $path.Text) -match '2020'){if([Windows.MessageBox]::Show($form,'MSFS 2020 support is experimental. Test DX12 and DLSS first, with Neural Rendering and frame generation off. Install into this selected MSFS 2020 folder?','MSFS 2020 test','YesNo','Question','No') -ne 'Yes'){return}}
  $proxy=[string]$form.FindName('Method').SelectedItem.Tag
  $plan=CheckGameCompatibility $exe
  if($proxy -eq 'auto'){$proxy=$plan.Proxy}
@@ -89,6 +90,26 @@ $form.FindName('Install').Add_Click({RunAction {
  FinishOptionalDownloads $m $plan
 }})
 $form.FindName('Restore').Add_Click({RunAction {$m=ManifestPath $store $path.Text;if(-not(Test-Path $m)){throw 'No recorded installation for this game.'};RestoreFusion $m;$status.Text='Game restored. Original files are back and OptiShade game files are removed.'}})
+$form.FindName('PrepareOlderRtx').Add_Click({RunAction {
+ $m=ManifestPath $store $path.Text
+ if(-not(Test-Path -LiteralPath $m)){throw 'Install OptiShade in this game first.'}
+ $gpu=GetFusionGpu;$selection=GetNeuralDownload $gpu
+ if($selection.Family -notmatch '20/30/40'){throw 'This test is for a single detected RTX 20, 30 or 40 GPU. RTX 50 uses its existing runtime.'}
+ if([Windows.MessageBox]::Show($form,'Prepare the hash-verified community compatibility model (not NVIDIA-signed) for older RTX hardware? This is experimental and may fail initialization or run too slowly. It is not native RTX 50 support. The test uses one pass and keeps Neural Rendering off at startup. Other picture settings are kept.','Older RTX compatibility test','YesNo','Question','No') -ne 'Yes'){return}
+ $record=Get-Content -LiteralPath $m -Raw|ConvertFrom-Json
+ $downloadsBefore=$record.Downloads
+ if($record.Status -ne 'Installed'){throw 'Complete or repair this installation before preparing the test.'}
+ AssertClosed $path.Text
+ $record|Add-Member -NotePropertyName OptionalDlss -NotePropertyValue $true -Force
+ $record|Add-Member -NotePropertyName Downloads -NotePropertyValue 'Pending' -Force;WriteState $record $m
+ EnsureNeuralRuntime $m $gpu $progress
+ InstallNvidia $path.Text $progress
+ SetOlderRtxTestSettings $path.Text
+ $record=Get-Content -LiteralPath $m -Raw|ConvertFrom-Json
+ $record|Add-Member -NotePropertyName OptionalDlss -NotePropertyValue $true -Force;WriteState $record $m
+ if($downloadsBefore -eq 'Complete'){$record|Add-Member -NotePropertyName Downloads -NotePropertyValue 'Complete' -Force;WriteState $record $m}
+ $status.Text='Older RTX model prepared. Use Retry unfinished downloads if other optional packages remain pending. Start DX12 with DLSS, enter a flight, then enable Neural Rendering manually. If it fails, leave it off and export diagnostics. No native older-RTX support is claimed.'
+}})
 $form.FindName('Runtime').Add_Click({RunAction {$m=ManifestPath $store $path.Text;if(-not(Test-Path $m)){throw 'Install OptiShade first.'};$installed=Get-Content $m -Raw|ConvertFrom-Json;$plan=CheckGameCompatibility $installed.LaunchExe;if(-not $plan.DownloadNvidia){throw $plan.NeuralRendering};$d=New-Object Windows.Forms.OpenFileDialog;$d.Title='Choose '+$plan.NeuralRuntime.Expected;$d.Filter='NVIDIA NR model (not the helper)|nvngx_dlssnr.dll';if($d.ShowDialog() -eq 'OK'){ImportNrRuntime $m $d.FileName;$installed|Add-Member -NotePropertyName OptionalDlss -NotePropertyValue $true -Force;$latest=Get-Content $m -Raw|ConvertFrom-Json;$latest|Add-Member -NotePropertyName OptionalDlss -NotePropertyValue $true -Force;WriteState $latest $m;$status.Text='Model file added. It is not running yet: a supported game connection is still required.'};$d.Dispose()}})
 $form.FindName('Uninstall').Add_Click({RunAction {$choice=[Windows.MessageBox]::Show($form,'Would you like to keep your saved INI files? Yes keeps presets in each game folder for later. No removes them with OptiShade.','Keep saved presets?','YesNoCancel','Question','Yes');if($choice -eq 'Cancel'){return};UninstallFusion $store $Installer $PSScriptRoot -KeepPresets ($choice -eq 'Yes');$script:uninstallDone=$true;$status.Text='OptiShade removed. Closing setup; your original installer EXE is kept.';$script:busy=$false;$form.Close()}})
 $form.FindName('Retry').Add_Click({RunAction {$m=Get-Content (ManifestPath $store $path.Text) -Raw|ConvertFrom-Json;if($m.Status -ne 'Installed'){throw 'Install OptiShade first.'};AssertClosed $path.Text;$plan=CheckGameCompatibility $m.LaunchExe;SaveFusionCompatibility $path.Text $plan;FinishOptionalDownloads $m $plan}})
@@ -153,21 +174,30 @@ function ShowGames($games){
  $script:libraryGames=$cards;$form.FindName('LibraryGames').ItemsSource=$cards
 }
 function RefreshHomeState{
- $detected=$false
- try{if($path.Text){$folder=ResolveFusionInstallFolder $path.Text;$detected=Test-Path -LiteralPath (Join-Path $folder 'FlightSimulator2024.exe') -PathType Leaf}}catch{}
- $form.FindName('HomeDetection').Text=if($detected){'MSFS 2024 detected'}else{'Not detected - select folder in Setup'}
  try{$state=if($path.Text){GetFusionInstallState $store $path.Text}else{'Not installed'}}catch{$state='Invalid path'}
  $installed=$state -match '^Installed';$incomplete=$state -match '^Installation incomplete'
  $install=$form.FindName('Install');$install.Content=if($installed){'Already installed'}elseif($incomplete){'Repair required'}else{'Install OptiShade'}
  $install.IsEnabled=(-not $script:busy -and -not $installed -and -not $incomplete -and $state -ne 'Invalid path' -and -not [string]::IsNullOrWhiteSpace($path.Text))
- $form.FindName('HomeInstallState').Text=if($state -match '^Installed'){'OptiShade installed'}elseif($state -match 'incomplete'){'OptiShade needs repair'}else{'Install OptiShade'}
+ $title=GetMsfsTitle $path.Text
+ if($title){$form.FindName('SelectedTitle').Text=$title}
+ foreach($entry in @(@('2024','HomeInstallState','HomeDetection'),@('2020','Home2020State','Home2020Detection'))){
+  $homeState='Not installed'
+  $homeCopy=@($form.FindName('MsfsCopies').ItemsSource|Where-Object {$_.Name -match $entry[0]})|Select-Object -First 1
+  $detected=($title -match $entry[0]) -or ($null -ne $homeCopy)
+  $form.FindName($entry[2]).Text=if($detected){'MSFS '+$entry[0]+' detected'}else{'MSFS '+$entry[0]+' not detected'}
+  if($title -match $entry[0]){$homeState=$state}else{
+   if($homeCopy){$homeState=$homeCopy.State}
+  }
+  $form.FindName($entry[1]).Text=if($homeState -match '^Installed'){'OptiShade installed'}elseif($homeState -match 'incomplete'){'OptiShade needs repair'}else{'Install OptiShade'}
+ }
+
 }
 function RefreshLibrary{
  $selector=$form.FindName('MsfsCopies');$items=@($selector.ItemsSource)
  foreach($game in $items){
   $installPath=if($game.InstallFolder){$game.InstallFolder}else{$game.Folder}
   $state=GetFusionInstallState $store $installPath
-  $game.State=$state;$game.Label="$($game.Launcher) - OptiShade $state"
+  $game.State=$state;$game.Label="$($game.Name) / $($game.Launcher) - OptiShade $state"
  }
  $selected=$selector.SelectedIndex;$savedPath=$path.Text
  $selector.ItemsSource=$null;$selector.ItemsSource=$items;$selector.SelectedIndex=$selected;$path.Text=$savedPath
@@ -190,7 +220,17 @@ $form.FindName('Help').Add_Click({
 $form.FindName('HomeNav').Add_Click({RefreshHomeState;ShowPage 'Home'})
 $form.FindName('GitHub').Add_Click({Start-Process 'https://github.com/GamingWithGravy/OptiShade/releases/latest'})
 $form.FindName('LibraryNav').Add_Click({ShowPage 'Library'})
-$form.FindName('OpenLibrary').Add_Click({$form.FindName('SelectedTitle').Text='Microsoft Flight Simulator 2024';ShowPage 'Setup'})
+function OpenSimulator([bool]$Legacy){
+ $wanted=if($Legacy){'2020'}else{'2024'}
+ $copy=@($form.FindName('MsfsCopies').ItemsSource|Where-Object {$_.Name -match $wanted})|Select-Object -First 1
+ if($copy){$form.FindName('MsfsCopies').SelectedItem=$copy;$path.Text=$copy.InstallFolder}
+ else{$form.FindName('MsfsCopies').SelectedIndex=-1;$script:gameRoot='';$script:gameLauncher='';$path.Text=''}
+ $form.FindName('SelectedTitle').Text=if($Legacy){'Microsoft Flight Simulator 2020 (experimental)'}else{'Microsoft Flight Simulator 2024'}
+ $status.Text=if($Legacy){'Experimental MSFS 2020 test: choose the EXE folder, not Community/Official packages. Use DX12 and DLSS; restart after changing API. Xbox copies need an accessible executable folder; protected WindowsApps installs are not unlocked by this manager.'}else{'Select your MSFS 2024 copy below.'}
+ ShowPage 'Setup'
+}
+$form.FindName('OpenLibrary').Add_Click({OpenSimulator $false})
+$form.FindName('OpenMsfs2020').Add_Click({OpenSimulator $true})
 $form.FindName('KeybindsNav').Add_Click({RefreshMenuKeys;ShowPage 'Keybinds'})
 $form.FindName('SettingsNav').Add_Click({ShowPage 'Settings'})
 $form.FindName('SetupNav').Add_Click({ShowPage 'Setup'})
@@ -250,12 +290,12 @@ $script:startupTimer.Add_Tick({
    if($result.Update){$script:availableUpdate=$result.Update;$form.FindName('UpdateAvailable').Content='Update available - '+$result.Update.Version;$form.FindName('UpdateAvailable').Visibility='Visible'}
    $form.FindName('MsfsCopies').ItemsSource=$copies
    if($copies.Count){$form.FindName('MsfsCopies').SelectedIndex=0}else{$path.Text=''}
-   $status.Text='Microsoft Flight Simulator 2024 detection complete. Open Setup to install, play or restore.'
+   $status.Text='Microsoft Flight Simulator detection complete. Open Setup to install, play or restore.'
   }catch{$form.FindName('Hardware').Text='Hardware detection was unavailable. Choose settings in game after checking your graphics card.'}
   finally{$script:startup.Dispose();$script:startupResult=$null;$script:startupTimer.Stop();RefreshHomeState;$form.FindName('Intro').Visibility='Collapsed';ShowReleaseNotes $form $store}
  }
 })
-$form.FindName('MsfsCopies').Add_SelectionChanged({$copy=$form.FindName('MsfsCopies').SelectedItem;if($copy){$script:gameRoot=$copy.Folder;$script:gameLauncher=$copy.Launcher;$path.Text=if($copy.InstallFolder){$copy.InstallFolder}else{$copy.Folder};$form.FindName('SelectedTitle').Text='Microsoft Flight Simulator 2024';RefreshHomeState}})
+$form.FindName('MsfsCopies').Add_SelectionChanged({$copy=$form.FindName('MsfsCopies').SelectedItem;if($copy){$script:gameRoot=$copy.Folder;$script:gameLauncher=$copy.Launcher;$path.Text=if($copy.InstallFolder){$copy.InstallFolder}else{$copy.Folder};$form.FindName('SelectedTitle').Text=$copy.Name;RefreshHomeState}})
 
 $form.FindName('TroubleshootingNav').Add_Click({ShowPage 'Troubleshooting'})
 $buttons+=@($form.FindName('ExportSupport'),$form.FindName('ExportDetailedSupport'))
@@ -340,6 +380,6 @@ RefreshMenuKeys
 ShowPage 'Home'
 # Raise the shared splash/installer window once, without keeping it above other apps.
 $form.Add_Loaded({$form.Topmost=$true;[void]$form.Activate()})
-$form.Add_ContentRendered({$form.Topmost=$false;[void]$form.Activate();$script:introStart=Get-Date;$form.FindName('IntroStatus').Text=if(Test-Path -LiteralPath $script:cachePath){'Loading your saved setup...'}else{'Checking graphics hardware and finding Microsoft Flight Simulator 2024...'};$status.Text=$form.FindName('IntroStatus').Text;$script:startupTimer.Start()})
+$form.Add_ContentRendered({$form.Topmost=$false;[void]$form.Activate();$script:introStart=Get-Date;$form.FindName('IntroStatus').Text=if(Test-Path -LiteralPath $script:cachePath){'Loading your saved setup...'}else{'Checking graphics hardware and finding Microsoft Flight Simulator installations...'};$status.Text=$form.FindName('IntroStatus').Text;$script:startupTimer.Start()})
 $form.Add_Closed({$script:startupTimer.Stop();if($script:startupResult){$script:startup.BeginStop($null,$null)|Out-Null}})
 [void]$form.ShowDialog()

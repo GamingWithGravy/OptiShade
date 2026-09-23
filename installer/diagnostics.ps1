@@ -7,7 +7,7 @@ function GetDetailedSupportReport([string]$Game,[string]$Store){
  $report=GetOptiShadeSupportReport $Game $Store
  $report.SchemaVersion=2;$report.ReportId=[guid]::NewGuid().ToString('N');$report.RuntimeEvidence='Logs and optional process metadata. Installed files alone do not establish active features.'
  $report.Windows=[Environment]::OSVersion.VersionString
- try{$exe=Get-Item -LiteralPath (OwnedPath $Game 'FlightSimulator2024.exe');$report.GameExecutable=@{Name=$exe.Name;Version=$exe.VersionInfo.FileVersion;Bytes=$exe.Length}}catch{$report.GameExecutable='Unavailable'}
+ try{$gameExe=if(Test-Path -LiteralPath (OwnedPath $Game 'FlightSimulator2024.exe')){'FlightSimulator2024.exe'}else{'FlightSimulator.exe'};$exe=Get-Item -LiteralPath (OwnedPath $Game $gameExe);$report.GameExecutable=@{Name=$exe.Name;Version=$exe.VersionInfo.FileVersion;Bytes=$exe.Length}}catch{$report.GameExecutable='Unavailable'}
  try{$report.Displays=@(Get-CimInstance Win32_VideoController|Select-Object Name,DriverVersion,CurrentHorizontalResolution,CurrentVerticalResolution,CurrentRefreshRate,VideoModeDescription)}catch{$report.Displays='Unavailable'}
  try{Add-Type -AssemblyName System.Windows.Forms;$report.MonitorLayout=@([Windows.Forms.Screen]::AllScreens|ForEach-Object {@{Primary=$_.Primary;X=$_.Bounds.X;Y=$_.Bounds.Y;Width=$_.Bounds.Width;Height=$_.Bounds.Height}})}catch{$report.MonitorLayout='Unavailable'}
  $report.LogTails=@{}
@@ -29,7 +29,7 @@ function GetDetailedSupportReport([string]$Game,[string]$Store){
  }catch{}
  $report.DisplayEventContext='Display-driver recovery events are system-wide; they do not prove MSFS or OptiShade caused the failure.'
  $report.LoadedModules=@();$report.ModuleInspection='Simulator not running or unavailable'
- foreach($process in Get-Process FlightSimulator2024 -ErrorAction SilentlyContinue){
+ foreach($process in Get-Process FlightSimulator2024,FlightSimulator -ErrorAction SilentlyContinue){
   try{
    $report.LoadedModules=@($process.Modules|Where-Object ModuleName -match '^(winmm|dxgi|d3d12|OptiScaler|ReShade64|nvngx.*|sl\..*|amd_fidelityfx.*|libxess.*)\.dll$'|ForEach-Object {@{Name=$_.ModuleName;Version=$_.FileVersionInfo.FileVersion}})
    $report.ModuleInspection='Observed loaded modules; not proof an optional feature rendered successfully'
@@ -38,7 +38,7 @@ function GetDetailedSupportReport([string]$Game,[string]$Store){
  $report.RecentCrashEvents=@()
  try{
   $events=Get-WinEvent -FilterHashtable @{LogName='Application';Id=1000,1001;StartTime=(Get-Date).AddDays(-3)} -MaxEvents 100 -ErrorAction Stop
-  $report.RecentCrashEvents=@($events|Where-Object {$_.Message -match 'FlightSimulator2024.exe'}|Select-Object -First 5|ForEach-Object {@{Time=$_.TimeCreated.ToString('o');Provider=$_.ProviderName;EventId=$_.Id;Details=$_.Message.Substring(0,[Math]::Min(4096,$_.Message.Length))}})
+  $report.RecentCrashEvents=@($events|Where-Object {$_.Message -match 'FlightSimulator(2024)?\.exe'}|Select-Object -First 5|ForEach-Object {@{Time=$_.TimeCreated.ToString('o');Provider=$_.ProviderName;EventId=$_.Id;Details=$_.Message.Substring(0,[Math]::Min(4096,$_.Message.Length))}})
  }catch{}
  $report.Limitations='No simulator/hardware reproduction is implied. No minidump is created or uploaded. Windows fault events may be unavailable; a faulting module is not proof of root cause. Active API/backend, swapchains, NR/FG and device-removed details are available only where runtime logs captured them.'
  $report.Note='Local report only. Paths for the selected game and user profile are redacted. Review all remaining log/event text before sharing. No credentials or automatic upload service are configured.'

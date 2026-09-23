@@ -1,21 +1,25 @@
 <div align="center">
   <img src="docs/images/optishade.png" width="160" alt="Optishade OS logo">
   <h1>Optishade</h1>
-  <p><strong>Microsoft Flight Simulator 2024</strong></p>
+  <p><strong>Microsoft Flight Simulator 2024 · MSFS 2020 experimental testing</strong></p>
   <p>Created by gravy · Powered by Fusion Engine</p>
   <p>
-    <img src="https://img.shields.io/badge/Version-0.20.5-9755E9?style=flat-square" alt="Version 0.20.5">
+    <img src="https://img.shields.io/badge/Version-0.20.7-9755E9?style=flat-square" alt="Version 0.20.7">
     <img src="https://img.shields.io/badge/Windows-x64-272133?style=flat-square" alt="Windows x64">
     <img src="https://img.shields.io/badge/Graphics-NVIDIA-76B900?style=flat-square" alt="NVIDIA graphics">
   </p>
   <p><a href="https://github.com/GamingWithGravy/OptiShade/releases/latest"><strong>Download OptiShade Manager</strong></a> · <a href="docs/Tutorial.txt">Getting started</a> · <a href="docs/Features.txt">Features</a> · <a href="BUILDING.md">Build from source</a></p>
 </div>
 
-![OptiShade Manager 0.20.5](docs/images/installer.png)
+![OptiShade Manager](docs/images/installer.png)
 
 ## Your flight. Your look.
 
 Optishade brings image effects, saved looks and optional NVIDIA neural rendering together in one custom in-game menu. This edition is built for **Microsoft Flight Simulator 2024 on NVIDIA and AMD graphics cards (AMD support is early experimental)**, with automatic Steam and Xbox detection.
+
+### New in 0.20.7: MSFS 2020 experimental testing
+
+This is the **first public release enabling MSFS 2020**. A Steam installation with an **RTX 5090** successfully loaded OptiShade; game logs confirmed the DLSS connection and active Neural Rendering at 3840 × 2160, including two passes. Support remains experimental: Xbox startup, older RTX Neural Rendering, frame generation and triple-monitor stability need further real-system testing. Select **Microsoft Flight Simulator 2020 (test)** in the manager. See the [testing guide and limitations](docs/Local-0207-testing.md).
 
 ### Image effects
 
@@ -31,7 +35,7 @@ Choose **Yes or No** when setup asks about DLSS 5. Neural rendering requires com
 
 ### An interface you can make your own
 
-Press **Insert** or **Ctrl+Shift+O** to open the menu. Shortcuts are configurable in launcher Setup. Purple is the default; choose a different overlay accent in Settings & status and save it for your game. Close the installer after setup finishes—the in-game menu runs independently.
+Press **Insert** or **Ctrl+Shift+O** to open the menu. Shortcuts are configurable in the manager’s Keybinds tab. Purple is the default; choose a different overlay accent in Settings & status and save it for your game. Close the installer after setup finishes—the in-game menu runs independently.
 
 ## Install in a few steps
 

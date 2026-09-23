@@ -110,6 +110,14 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,LPWSTR args,int){
                 if(snapshot.dirty)throw std::runtime_error("Discard left unsaved changes");bool active=false;for(uint32_t i=0;i<snapshot.techniques;i++)if(!strcmp(snapshot.technique[i].effect,"Vibrance.fx")&&snapshot.technique[i].enabled)active=true;
                 if(active)throw std::runtime_error("Discard did not restore saved techniques");fprintf(report,"Discard restores saved look and clears unsaved notice: PASS\n");
             }
+            if(automatic&&tick==24){
+                finish();
+                const HRESULT nullQueues=swap->ResizeBuffers1(3,960,640,DXGI_FORMAT_UNKNOWN,0,nullptr,nullptr);
+                fprintf(report,"ResizeBuffers1 with null queue array returned %08lX without crashing\n",(unsigned long)nullQueues);
+                // DXGI may accept the retained configuration or return INVALID_CALL; both must preserve the live queue.
+                if(FAILED(nullQueues)&&nullQueues!=DXGI_ERROR_INVALID_CALL&&nullQueues!=E_INVALIDARG)Check(nullQueues);
+                // The proxy rejects this before DXGI; no debug-layer errors should be generated.
+            }
             if(automatic&&(tick==16||tick==32)){
                 finish();UINT w=tick==16?960:1080,h=tick==16?640:720;
                 if(tick==16)Check(swap->ResizeBuffers(3,w,h,DXGI_FORMAT_UNKNOWN,0));else {UINT nodes[]={1,1,1};IUnknown* queues[]={queue.Get(),queue.Get(),queue.Get()};Check(swap->ResizeBuffers1(3,w,h,DXGI_FORMAT_UNKNOWN,0,nodes,queues));}

@@ -14,12 +14,14 @@ Set-Content "$payload/nvngx.dll_dlssnr.dll" 'our neural helper'
 @(Get-ChildItem $payload -Recurse -File|ForEach-Object {@{Path=$_.FullName.Substring($payload.Length+1);Hash=(HashFile $_.FullName)}})|ConvertTo-Json|Set-Content "$payload/files.json"
 $gpu=[pscustomobject]@{Names='NVIDIA GeForce RTX 5080';Known=$true;Nvidia=$true}
 $targets=@()
+foreach($edition in @('2024','2020')){
 foreach($platform in @('Steam','Xbox')){
  # Steam may be in a user-named XboxGames directory; do not use that name to pick its loader.
- $parent=Join-Path $fixture $(if($platform -eq 'Steam'){'XboxGames/SteamLibrary/steamapps/common/MSFS'}else{'Xbox/MSFS'})
+ $parent=Join-Path $fixture $(if($platform -eq 'Steam'){('XboxGames/SteamLibrary/steamapps/common/MSFS'+$edition)}else{('Xbox/MSFS'+$edition)})
  $game=if($platform -eq 'Xbox'){Join-Path $parent 'Content'}else{$parent}
  New-Item -ItemType Directory -Path $game -Force|Out-Null
- foreach($exe in @('FlightSimulator2024.exe','gamelaunchhelper.exe')){Copy-Item -LiteralPath "$PSScriptRoot/../installer/FusionSetup.exe" -Destination (Join-Path $game $exe)}
+ $main=if($edition -eq '2024'){'FlightSimulator2024.exe'}else{'FlightSimulator.exe'}
+ foreach($exe in @($main,'gamelaunchhelper.exe')){Copy-Item -LiteralPath "$PSScriptRoot/../installer/FusionSetup.exe" -Destination (Join-Path $game $exe)}
  if($platform -eq 'Xbox'){Set-Content "$game/MicrosoftGame.Config" '<Game/>'}
  $resolved=ResolveFusionInstallFolder $parent
  Assert ($resolved -eq $game) "$platform parent resolves to actual executable folder"
@@ -40,6 +42,7 @@ foreach($platform in @('Steam','Xbox')){
  Assert (Test-Path "$game/OptiShadeData/Presets/User.ini") "$platform saved preset preserved"
  $mp=InstallFusion $resolved $payload $store $installer $plan.Proxy @(FindFusionConflicts $game) -ReplaceExisting $true
  $targets+=@{Game=$game;Loader=$expected;Native=$native}
+}
 }
 # Keep a session fixture so uninstall only removes individual, verified contained paths.
 $session=Join-Path $store 'Sessions/test';New-Item -ItemType Directory -Path $session -Force|Out-Null

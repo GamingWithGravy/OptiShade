@@ -13,6 +13,20 @@
 #include "../../../shared/PresentationOwner.h"
 static optishade::PresentationOwner presentationOwner;
 bool MenuOverlayDx::IsPrimaryWindow(HWND window,bool claim){return presentationOwner.Accept(window,claim);}
+static const void* SwapchainIdentity(IDXGISwapChain* swapchain) {
+    IUnknown* identity = nullptr;
+    if (!swapchain || FAILED(swapchain->QueryInterface(IID_PPV_ARGS(&identity)))) return swapchain;
+    const void* result = identity;
+    identity->Release(); // swapchain remains alive throughout the caller's operation.
+    return result;
+}
+bool MenuOverlayDx::IsPrimarySwapchain(HWND window, IDXGISwapChain* swapchain, bool claim) {
+    return presentationOwner.Accept(window, claim, SwapchainIdentity(swapchain));
+}
+void MenuOverlayDx::RetireSwapchain(HWND window, IDXGISwapChain* swapchain) {
+    presentationOwner.Retire(window, SwapchainIdentity(swapchain));
+}
+
 // menu
 static int const NUM_BACK_BUFFERS = 8;
 static int const SRV_HEAP_SIZE = 64;
@@ -545,7 +559,7 @@ void MenuOverlayDx::CleanupRenderTarget(bool clearQueue, HWND hWnd)
 void MenuOverlayDx::Present(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags,
                             const DXGI_PRESENT_PARAMETERS* pPresentParameters, IUnknown* pDevice, HWND hWnd, bool isUWP)
 {
-    if(!IsPrimaryWindow(hWnd,true))return;
+    if(!IsPrimarySwapchain(hWnd,pSwapChain,true))return;
     if (!Config::Instance()->OverlayMenu.value_or_default())
     {
         MenuOverlayBase::Present();

@@ -10,6 +10,14 @@ int main(){
     assert(!owner.Accept(child,true));
     assert(owner.Accept(main,true));
     for(int i=0;i<100;i++){assert(!owner.Accept(secondary,true));assert(!owner.Accept(secondary));assert(owner.Accept(main));}
+    int first = 0, other = 0;
+    assert(owner.Accept(main, true, &first));
+    assert(!owner.Accept(main, true, &other));
+    owner.Retire(main, &other);
+    assert(!owner.Accept(main, true, &other));
+    owner.Retire(main, &first);
+    assert(owner.Accept(main, true, &other));
+    assert(!owner.Accept(secondary, true, &first));
     DestroyWindow(main);
     assert(owner.Accept(secondary,true));
     assert(owner.Accept(nullptr));

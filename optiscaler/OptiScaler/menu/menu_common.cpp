@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "menu_common.h"
+#include "../../../shared/RenderingCapability.h"
 #include "optishade_effects_ui.inl"
 #include <framegen/dlssg/MfgUnlock.h>
 #include <framegen/dlssg/AmpereMfgLoader.h>
@@ -47,6 +48,28 @@
 #define MARK_ALL_BACKENDS_CHANGED()                                                                                    \
     for (auto& singleChangeBackend : State::Instance().changeBackend)                                                  \
         singleChangeBackend.second = true;
+
+// Match the live rendering device, not the first/preferred GPU in the PC.
+static GpuInformation RenderingGpu(const State& state) {
+    LUID luid {};
+    if (state.currentD3D12Device) luid = state.currentD3D12Device->GetAdapterLuid();
+    else if (state.currentD3D11Device) {
+        IDXGIDevice* dxgi = nullptr;
+        IDXGIAdapter* adapter = nullptr;
+        DXGI_ADAPTER_DESC desc {};
+        if (SUCCEEDED(state.currentD3D11Device->QueryInterface(IID_PPV_ARGS(&dxgi)))) {
+            if (SUCCEEDED(dxgi->GetAdapter(&adapter))) {
+                if (SUCCEEDED(adapter->GetDesc(&desc))) luid = desc.AdapterLuid;
+                adapter->Release();
+            }
+            dxgi->Release();
+        }
+    }
+    if (!luid.HighPart && !luid.LowPart) return {};
+    for (const auto& gpu : IdentifyGpu::getAllGpus())
+        if (IsEqualLUID(gpu.luid, luid)) return gpu;
+    return {}; // A missing match is unknown, never an inferred primary adapter.
+}
 
 static float fontSize = 14.0f; // just changing this doesn't make other elements scale ideally
 static ImVec2 overlaySize(0.0f, 0.0f);
@@ -7699,7 +7722,7 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
     ImGui::SetNextWindowPos(ImVec2(15,15),ImGuiCond_FirstUseEver);
     bool visible=_isVisible;static bool saved=false;
     if(ImGui::Begin("optishade | fusion engine",&visible,ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar)){
-        ImGui::SetWindowFontScale(1.75f);ImGui::TextUnformatted("optishade  0.20.5");ImGui::SetWindowFontScale(1.f);
+        ImGui::SetWindowFontScale(1.75f);ImGui::TextUnformatted("optishade  0.20.7");ImGui::SetWindowFontScale(1.f);
         ImGui::SameLine(ImGui::GetWindowWidth()-100);if(ImGui::SmallButton("Close"))visible=false;
         OptiShadeUpdates::DrawHeader();
         ImGui::TextColored(ImGui::GetStyleColorVec4(ImGuiCol_CheckMark),"powered by fusion engine");
@@ -7713,9 +7736,13 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
         if(page==0){
             ImGui::TextWrapped("Get a sharper picture, a smoother frame rate, or a balance of both. Some options depend on the game.");
             ImGui::Spacing();ImGui::SeparatorText("Upscaling");
-            const char* backendStatus = !ctx.currentFeature ? "Waiting for game upscaling input" :
-                !ctx.currentFeature->IsInited() ? "Detected, not initialized" :
-                ctx.currentFeature->IsFrozen() ? "Initialized, no recent upscaling frames" : "Active";
+            optishade::BackendEvidence backendEvidence;
+            backendEvidence.gameInput = ctx.currentFeature ? optishade::Evidence::Yes : optishade::Evidence::Unknown;
+            if (ctx.currentFeature) {
+                backendEvidence.initialized = ctx.currentFeature->IsInited() ? optishade::Evidence::Yes : optishade::Evidence::No;
+                backendEvidence.active = ctx.currentFeature->IsInited() && !ctx.currentFeature->IsFrozen() ? optishade::Evidence::Yes : optishade::Evidence::No;
+            }
+            const char* backendStatus = optishade::BackendStageLabel(optishade::ResolveBackendStage(backendEvidence));
             static std::string lastBackendStatus;
             if(lastBackendStatus != backendStatus){
                 LOG_INFO("Performance page backend: {}; API: {}", backendStatus, (int)ctx.state.api);
@@ -7730,6 +7757,16 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
                 ImGui::TextWrapped("If DLSS is already selected while flying, this may be a connection or initialization problem. Save a detailed support report from the launcher and include your MSFS graphics settings. Image effects work separately.");
             }
             ImGui::TextDisabled("Backend state: %s",backendStatus);
+            const auto renderingGpu = RenderingGpu(ctx.state);
+            ImGui::TextWrapped("Rendering GPU: %s", renderingGpu.name.empty() ? "Not identified from the active device" : renderingGpu.name.c_str());
+            static std::string lastRenderingGpu;
+            if (!renderingGpu.name.empty() && renderingGpu.name != lastRenderingGpu) {
+                LOG_INFO("Rendering adapter: {}; LUID={:08X}:{:08X}; vendor={:04X}; device={:04X}",
+                    renderingGpu.name, (UINT)renderingGpu.luid.HighPart, renderingGpu.luid.LowPart,
+                    (UINT)renderingGpu.vendorId, renderingGpu.deviceId);
+                lastRenderingGpu = renderingGpu.name;
+            }
+
             ImGui::TextWrapped("An installed NVIDIA DLL is not proof that DLSS or Neural Rendering is active. Enter a flight with supported upscaling enabled. If controls remain unavailable, save a diagnostic report in the launcher.");
             ImGui::Spacing();ImGui::SeparatorText("Smoother motion");
             ImGui::TextWrapped("Frame generation adds frames between the ones the game draws. It can look smoother, but it does not make your controls respond faster.");
@@ -7739,7 +7776,7 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
             if(ImGui::CollapsingHeader("Set a frame-rate limit"))RenderFramerateSettings(ctx);
             if(ImGui::CollapsingHeader("Sharpness and picture size"))RenderActiveImageSettings(ctx);
         }else if(page==1){
-            const auto nrGpu = IdentifyGpu::getPrimaryGpu();
+            const auto nrGpu = RenderingGpu(ctx.state);
             const bool nrUnsupportedGpu = nrGpu.vendorId == VendorId::AMD || nrGpu.vendorId == VendorId::Intel;
             if(nrUnsupportedGpu)ImGui::TextWrapped("Unavailable on this graphics card: this build's neural-rendering model requires NVIDIA RTX. Use Image effects, or FSR/XeSS in a compatible game.");
             ImGui::TextWrapped("This neural-rendering build requires compatible NVIDIA RTX hardware. AMD/Intel cards can use image effects and supported FSR/XeSS paths, but not this DLSS model.");
@@ -7747,7 +7784,16 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
             ImGui::Text("Model status: %s",DlssNr::IsRunning()?"Running":"Not running");
             if(auto reason=DlssNr::FailureReason();reason&&reason[0])ImGui::TextWrapped("%s",reason);
             ImGui::BeginDisabled(nrUnsupportedGpu);
-            bool enabled=config->DlssNrEnabled.value_or_default();if(ImGui::Checkbox("Use neural rendering",&enabled))config->DlssNrEnabled=enabled;
+            const bool olderRtx = nrGpu.vendorId == VendorId::Nvidia &&
+                (nrGpu.name.find("RTX 20") != std::string::npos || nrGpu.name.find("RTX 30") != std::string::npos || nrGpu.name.find("RTX 40") != std::string::npos);
+            if(olderRtx)ImGui::TextWrapped("Experimental compatibility attempt: prepare the older RTX model in the manager first. Runtime initialization decides whether it can run. This is not native RTX 50 support; start with one pass and stop if performance is poor.");
+            bool enabled=config->DlssNrEnabled.value_or_default();
+            if(ImGui::Checkbox(olderRtx ? "Attempt compatibility rendering (experimental)" : "Use neural rendering",&enabled)) {
+                config->DlssNrEnabled=enabled;
+                if(enabled && olderRtx){config->DlssNrPasses=1u;config->DlssNrUnlockPasses=false;}
+                LOG_INFO("Neural Rendering session request: {}; rendering GPU: {}; compatibility attempt: {}",enabled,nrGpu.name,olderRtx);
+            }
+
             ImGui::TextWrapped("Adds detail and changes lighting with NVIDIA's model. It can change faces and scenery, and may lower your frame rate.");
             const int passLimit=config->DlssNrUnlockPasses.value_or_default()?5:3;int passes=(int)std::clamp(config->DlssNrPasses.value_or_default(),1u,(uint32_t)passLimit);if(ImGui::SliderInt("Passes",&passes,1,passLimit))config->DlssNrPasses=(uint32_t)passes;
             ImGui::TextDisabled("Start with one. Extra passes can add detail, but take more time.");

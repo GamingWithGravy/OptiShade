@@ -26,7 +26,8 @@ foreach($width in @(1000,1100)){
   $control=$form.FindName($name);$point=$control.TranslatePoint([Windows.Point]::new(0,0),$form.Content)
   if($point.X+$control.ActualWidth -gt $width -or $control.ActualHeight -lt 100){throw "Home game button clipped: $name at $width"}
  }
- if($form.FindName('OpenXPlane12').IsEnabled -or $form.FindName('OpenMsfs2020').IsEnabled){throw 'Coming-soon installation enabled'}
+ if($form.FindName('OpenXPlane12').IsEnabled){throw 'X-Plane coming-soon installation enabled'}
+ if(-not $form.FindName('OpenMsfs2020').IsEnabled){throw 'Experimental MSFS 2020 entry disabled'}
 }
 $bitmap=[Windows.Media.Imaging.RenderTargetBitmap]::new(1100,740,96,96,[Windows.Media.PixelFormats]::Pbgra32);$bitmap.Render($form.Content)
 $encoder=[Windows.Media.Imaging.PngBitmapEncoder]::new();$encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bitmap))

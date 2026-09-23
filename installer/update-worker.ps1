@@ -50,7 +50,7 @@ $window.Add_ContentRendered({
   $web.Headers['User-Agent']='OptiShade-updater';$task=$web.DownloadFileTaskAsync($uri,$download);$clock=[Diagnostics.Stopwatch]::StartNew()
   while(-not $task.IsCompleted){if($clock.Elapsed.TotalMinutes -gt 15){$web.CancelAsync();throw 'Download timed out. Your existing manager is unchanged.'};$window.Dispatcher.Invoke([Action]{},[Windows.Threading.DispatcherPriority]::Background);Start-Sleep -Milliseconds 100}
   $task.GetAwaiter().GetResult()
-  if(Get-Process FlightSimulator2024 -ErrorAction SilentlyContinue){throw 'Close Microsoft Flight Simulator 2024, then retry the update. No installed files were changed.'}
+  if(Get-Process FlightSimulator2024,FlightSimulator -ErrorAction SilentlyContinue){throw 'Close Microsoft Flight Simulator, then retry the update. No installed files were changed.'}
   if((Get-FileHash -LiteralPath $download -Algorithm SHA256).Hash -ne $settings.SHA256){throw 'Update verification failed. Your existing manager is unchanged.'}
   $window.FindName('Status').Text='Checking staged files and installation requirements...'
   $window.FindName('Progress').IsIndeterminate=$false;$window.FindName('Progress').Value=35

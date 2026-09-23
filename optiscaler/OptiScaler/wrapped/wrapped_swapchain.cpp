@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "wrapped_swapchain.h"
+#include "../../../shared/D3D12QueueWait.h"
 #include <dlssnr/DlssNr.h>
 #include <hooks/DxgiSwapchainSizing.h>
 
@@ -77,58 +78,6 @@ const GUID IID_IUnwrappedDXGISwapChain = {
     0xe8a33b4a, 0x1405, 0x424c, { 0xae, 0x88, 0xd, 0x3e, 0x9d, 0x46, 0xc9, 0x14 }
 };
 
-static ID3D12Fence* resizeFence = nullptr;
-static UINT64 resizeFenceValue = 0;
-static HANDLE resizeFenceEvent = nullptr;
-
-static void WaitForGPUIdle(IUnknown* object)
-{
-    if (State::Instance().currentD3D12Device == nullptr || object == nullptr)
-        return;
-
-    ID3D12CommandQueue* queue = nullptr;
-
-    if (object->QueryInterface(IID_PPV_ARGS(&queue)) == S_OK)
-    {
-        LOG_DEBUG("Command queue obtained for GPU idle wait");
-        queue->Release();
-    }
-
-    if (queue != nullptr && resizeFence != nullptr && resizeFenceEvent != nullptr)
-    {
-        if (State::Instance().currentD3D12Device != nullptr)
-        {
-            if (resizeFence != nullptr)
-            {
-                resizeFence->Release();
-                resizeFence = nullptr;
-            }
-
-            if (resizeFenceEvent != nullptr)
-            {
-                CloseHandle(resizeFenceEvent);
-                resizeFenceEvent = nullptr;
-            }
-
-            State::Instance().currentD3D12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&resizeFence));
-            resizeFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-        }
-
-        LOG_DEBUG("Waiting for GPU to finish before resizing buffers");
-
-        resizeFenceValue++;
-        queue->Signal(resizeFence, resizeFenceValue);
-
-        if (resizeFence->GetCompletedValue() < resizeFenceValue)
-        {
-            resizeFence->SetEventOnCompletion(resizeFenceValue, resizeFenceEvent);
-            // Max 5 sec
-            auto waitResult = WaitForSingleObject(resizeFenceEvent, 5000);
-            LOG_DEBUG("WaitForSingleObject result: {:X}", waitResult);
-        }
-    }
-}
-
 #ifdef DXGI_DEBUG_ENABLED
 void ReportDXGILiveObjects()
 {
@@ -179,7 +128,7 @@ void ReportD3D12LiveObjects(ID3D12Device* device)
 static HRESULT LocalPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags,
                             const DXGI_PRESENT_PARAMETERS* pPresentParameters, IUnknown* pDevice, HWND hWnd, bool isUWP)
 {
-    if (State::Instance().isShuttingDown || !MenuOverlayDx::IsPrimaryWindow(hWnd,(Flags & DXGI_PRESENT_TEST)==0))
+    if (State::Instance().isShuttingDown || !MenuOverlayDx::IsPrimarySwapchain(hWnd,pSwapChain,(Flags & DXGI_PRESENT_TEST)==0))
     {
         if (pPresentParameters == nullptr)
             return pSwapChain->Present(SyncInterval, Flags);
@@ -233,6 +182,7 @@ static HRESULT LocalPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT 
         _dx11Device = true;
         State::Instance().swapchainApi = DX11;
         State::Instance().currentD3D11Device = device;
+        State::Instance().currentD3D12Device = nullptr;
     }
     else if (pDevice->QueryInterface(IID_PPV_ARGS(&cq)) == S_OK)
     {
@@ -247,8 +197,7 @@ static HRESULT LocalPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT 
 
         State::Instance().swapchainApi = DX12;
 
-        if (State::Instance().currentCommandQueue == nullptr)
-            State::Instance().currentCommandQueue = cq;
+        State::Instance().currentCommandQueue = cq; // accepted primary swapchain only
 
         if (cq->GetDevice(IID_PPV_ARGS(&device12)) == S_OK)
         {
@@ -260,6 +209,7 @@ static HRESULT LocalPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT 
             _dx12Device = true;
 
             State::Instance().currentD3D12Device = device12;
+            State::Instance().currentD3D11Device = nullptr;
             D3D12Hooks::HookDevice(device12);
         }
     }
@@ -590,16 +540,17 @@ ULONG STDMETHODCALLTYPE WrappedIDXGISwapChain4::Release()
         OwnedLockGuard lock(_localMutex, 999);
 #endif
 
-        MenuOverlayDx::CleanupRenderTarget(true, _handle);
+        if (MenuOverlayDx::IsPrimarySwapchain(_handle, _real))
+            MenuOverlayDx::CleanupRenderTarget(true, _handle);
 
         if (State::Instance().currentSwapchain == this)
             State::Instance().currentSwapchain = nullptr;
 
-        if (State::Instance().currentRealSwapchain == this)
+        if (State::Instance().currentRealSwapchain == this || State::Instance().currentRealSwapchain == _real)
             State::Instance().currentRealSwapchain = nullptr;
 
         auto fg = State::Instance().currentFG;
-        if (MenuOverlayDx::IsPrimaryWindow(_handle) && fg != nullptr && fg->Mutex.getOwner() != 1 && fg->SwapchainContext() != nullptr)
+        if (MenuOverlayDx::IsPrimarySwapchain(_handle,_real) && fg != nullptr && fg->Mutex.getOwner() != 1 && fg->SwapchainContext() != nullptr)
         {
             fg->Deactivate();
             fg->ReleaseSwapchain(_handle);
@@ -608,6 +559,12 @@ ULONG STDMETHODCALLTYPE WrappedIDXGISwapChain4::Release()
                 State::Instance().currentFGSwapchain = nullptr;
         }
 
+        if (MenuOverlayDx::IsPrimarySwapchain(_handle, _real)) {
+            State::Instance().currentCommandQueue = nullptr;
+            State::Instance().currentD3D12Device = nullptr;
+            State::Instance().currentD3D11Device = nullptr;
+        }
+        MenuOverlayDx::RetireSwapchain(_handle, _real);
         auto refCount = _real->Release();
 
         // Disabled for now, cause issues with some games
@@ -687,7 +644,8 @@ HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::Present(UINT SyncInterval, UIN
         result = LocalPresent(_real, SyncInterval, Flags, nullptr, _device, _handle, _uwp);
 
         // When Reflex can't be used to limit, sleep in present
-        if (!State::Instance().reflexLimitsFps && State::Instance().activeFgOutput == FGOutput::NoFG &&
+        if (MenuOverlayDx::IsPrimarySwapchain(_handle, _real) &&
+            !State::Instance().reflexLimitsFps && State::Instance().activeFgOutput == FGOutput::NoFG &&
             !IdentifyGpu::getPrimaryGpu().usesDxvk && !XellHooks::canLimit())
             FrameLimit::sleep(false);
     }
@@ -707,6 +665,7 @@ HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::GetBuffer(UINT Buffer, REFIID 
 
 HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::SetFullscreenState(BOOL Fullscreen, IDXGIOutput* pTarget)
 {
+    if (!MenuOverlayDx::IsPrimarySwapchain(_handle, _real)) return _real->SetFullscreenState(Fullscreen, pTarget);
     LOG_DEBUG("Fullscreen: {}, pTarget: {:X}, Caller: {}", Fullscreen, (size_t) pTarget,
               Util::WhoIsTheCaller(_ReturnAddress()));
 
@@ -769,9 +728,14 @@ HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::GetDesc(DXGI_SWAP_CHAIN_DESC* 
 HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::ResizeBuffers(UINT BufferCount, UINT Width, UINT Height,
                                                                 DXGI_FORMAT NewFormat, UINT SwapChainFlags)
 {
-    if(!MenuOverlayDx::IsPrimaryWindow(_handle))return _real->ResizeBuffers(BufferCount,Width,Height,NewFormat,SwapChainFlags);
+    if(!MenuOverlayDx::IsPrimarySwapchain(_handle,_real))return _real->ResizeBuffers(BufferCount,Width,Height,NewFormat,SwapChainFlags);
     if (!DlssNr::WaitForFinishedPicture())
         return DXGI_ERROR_WAS_STILL_DRAWING;
+    const HRESULT idleResult = optishade::WaitForQueueIdle(_device);
+    if (FAILED(idleResult)) {
+        LOG_ERROR("Resize postponed before resource cleanup: GPU wait HRESULT={:08X}", (UINT)idleResult);
+        return idleResult;
+    }
     LOG_DEBUG("");
 
 #ifdef USE_LOCAL_MUTEX
@@ -820,7 +784,6 @@ HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::ResizeBuffers(UINT BufferCount
     LOG_DEBUG("BufferCount: {0}, Width: {1}, Height: {2}, NewFormat: {3}, SwapChainFlags: {4:X}", BufferCount, Width,
               Height, (UINT) NewFormat, SwapChainFlags);
 
-    WaitForGPUIdle(_device);
 
     // Release swapchain backbuffers to prevent errors when resizing
     /*
@@ -1052,7 +1015,8 @@ HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::Present1(UINT SyncInterval, UI
         result = LocalPresent(_real1, SyncInterval, Flags, pPresentParameters, _device, _handle, _uwp);
 
         // When Reflex can't be used to limit, sleep in present
-        if (!State::Instance().reflexLimitsFps && State::Instance().activeFgOutput == FGOutput::NoFG &&
+        if (MenuOverlayDx::IsPrimarySwapchain(_handle, _real) &&
+            !State::Instance().reflexLimitsFps && State::Instance().activeFgOutput == FGOutput::NoFG &&
             !IdentifyGpu::getPrimaryGpu().usesDxvk && !XellHooks::canLimit())
             FrameLimit::sleep(false);
     }
@@ -1145,6 +1109,7 @@ HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::CheckColorSpaceSupport(DXGI_CO
 
 HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::SetColorSpace1(DXGI_COLOR_SPACE_TYPE ColorSpace)
 {
+    if (!MenuOverlayDx::IsPrimarySwapchain(_handle, _real)) return _real3->SetColorSpace1(ColorSpace);
     State::Instance().isHdrActive = ColorSpace == DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020 ||
                                     ColorSpace == DXGI_COLOR_SPACE_YCBCR_FULL_GHLG_TOPLEFT_P2020 ||
                                     ColorSpace == DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P2020 ||
@@ -1198,9 +1163,16 @@ HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::ResizeBuffers1(UINT BufferCoun
                                                                  const UINT* pCreationNodeMask,
                                                                  IUnknown* const* ppPresentQueue)
 {
-    if(!MenuOverlayDx::IsPrimaryWindow(_handle))return _real3->ResizeBuffers1(BufferCount,Width,Height,Format,SwapChainFlags,pCreationNodeMask,ppPresentQueue);
+    if (!ppPresentQueue) return DXGI_ERROR_INVALID_CALL; // reject before cleanup or forwarding to another proxy
+
+    if(!MenuOverlayDx::IsPrimarySwapchain(_handle,_real))return _real3->ResizeBuffers1(BufferCount,Width,Height,Format,SwapChainFlags,pCreationNodeMask,ppPresentQueue);
     if (!DlssNr::WaitForFinishedPicture())
         return DXGI_ERROR_WAS_STILL_DRAWING;
+    const HRESULT idleResult = optishade::WaitForQueueIdle(_device);
+    if (FAILED(idleResult)) {
+        LOG_ERROR("Resize postponed before resource cleanup: GPU wait HRESULT={:08X}", (UINT)idleResult);
+        return idleResult;
+    }
     LOG_DEBUG("");
 
 #ifdef USE_LOCAL_MUTEX
@@ -1211,13 +1183,6 @@ HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::ResizeBuffers1(UINT BufferCoun
         OwnedLockGuard lock(_localMutex, 2);
     }
 #endif
-
-    if (*ppPresentQueue != nullptr)
-    {
-        auto state = &State::Instance();
-        state->currentCommandQueue = (ID3D12CommandQueue*) *ppPresentQueue;
-        _device = state->currentCommandQueue;
-    }
 
     if (State::Instance().activeFgOutput == FGOutput::FSRFG &&
         Config::Instance()->FGUseMutexForSwapchain.value_or_default())
@@ -1257,7 +1222,6 @@ HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::ResizeBuffers1(UINT BufferCoun
     LOG_DEBUG("BufferCount: {}, Width: {}, Height: {}, NewFormat: {}, SwapChainFlags: {:X}", BufferCount, Width, Height,
               (UINT) Format, SwapChainFlags);
 
-    WaitForGPUIdle(_device);
 
     // Release swapchain backbuffers to prevent errors when resizing
     const bool isUsingOptiFgFeature =
@@ -1352,6 +1316,16 @@ HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::ResizeBuffers1(UINT BufferCoun
         _lastFlags = SwapChainFlags;
         result = _real3->ResizeBuffers1(BufferCount, Width, Height, Format, SwapChainFlags, pCreationNodeMask,
                                         ppPresentQueue);
+    }
+
+    // A failed resize must not replace the working queue; DXGI validates the supplied array.
+    if (SUCCEEDED(result) && ppPresentQueue && ppPresentQueue[0]) {
+        ID3D12CommandQueue* queue = nullptr;
+        if (SUCCEEDED(ppPresentQueue[0]->QueryInterface(IID_PPV_ARGS(&queue)))) {
+            State::Instance().currentCommandQueue = queue;
+            _device = ppPresentQueue[0];
+            queue->Release(); // borrowed from the successful swapchain configuration
+        }
     }
 
     if (result == DXGI_ERROR_DEVICE_REMOVED && State::Instance().currentD3D12Device != nullptr)

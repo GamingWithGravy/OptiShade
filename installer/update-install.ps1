@@ -14,7 +14,7 @@ $payloadBytes=0L;foreach($entry in $catalog){$payloadBytes+=(Get-Item -LiteralPa
 foreach($record in $records){
  $m=Get-Content -LiteralPath $record.FullName -Raw|ConvertFrom-Json
  if($m.Status -ne 'Installed'){continue}
- if(-not(Test-Path -LiteralPath (Join-Path $m.Game 'FlightSimulator2024.exe'))){continue}
+ if(-not(Test-Path -LiteralPath (Join-Path $m.Game 'FlightSimulator2024.exe')) -and -not(Test-Path -LiteralPath (Join-Path $m.Game 'FlightSimulator.exe'))){continue}
  AssertClosed $m.Game
  $drive=[IO.Path]::GetPathRoot([IO.Path]::GetFullPath($m.Game));$diskNeeded[$drive]+=2*$payloadBytes+64MB
  $proxy=@($m.Files|Where-Object SourcePath -eq 'winmm.dll'|Select-Object -First 1).Path
@@ -34,4 +34,4 @@ foreach($target in $targets){
  foreach($key in @('LaunchExe','Downloads','OptionalDlss')){if($m.PSObject.Properties[$key]){$updated|Add-Member -NotePropertyName $key -NotePropertyValue $m.$key -Force}}
  WriteState $updated $mp
 }
-"Updated $($targets.Count) Microsoft Flight Simulator 2024 installation(s). Presets and configuration preserved."
+"Updated $($targets.Count) Microsoft Flight Simulator installation(s). Presets and configuration preserved."

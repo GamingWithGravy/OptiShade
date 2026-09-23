@@ -22,7 +22,7 @@ function ResetOptiShadeSettings([string]$Game,[string]$Payload,[string]$Store){
 }
 function GetOptiShadeSupportReport([string]$Game,[string]$Store){
  $Game=ResolveFusionInstallFolder $Game
- if(-not(Test-Path -LiteralPath (Join-Path $Game 'FlightSimulator2024.exe'))){throw 'Select your MSFS installation in Setup first.'}
+ if(-not(GetMsfsTitle $Game)){throw 'Select your MSFS installation in Setup first.'}
  $gpu=GetFusionGpu
  $files=@()
  # Bounded metadata only: no presets or log contents.
@@ -38,7 +38,7 @@ function GetOptiShadeSupportReport([string]$Game,[string]$Store){
    }
   }
  }
- [ordered]@{InstallerVersion='0.20.5';Created=(Get-Date -Format o);GameFolder=$Game;InstallationState=(GetFusionInstallState $Store $Game);GPU=$gpu;NeuralModel=(GetNeuralRuntimeStatus $Game $gpu);Files=$files;Note='Stored files only. This report does not confirm loaded DLLs or rendered output. No presets or log contents included.'}
+ [ordered]@{InstallerVersion='0.20.7';Created=(Get-Date -Format o);GameFolder=$Game;InstallationState=(GetFusionInstallState $Store $Game);GPU=$gpu;NeuralModel=(GetNeuralRuntimeStatus $Game $gpu);Files=$files;Note='Stored files only. This report does not confirm loaded DLLs or rendered output. No presets or log contents included.'}
 }
 
 function InstallFusionCinema([string]$Game){

@@ -39,3 +39,24 @@ function EnsureNeuralRuntime([string]$ManifestPath,$Gpu,[scriptblock]$Progress={
   if(-not(Get-ChildItem -LiteralPath $temp -Force)){Remove-Item -LiteralPath $temp}
  }
 }
+
+function SetOlderRtxTestSettings([string]$Game){
+ AssertClosed $Game
+ $file=OwnedPath $Game 'OptiScaler.ini'
+ if(-not(Test-Path -LiteralPath $file -PathType Leaf)){throw 'Install OptiShade before preparing a compatibility test.'}
+ $settings=@{Enabled='false';Passes='1';UnlockPasses='false'};$seen=@{};$section=''
+ $lines=New-Object 'System.Collections.Generic.List[string]'
+ foreach($line in [IO.File]::ReadAllLines($file)){
+  if($line -match '^\s*\[([^]]+)\]'){
+   if($section -eq 'DlssNr'){foreach($key in $settings.Keys){if(-not $seen[$key]){$lines.Add("$key=$($settings[$key])");$seen[$key]=$true}}}
+   $section=$Matches[1]
+  }
+  if($section -eq 'DlssNr' -and $line -match '^\s*(Enabled|Passes|UnlockPasses)\s*='){
+   $key=$Matches[1];if(-not $seen[$key]){$lines.Add("$key=$($settings[$key])");$seen[$key]=$true}
+  }else{$lines.Add($line)}
+ }
+ if(-not $seen.Count -and $section -ne 'DlssNr'){$lines.Add('[DlssNr]')}
+ foreach($key in $settings.Keys){if(-not $seen[$key]){$lines.Add("$key=$($settings[$key])")}}
+ $tmp=$file+'.nr-test-'+[guid]::NewGuid().ToString('N')
+ try{[IO.File]::WriteAllLines($tmp,$lines,[Text.UTF8Encoding]::new($false));[IO.File]::Replace($tmp,$file,$tmp+'.backup');Remove-Item -LiteralPath ($tmp+'.backup')}finally{if(Test-Path -LiteralPath $tmp){Remove-Item -LiteralPath $tmp}}
+}

@@ -13,7 +13,7 @@ static DWORD WINAPI Check(void* reference){
   OS_HTTP(WinHttpOpen);OS_HTTP(WinHttpSetTimeouts);OS_HTTP(WinHttpConnect);OS_HTTP(WinHttpOpenRequest);OS_HTTP(WinHttpSendRequest);OS_HTTP(WinHttpReceiveResponse);OS_HTTP(WinHttpReadData);OS_HTTP(WinHttpCloseHandle);OS_HTTP(WinHttpQueryHeaders);
 #undef OS_HTTP
   if(WinHttpOpen&&WinHttpSetTimeouts&&WinHttpConnect&&WinHttpOpenRequest&&WinHttpSendRequest&&WinHttpReceiveResponse&&WinHttpReadData&&WinHttpCloseHandle&&WinHttpQueryHeaders){
-   HINTERNET session=WinHttpOpen(L"OptiShade/0.20.5",WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,nullptr,nullptr,0);
+   HINTERNET session=WinHttpOpen(L"OptiShade/0.20.7",WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,nullptr,nullptr,0);
    if(session){
     WinHttpSetTimeouts(session,3000,3000,3000,3000);
     HINTERNET connection=WinHttpConnect(session,L"api.github.com",INTERNET_DEFAULT_HTTPS_PORT,0);

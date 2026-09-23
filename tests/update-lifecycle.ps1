@@ -1,4 +1,5 @@
-﻿$ErrorActionPreference='Stop'
+﻿param([switch]$Msfs2020)
+$ErrorActionPreference='Stop'
 . "$PSScriptRoot/../installer/ownership.ps1"
 . "$PSScriptRoot/../installer/library.ps1"
 function AssertClosed([string]$Game){} # Fixtures contain text files, never a running simulator.
@@ -54,10 +55,11 @@ Set-Content (Join-Path $orphan 'OptiShadeData/Shaders/test.fx') 'untracked user 
 $mp=InstallFusion $orphan $payload $store $installer 'winmm.dll' @() -ReplaceExisting $true
 RestoreFusion $mp
 Assert (-not(Test-Path (Join-Path $orphan 'OptiShadeData/Shaders/test.fx'))) 'Orphaned app files are not restored as originals'
-Set-Content (Join-Path $game 'FlightSimulator2024.exe') 'fixture, not executable'
+$testExe=if($Msfs2020){'FlightSimulator.exe'}else{'FlightSimulator2024.exe'}
+Set-Content (Join-Path $game $testExe) 'fixture, not executable'
 $mp=InstallFusion $game $payload $store $installer 'dxgi.dll' @(FindFusionConflicts $game) -ReplaceExisting $true
 Set-Content (Join-Path $game 'ReShade.ini') 'keep update config'
-$m=Get-Content $mp -Raw|ConvertFrom-Json;$m|Add-Member LaunchExe (Join-Path $game 'FlightSimulator2024.exe');WriteState $m $mp
+$m=Get-Content $mp -Raw|ConvertFrom-Json;$m|Add-Member LaunchExe (Join-Path $game $testExe);WriteState $m $mp
 Payload 'v4'
 $savedLocalAppData=$env:LOCALAPPDATA
 try{

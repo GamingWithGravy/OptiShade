@@ -1,4 +1,4 @@
-﻿function GetOptiShadeUpdate([string]$Current='0.20.5',[switch]$ReportErrors){
+﻿function GetOptiShadeUpdate([string]$Current='0.20.7',[switch]$ReportErrors){
  [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
  try{
   $release=Invoke-RestMethod 'https://api.github.com/repos/GamingWithGravy/OptiShade/releases/latest' -Headers @{'User-Agent'='OptiShade-update-check'} -TimeoutSec 12

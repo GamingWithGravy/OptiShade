@@ -45,7 +45,7 @@
     <StackPanel DockPanel.Dock="Bottom" VerticalAlignment="Bottom">
      <TextBlock Text="OptiShade - created by gravy" Foreground="#D4B7F9" FontWeight="SemiBold" FontSize="12"/>
      
-     <TextBlock Text="VERSION  /  0.20.5" Foreground="#71657F" FontSize="10" Margin="0,22,0,0"/>
+     <TextBlock Text="VERSION  /  0.20.7" Foreground="#71657F" FontSize="10" Margin="0,22,0,0"/>
     </StackPanel>
     <Grid/>
    </DockPanel>
@@ -73,11 +73,11 @@
       <StackPanel Grid.Column="2"><TextBlock Text="Coming soon" Foreground="#AA9CB9" FontSize="12" TextAlignment="Center" Height="36"/>
        <Button x:Name="OpenXPlane12" Tag="XPlane12" IsEnabled="False" Height="110" Padding="12" Cursor="Arrow" ToolTipService.ShowOnDisabled="True" ToolTip="X-Plane 12 installation is not available yet"><StackPanel Width="174"><TextBlock Text="X-Plane 12" TextAlignment="Center" FontWeight="SemiBold" FontSize="14"/><TextBlock Text="Install OptiShade" TextAlignment="Center" FontSize="11" Margin="0,8,0,0"/></StackPanel></Button>
       </StackPanel>
-      <StackPanel Grid.Column="4"><TextBlock Text="Coming soon" Foreground="#AA9CB9" FontSize="12" TextAlignment="Center" Height="36"/>
-       <Button x:Name="OpenMsfs2020" Tag="MSFS2020" IsEnabled="False" Height="110" Padding="12" Cursor="Arrow" ToolTipService.ShowOnDisabled="True" ToolTip="Microsoft Flight Simulator 2020 installation is not available yet"><StackPanel Width="174"><TextBlock Text="Microsoft Flight Simulator 2020" TextAlignment="Center" FontWeight="SemiBold" FontSize="14"/><TextBlock Text="Install OptiShade" TextAlignment="Center" FontSize="11" Margin="0,8,0,0"/></StackPanel></Button>
+      <StackPanel Grid.Column="4"><TextBlock x:Name="Home2020Detection" Text="Checking for MSFS 2020..." Foreground="#C9B6DF" FontSize="12" TextAlignment="Center" Height="36"/>
+       <Button x:Name="OpenMsfs2020" Tag="MSFS2020" Background="#8650C8" Height="110" Padding="12" ToolTipService.ShowOnDisabled="True" ToolTip="Experimental MSFS 2020 installation - DX12 test"><StackPanel Width="174"><TextBlock Text="Microsoft Flight Simulator 2020 (test)" TextWrapping="Wrap" TextAlignment="Center" FontWeight="SemiBold" FontSize="14"/><TextBlock x:Name="Home2020State" Text="Install OptiShade" TextAlignment="Center" Foreground="#E1CEF7" FontSize="11" Margin="0,8,0,0"/></StackPanel></Button>
       </StackPanel>
      </Grid>
-     <TextBlock Text="For Microsoft Flight Simulator 2024 on NVIDIA and AMD graphics cards. Install, play and restore from Setup." Foreground="#AA9CB9" FontSize="13"/>
+     <TextBlock Text="For MSFS 2024 and experimental MSFS 2020 on NVIDIA and AMD graphics cards. Install, play and restore from Setup." Foreground="#AA9CB9" FontSize="13"/>
     </StackPanel></ScrollViewer>
     <Grid x:Name="LibraryPage" Visibility="Collapsed"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
      <StackPanel Margin="0,12,0,16"><TextBlock Text="Your game library" FontSize="28" FontWeight="SemiBold"/><TextBlock Text="Games found on this PC. Choose one to open its setup page." Foreground="#AA9CB9" Margin="0,8,0,14"/><StackPanel Orientation="Horizontal"><Button x:Name="Scan" Content="Scan games" Margin="0,0,12,0"/><Button x:Name="AddGame" Content="Add a game"/></StackPanel></StackPanel>
@@ -96,7 +96,7 @@
 <TextBlock Text="Troubleshooting" FontSize="28" FontWeight="SemiBold"/>
 <Button x:Name="ExportSupport" Content="Save lightweight support report" Margin="0,12,0,10"/><Button x:Name="ExportDetailedSupport" Content="Save diagnostics ZIP for Discord" Margin="0,0,0,10"/>
 <TextBlock Text="The ZIP contains a readable text report, recent log tails and a checklist to describe the issue. Includes GPU/driver, display, installation and available crash details. You can also choose a plain TXT report in the save dialog. Reports stay local; review before attaching to Discord." TextWrapping="Wrap" Foreground="#AA9CB9" Margin="0,0,0,12"/>
-<TextBlock Text="Applies to the game folder selected on Setup. Close MSFS before making changes. If it has crashed, check Task Manager for a remaining FlightSimulator2024 process." TextWrapping="Wrap" Margin="0,16,0,12"/>
+<TextBlock Text="Applies to the game folder selected on Setup. Close MSFS before making changes. If it has crashed, check Task Manager for a remaining FlightSimulator2024 or FlightSimulator process." TextWrapping="Wrap" Margin="0,16,0,12"/>
 <TextBlock Text="Black screen or missing frame generation? Reset OptiShade settings first. Enable one frame-generation provider at a time while diagnosing; multipliers are not guaranteed to stack. A screenshot alone cannot identify the cause of a crash." TextWrapping="Wrap" Foreground="#C2B0D7" Margin="0,0,0,16"/>
 <Button x:Name="ResetDefaults" Content="Back up and reset OptiShade settings" Margin="0,0,0,10"/>
 <TextBlock Text="Resets Performance settings and selects an empty image-effects look. Keeps saved presets and MSFS settings." TextWrapping="Wrap" Margin="0,0,0,16"/>
@@ -113,7 +113,7 @@
 
 <Expander Header="Advanced options and downloads" Foreground="#BD9CEC" Margin="0,20,0,12"><StackPanel Margin="0,14,0,0">     <TextBlock Text="Installation method - restore before trying another if the menu does not appear." Foreground="#94869F" FontSize="12" Margin="0,0,0,6"/>
      <ComboBox x:Name="Method" SelectedIndex="0" Margin="0,0,0,12" Padding="8"><ComboBoxItem Content="Automatic - check game and graphics card" Tag="auto"/><ComboBoxItem Content="Windows multimedia - Xbox / Vulkan (winmm)" Tag="winmm.dll"/><ComboBoxItem Content="DirectX graphics (dxgi)" Tag="dxgi.dll"/><ComboBoxItem Content="DirectX 12 fallback (d3d12)" Tag="d3d12.dll"/><ComboBoxItem Content="Version library fallback (version)" Tag="version.dll"/><ComboBoxItem Content="Debug library fallback (dbghelp)" Tag="dbghelp.dll"/></ComboBox>
-     <WrapPanel><Button x:Name="ImportZip" Content="Install FX / INI from ZIP" Margin="0,0,10,10"/><Button x:Name="InstallCinema" Content="Install bundled Fusion Cinema preset + FX" Margin="0,0,0,10"/></WrapPanel><TextBlock Text="ZIP import installs FX, includes, textures and INI files; existing files are kept. Fusion Cinema includes a shader and INI preset, is bundled for offline installation, and requires Image effects. It is not a REX preset. Install it, then select Gravy - Fusion Cinema Custom v1 under Image effects > Saved look. Downloading other presets does not apply them." TextWrapping="Wrap" Margin="0,0,0,14"/><Button x:Name="CheckCompatibility" Content="Check game and runtime versions" HorizontalAlignment="Left" Margin="0,0,0,10"/><TextBlock x:Name="Compatibility" Text="Check this game before installing. Automatic setup also checks again at install time." TextWrapping="Wrap" Foreground="#BDA0F4" Margin="0,0,0,14"/><WrapPanel><Button x:Name="Runtime" Content="Add NVIDIA runtime" Margin="0,0,10,10"/><Button x:Name="Retry" Content="Retry unfinished downloads" Margin="0,0,10,10"/></WrapPanel></StackPanel></Expander>     <TextBlock Text="Restore removes OptiShade and restores files it backed up. Your game settings, controls and saves stay untouched. Saved INI presets stay in the game presets folder." Foreground="#94869F" FontSize="11" Margin="0,4,0,0"/>
+     <WrapPanel><Button x:Name="ImportZip" Content="Install FX / INI from ZIP" Margin="0,0,10,10"/><Button x:Name="InstallCinema" Content="Install bundled Fusion Cinema preset + FX" Margin="0,0,0,10"/></WrapPanel><TextBlock Text="ZIP import installs FX, includes, textures and INI files; existing files are kept. Fusion Cinema includes a shader and INI preset, is bundled for offline installation, and requires Image effects. It is not a REX preset. Install it, then select Gravy - Fusion Cinema Custom v1 under Image effects > Saved look. Downloading other presets does not apply them." TextWrapping="Wrap" Margin="0,0,0,14"/><Button x:Name="CheckCompatibility" Content="Check game and runtime versions" HorizontalAlignment="Left" Margin="0,0,0,10"/><TextBlock x:Name="Compatibility" Text="Check this game before installing. Automatic setup also checks again at install time." TextWrapping="Wrap" Foreground="#BDA0F4" Margin="0,0,0,14"/><WrapPanel><Button x:Name="PrepareOlderRtx" Content="Prepare older RTX test" Margin="0,0,10,10"/><Button x:Name="Runtime" Content="Add NVIDIA runtime" Margin="0,0,10,10"/><Button x:Name="Retry" Content="Retry unfinished downloads" Margin="0,0,10,10"/></WrapPanel></StackPanel></Expander>     <TextBlock Text="Restore removes OptiShade and restores files it backed up. Your game settings, controls and saves stay untouched. Saved INI presets stay in the game presets folder." Foreground="#94869F" FontSize="11" Margin="0,4,0,0"/>
 
     </StackPanel></ScrollViewer>
    </Grid>
@@ -122,7 +122,7 @@
   <Border x:Name="Intro" Grid.ColumnSpan="2" Background="#171020" CornerRadius="20">
    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="620">
     <TextBlock Text="Optishade" FontSize="48" HorizontalAlignment="Center" FontWeight="SemiBold"/>
-    <TextBlock Text="Microsoft Flight Simulator 2024" Foreground="#BD9CEC" FontSize="22" HorizontalAlignment="Center" Margin="0,8,0,36"/>
+    <TextBlock Text="MSFS 2024 / MSFS 2020 preview" Foreground="#BD9CEC" FontSize="22" HorizontalAlignment="Center" Margin="0,8,0,36"/>
     <TextBlock x:Name="IntroStatus" Text="Welcome. Your hardware check starts next." HorizontalAlignment="Center" Foreground="#C9B6DF"/>
     <ProgressBar x:Name="IntroProgress" Width="360" Height="7" Margin="0,24,0,0" Foreground="#9755E9" Background="#332246" BorderThickness="0" IsIndeterminate="True" Minimum="0" Maximum="100"/>
     <TextBlock Text="created by gravy" HorizontalAlignment="Center" Foreground="#8E829E" Margin="0,26,0,22"/>

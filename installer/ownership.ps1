@@ -10,7 +10,7 @@ function OwnedPath([string]$Root,[string]$Relative){
 }
 function AssertClosed([string]$Game){
     foreach($p in Get-Process){try{if($p.Path -and ((FullPath (Split-Path $p.Path -Parent)) -eq (FullPath $Game))){throw "Close $($p.ProcessName) first."}}catch [System.ComponentModel.Win32Exception]{}}
-    if(Get-Process FlightSimulator2024 -ErrorAction SilentlyContinue){throw 'Close MSFS before changing installed files.'}
+    if(Get-Process FlightSimulator2024,FlightSimulator -ErrorAction SilentlyContinue){throw 'Close MSFS before changing installed files.'}
 }
 function ManifestPath([string]$StateRoot,[string]$Game){
     $bytes=[Text.Encoding]::UTF8.GetBytes((FullPath $Game).ToLowerInvariant());$sha=[Security.Cryptography.SHA256]::Create();$id=[BitConverter]::ToString($sha.ComputeHash($bytes)).Replace('-','').Substring(0,16);$sha.Dispose()
@@ -119,7 +119,7 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
         if($hash){Copy-Item -LiteralPath $dest -Destination $copy;if((HashFile $copy) -ne $hash){throw 'Rollback snapshot verification failed.'}}
         $rollback+=@{Path=$entry.Path;Hash=$hash;Copy=$copy}
     }
-    $manifest=@{Version='P0.20.5-MSFS24';Game=$Game;Installer=(FullPath $Installer);Status='Installing';Files=$files;OwnedDirectories=@('OptiShadeData');IncludeEffects=$IncludeEffects;PreserveThirdParty=$true;Created=(Get-Date -Format o)}
+    $manifest=@{Version='P0.20.7-MSFS24';Game=$Game;Installer=(FullPath $Installer);Status='Installing';Files=$files;OwnedDirectories=@('OptiShadeData');IncludeEffects=$IncludeEffects;PreserveThirdParty=$true;Created=(Get-Date -Format o)}
     WriteState $manifest $mp
     try{
         # The entry-point proxy is copied last so an incomplete install cannot start.

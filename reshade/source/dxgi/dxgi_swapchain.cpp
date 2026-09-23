@@ -746,6 +746,11 @@ HRESULT STDMETHODCALLTYPE DXGISwapChain::SetColorSpace1(DXGI_COLOR_SPACE_TYPE Co
 }
 HRESULT STDMETHODCALLTYPE DXGISwapChain::ResizeBuffers1(UINT BufferCount, UINT Width, UINT Height, DXGI_FORMAT NewFormat, UINT SwapChainFlags, const UINT *pCreationNodeMask, IUnknown *const *ppPresentQueue)
 {
+	// OptiShade: reject a missing queue array before resetting the live effects runtime.
+	// Release builds cannot rely on the assertion below to prevent a null dereference.
+	if (ppPresentQueue == nullptr)
+		return DXGI_ERROR_INVALID_CALL;
+
 	assert(_interface_version >= 3);
 
 	reshade::log::message(

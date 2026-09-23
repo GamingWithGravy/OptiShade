@@ -1,5 +1,6 @@
 ﻿$ErrorActionPreference='Stop'
 . "$PSScriptRoot/../installer/ownership.ps1"
+function AssertClosed($Game){} # Isolated temporary fixtures, not the running simulator.
 $fixture=Join-Path $env:TEMP ('OptiShade-lifecycle-'+[guid]::NewGuid().ToString('N'))
 $game=Join-Path $fixture 'Game';$payload=Join-Path $fixture 'Payload';$store=Join-Path $fixture 'OptiShade';$installer=Join-Path $fixture 'OriginalInstaller.exe'
 function Assert($ok,$text){if(-not $ok){throw $text};Write-Output "PASS: $text"}
