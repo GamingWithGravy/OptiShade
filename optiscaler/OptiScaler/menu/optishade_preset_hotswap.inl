@@ -20,7 +20,7 @@ static bool SaveSwapPair(){
  }return true;
 }
 static void RememberMainPreset(const char* path){LoadSwapPair();swapMain=std::filesystem::u8path(path);SaveSwapPair();}
-static bool SameSwapPreset(const std::filesystem::path& a,const std::filesystem::path& b){return !a.empty()&&!b.empty()&&_wcsicmp(a.lexically_normal().c_str(),b.lexically_normal().c_str())==0;}
+static bool SameSwapPreset(const std::filesystem::path& a,const std::filesystem::path& b){return optishade::hotswap::same_preset(a,b,Util::DllPath().parent_path());}
 static bool SwapKeyConflict(int key){
  auto c=Config::Instance();return key>0&&(key==c->ShortcutKey.value_or_default()||key==c->FpsShortcutKey.value_or_default()||key==c->FpsCycleShortcutKey.value_or_default()||key==c->FGShortcutKey.value_or_default()||key==c->DlssNrToggleKey.value_or_default());
 }
@@ -30,7 +30,7 @@ static void TryHotSwap(){
  if(fx.dirty){strcpy_s(feedback,"Preset swap skipped: save or revert your unsaved image-effects changes first.");return;}
  auto current=std::filesystem::u8path(fx.preset);if(swapMain.empty())swapMain=current;
  if(swapMain.empty()||swapAlternate.empty()||SameSwapPreset(swapMain,swapAlternate)){strcpy_s(feedback,"Choose two different presets: Main Preset and Hotswap Preset.");return;}
- auto next=SameSwapPreset(current,swapAlternate)?swapMain:swapAlternate;std::error_code ec;
+ auto next=optishade::hotswap::next_preset(current,swapMain,swapAlternate,Util::DllPath().parent_path());std::error_code ec;
  if(!std::filesystem::is_regular_file(next,ec)||ec){strcpy_s(feedback,"The selected preset is missing. Choose it again in Image effects.");return;}
  if(GetTickCount64()<swapNextAllowed)return;
  auto path=next.u8string();if(path.size()>=sizeof(osfx::Command{}.path)){strcpy_s(feedback,"The preset path is too long.");return;}
@@ -48,7 +48,7 @@ static void DrawHotSwap(){
  if(ImGui::BeginCombo("##Hotswap preset",label.c_str())){
   std::error_code ec;auto root=Util::DllPath().parent_path()/L"OptiShadeData"/L"Presets";
   for(std::filesystem::recursive_directory_iterator i(root,ec),end;i!=end&&!ec;i.increment(ec)){
-   if(_wcsicmp(i->path().extension().c_str(),L".ini")||!i->is_regular_file(ec))continue;
+   if(_wcsicmp(i->path().extension().c_str(),L".ini")||!i->is_regular_file(ec)||SameSwapPreset(i->path(),swapMain))continue;
    auto name=i->path().lexically_relative(root).string();if(ImGui::Selectable(name.c_str(),SameSwapPreset(i->path(),swapAlternate))){swapAlternate=i->path();SaveSwapPair();}
   }ImGui::EndCombo();
  }

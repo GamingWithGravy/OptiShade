@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <Config.h>
 #include "input_system_internal.h"
 
 #include <include/imgui/imgui.h>
@@ -1173,7 +1174,7 @@ void FeedImGui(bool menuVisible)
     auto AddKey = [&](ImGuiKey key, int vk)
     {
         if (vk >= 0 && vk < 256)
-            io.AddKeyEvent(key, _state.Keys[vk].Down);
+            io.AddKeyEvent(key, _state.Keys[vk].Down && (vk != Config::Instance()->PresetHotSwapKey.value_or_default() || io.WantTextInput));
     };
 
     const bool polledCtrlDown = (RealGetAsyncKeyStateSafe(VK_CONTROL) & 0x8000) != 0 ||
@@ -1254,12 +1255,12 @@ void FeedImGui(bool menuVisible)
 
     for (int vk = 'A'; vk <= 'Z'; vk++)
     {
-        io.AddKeyEvent(static_cast<ImGuiKey>(ImGuiKey_A + (vk - 'A')), _state.Keys[vk].Down);
+        AddKey(static_cast<ImGuiKey>(ImGuiKey_A + (vk - 'A')), vk);
     }
 
     for (int vk = '0'; vk <= '9'; vk++)
     {
-        io.AddKeyEvent(static_cast<ImGuiKey>(ImGuiKey_0 + (vk - '0')), _state.Keys[vk].Down);
+        AddKey(static_cast<ImGuiKey>(ImGuiKey_0 + (vk - '0')), vk);
     }
 
     for (wchar_t ch : _state.TextInput)

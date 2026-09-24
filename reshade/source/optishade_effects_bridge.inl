@@ -73,7 +73,9 @@ static void Publish(reshade::api::effect_runtime* runtime,bool loading,bool comp
  std::lock_guard guard(lock);if(owner!=runtime)return;
  snapshot.performanceMode=performanceMode;snapshot.connected=1;snapshot.loading=loading;snapshot.compileOK=compileOK;snapshot.enabled=runtime->get_effects_state();++snapshot.frames;if(rendered)++snapshot.effectFrames;
  if(loading){snapshot.techniques=snapshot.uniforms=0;return;}
- if(!requested||snapshot.frames%6!=0)return;requested=false;
+ // Publish the active preset every frame, even with the overlay closed. Only throttle the expensive effect lists.
+size_t presetSize=sizeof(snapshot.preset);runtime->get_current_preset_path(snapshot.preset,&presetSize);snapshot.preset[1023]=0;
+if(!requested||snapshot.frames%6!=0)return;requested=false;
  snapshot.techniques=snapshot.uniforms=snapshot.truncated=0;size_t size=sizeof(snapshot.preset);runtime->get_current_preset_path(snapshot.preset,&size);snapshot.preset[1023]=0;
  runtime->enumerate_techniques(nullptr,[](auto* r,reshade::api::effect_technique t,void*){if(snapshot.techniques==osfx::MaxTechniques){snapshot.truncated=1;return;}auto& out=snapshot.technique[snapshot.techniques++];size_t n=sizeof(out.name);r->get_technique_name(t,out.name,&n);n=sizeof(out.effect);r->get_technique_effect_name(t,out.effect,&n);out.name[127]=out.effect[127]=0;out.enabled=r->get_technique_state(t);},nullptr);
  runtime->enumerate_uniform_variables(inspected[0]?inspected:nullptr,[](auto* r,reshade::api::effect_uniform_variable u,void*){

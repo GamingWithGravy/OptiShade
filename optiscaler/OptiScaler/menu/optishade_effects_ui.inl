@@ -1,6 +1,7 @@
 // OptiShade additions, GPL-3.0-or-later.
 #include "../../../shared/EffectsBridge.h"
 #include "../../../shared/PresetHotSwapPolicy.h"
+#include "../../../shared/PresetPathIdentity.h"
 #include <cctype>
 #include <fstream>
 #include <set>
@@ -136,7 +137,7 @@ static void DrawEffects(){
  LoadSwapPair();ImGui::TextUnformatted("Main Preset");ImGui::SameLine();ImGui::SetNextItemWidth(300);
  if(ImGui::BeginCombo("##Look presets",(swapMain.empty()?std::filesystem::u8path(fx.preset):swapMain).filename().string().c_str())){
   for(std::filesystem::recursive_directory_iterator i(root/L"Presets",error),end;i!=end&&!error;i.increment(error)){
-   if(i->path().extension()!=L".ini")continue;auto label=i->path().lexically_relative(root/L"Presets").string();if(ImGui::Selectable(label.c_str())){auto path=i->path().u8string();if(fx.dirty){strncpy_s(nextPreset,(const char*)path.c_str(),_TRUNCATE);askSwitch=true;}else{osfx::Command c{};c.kind=osfx::Preset;strncpy_s(c.path,(const char*)path.c_str(),_TRUNCATE);Send(c);}}
+   if(i->path().extension()!=L".ini"||SameSwapPreset(i->path(),swapAlternate))continue;auto label=i->path().lexically_relative(root/L"Presets").string();if(ImGui::Selectable(label.c_str())){auto path=i->path().u8string();if(fx.dirty){strncpy_s(nextPreset,(const char*)path.c_str(),_TRUNCATE);askSwitch=true;}else{osfx::Command c{};c.kind=osfx::Preset;strncpy_s(c.path,(const char*)path.c_str(),_TRUNCATE);Send(c);}}
   }ImGui::EndCombo();
  }
  DrawHotSwap();
