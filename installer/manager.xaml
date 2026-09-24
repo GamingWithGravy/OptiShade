@@ -1,4 +1,4 @@
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+﻿<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  Title="OptiShade Manager | Your simulator. Your way." Width="1100" Height="780" MinWidth="1000" MinHeight="740" WindowStartupLocation="CenterScreen" WindowStyle="None" AllowsTransparency="True" Background="Transparent" FontFamily="Segoe UI" Foreground="#F3EFFB">
  <Window.Resources>
   <Style TargetType="RadioButton"><Setter Property="Foreground" Value="#EAE1F6"/><Setter Property="Cursor" Value="Hand"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton"><Border x:Name="Choice" Background="#282238" BorderBrush="#40314F" BorderThickness="1" CornerRadius="9" Padding="14,12"><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property="IsChecked" Value="True"><Setter TargetName="Choice" Property="Background" Value="#54346F"/><Setter TargetName="Choice" Property="BorderBrush" Value="#B68BE8"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter TargetName="Choice" Property="Opacity" Value="0.4"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
@@ -46,7 +46,7 @@
     <StackPanel DockPanel.Dock="Bottom" VerticalAlignment="Bottom">
      <TextBlock Text="OptiShade - created by gravy" Foreground="#D4B7F9" FontWeight="SemiBold" FontSize="12"/>
 
-     <TextBlock Text="VERSION  /  0.20.8" Foreground="#71657F" FontSize="10" Margin="0,22,0,0"/>
+     <TextBlock Text="VERSION  /  0.20.9" Foreground="#71657F" FontSize="10" Margin="0,22,0,0"/>
     </StackPanel>
     <Grid/>
    </DockPanel>
@@ -114,7 +114,7 @@
     <StackPanel x:Name="SettingsPage" Visibility="Collapsed" Margin="0,14,0,0"><TextBlock Text="Settings" FontSize="28" FontWeight="SemiBold"/><Button x:Name="GitHub" Content="GitHub releases and downloads" HorizontalAlignment="Left" Margin="0,18,0,0"/><Button x:Name="Help" Content="Tutorial, how it works and features" HorizontalAlignment="Left" Background="#8650C8" Margin="0,18,0,8"/><TextBlock Text="Remove OptiShade from all games recorded by this installer." Foreground="#AA9CB9" Margin="0,20,0,12"/><TextBlock Text="Uninstall removes OptiShade and restores files it backed up. You can keep your saved INI presets or remove them. Game settings, controls and saves stay untouched. Your original installer EXE is kept." Foreground="#AA9CB9" Margin="0,0,0,20"/><Button x:Name="Uninstall" Content="Uninstall OptiShade" Background="#30212C" Foreground="#E3B7CC" Margin="0,0,10,10"/></StackPanel>
     <ScrollViewer x:Name="TroubleshootingPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto"><StackPanel Margin="0,14,8,16">
 <TextBlock Text="Troubleshooting" FontSize="28" FontWeight="SemiBold"/>
-<Button x:Name="ExportSupport" Content="Save lightweight support report" Margin="0,12,0,10"/><Button x:Name="ExportDetailedSupport" Content="Save diagnostics ZIP for Discord" Margin="0,0,0,10"/>
+<CheckBox x:Name="IncludeCrashDumps" Content="Include recent crash dumps (may contain private memory data)" IsChecked="True" Margin="0,8,0,4"/><TextBlock Text="Saved locally, under 19 MB. Share dump archives privately with support. Large or unavailable dumps are listed in the ZIP." TextWrapping="Wrap" Foreground="#A499B6"/><Button x:Name="AddCrashDump" Content="Add a crash dump from another folder" Margin="0,8,0,0"/><Button x:Name="ExportSupport" Content="Save lightweight support report" Margin="0,12,0,10"/><Button x:Name="ExportDetailedSupport" Content="Save diagnostics ZIP for Discord" Margin="0,0,0,10"/>
 <TextBlock Text="The ZIP contains a readable text report, recent log tails and a checklist to describe the issue. Includes GPU/driver, display, installation and available crash details. You can also choose a plain TXT report in the save dialog. Reports stay local; review before attaching to Discord." TextWrapping="Wrap" Foreground="#AA9CB9" Margin="0,0,0,12"/>
 <TextBlock Text="Applies to the game folder selected on Setup. Close MSFS before making changes. If it has crashed, check Task Manager for a remaining FlightSimulator2024 or FlightSimulator process." TextWrapping="Wrap" Margin="0,16,0,12"/>
 <TextBlock Text="Black screen or missing frame generation? Reset OptiShade settings first. Enable one frame-generation provider at a time while diagnosing; multipliers are not guaranteed to stack. A screenshot alone cannot identify the cause of a crash." TextWrapping="Wrap" Foreground="#C2B0D7" Margin="0,0,0,16"/>

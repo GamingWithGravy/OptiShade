@@ -529,6 +529,7 @@ void ApplyMenuVisibilityChangeLocked(bool visible);
 void ResetRawInputBlockStateLocked();
 void ResetRawInputSanitizeCacheLocked();
 bool ShouldApplyBlockingPolicyLocked();
+bool PreserveFlightControllerInput();
 bool ShouldBlockKeyboardInputLocked();
 bool ShouldBlockMouseInputLocked();
 bool ShouldBlockCursorInputLocked();

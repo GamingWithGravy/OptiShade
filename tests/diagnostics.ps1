@@ -18,11 +18,12 @@ $report=GetDetailedSupportReport $game ''
 Check ($report.Windows.Version -eq '10.0.26100' -and $report.Windows.Build -eq '26100') 'Installed OS metadata replaces misleading compatibility version'
 Check ($report.LogTails.'OptiShadeData/ReShade.log' -match 'Managed effects log fixture') 'Managed effects log is included alongside legacy root logs'
 $json=$report|ConvertTo-Json -Depth 10
-Check ($report.SchemaVersion -eq 3 -and $report.ReportId -match '^[0-9a-f]{32}$') 'Versioned report has anonymous unique ID'
+Check ($report.SchemaVersion -eq 4 -and $report.ReportId -match '^[0-9a-f]{32}$') 'Versioned report has anonymous unique ID'
 Check ($report.FeatureSettings.'Menu.ShortcutKey' -eq '45' -and -not $json.Contains('do-not-export')) 'Settings whitelist excludes unrelated credentials'
 Check (-not $json.Contains(($game|ConvertTo-Json -Compress).Trim('"')) -and $report.GameFolder -eq '<GAME>' -and $report.LogTails.'OptiShadeData/Performance.log'.Contains('<USERPROFILE>')) 'Game and profile paths redacted from logs and events'
 Check ($report.RecentCrashEvents.Count -eq 1 -and $report.GameExecutable.Name -eq 'FlightSimulator2024.exe') 'Crash metadata and game executable metadata present'
 Check ($report.LogTails.'ReShade.log' -eq 'Not available') 'Missing runtime evidence is explicit'
+Check ($report.LogStarts.'OptiShadeData/Performance.log'.Length -eq 65536) 'Startup log prefix retained independently of latest tail'
 $plain=Join-Path $game 'Report.txt';$archive=Join-Path $game 'Report.zip'
 $bytes=ExportDiagnosticReport $report $plain 'txt'
 $body=[IO.File]::ReadAllText($plain)
@@ -38,7 +39,7 @@ Check ($zipBytes -lt 4MB) 'ZIP size remains bounded for fixture'
 $replacement=ExportDiagnosticReport $report $archive 'zip'
 Check ($replacement -gt 0) 'Existing report can be replaced completely'
 $before=[IO.File]::ReadAllBytes($archive)
-$tooLarge=[pscustomobject]@{Evidence=('x'*(4MB+1))}
+$tooLarge=[pscustomobject]@{Evidence=('x'*(8MB+1))}
 $rejected=$false;try{ExportDiagnosticReport $tooLarge $archive 'zip'}catch{$rejected=$true}
 Check ($rejected -and [Convert]::ToBase64String($before) -eq [Convert]::ToBase64String([IO.File]::ReadAllBytes($archive))) 'Oversize export fails without replacing existing archive'
 Check (@(Get-ChildItem $game -Filter '*.tmp-*').Count -eq 0) 'No partial export files remain'
@@ -56,3 +57,6 @@ Check ((Get-Item (Join-Path $folder 'PreRestoreDiagnostics.json')).Length -lt 1M
 function Get-Process { @([pscustomobject]@{ProcessName='FlightSimulator2024';Id=123;StartTime=(Get-Date);Responding=$false;WorkingSet64=123456;TotalProcessorTime=[TimeSpan]::FromSeconds(12);MainWindowHandle=[IntPtr]1;Modules=@([pscustomobject]@{ModuleName='winmm.dll';FileName=(Join-Path $game 'winmm.dll');FileVersionInfo=[pscustomobject]@{FileVersion='fixture'}})}) }
 $live=GetDetailedSupportReport $game $store
 Check ($live.Processes[0].Responding -eq $false -and $live.Processes[0].CpuSeconds -eq 12 -and $live.LoadedModules[0].Location -eq 'Game folder') 'Live process health and module origin captured without module paths'
+function Get-Process { @([pscustomobject]@{ProcessName='FlightSimulator';Id=456;StartTime=(Get-Date);Responding=$true;WorkingSet64=1;TotalProcessorTime=[TimeSpan]::Zero;MainWindowHandle=[IntPtr]1;Modules=@([pscustomobject]@{ModuleName='190_E658703.dll';FileName='C:\ProgramData\NVIDIA\NGX\models\sl_common_0\versions\134656\files\190_E658703.dll';FileVersionInfo=[pscustomobject]@{FileVersion='2.14.0'}})}) }
+$ota=GetDetailedSupportReport $game $store
+Check ($ota.LoadedModules.Count -eq 1 -and $ota.LoadedModules[0].Version -eq '2.14.0' -and $ota.LoadedModules[0].Path -match 'sl_common_0') 'OTA modules with opaque filenames retain feature folder and version'

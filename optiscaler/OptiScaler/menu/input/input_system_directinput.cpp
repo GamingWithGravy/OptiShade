@@ -51,6 +51,8 @@ bool ShouldBlockDirectInputMouseLocked()
 
 bool ShouldBlockDirectInputOtherLocked()
 {
+    if (PreserveFlightControllerInput())
+        return false;
     return _state.Initialized && _state.Focused && ShouldApplyBlockingPolicyLocked() &&
            (_state.BlockKeyboard || _state.BlockMouse);
 }

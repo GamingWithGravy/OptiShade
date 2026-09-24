@@ -59,6 +59,18 @@ thread_local int bypassHookDepth = 0;
 
 bool ShouldApplyBlockingPolicyLocked() { return bypassHookDepth == 0 && _state.MenuVisible; }
 
+bool PreserveFlightControllerInput()
+{
+    // The overlay only uses keyboard/mouse. Neutralising flight hardware can
+    // move absolute axes to an endpoint or retrigger maintained cockpit switches.
+    static const bool preserve = [] {
+        const auto name = Util::ExePath().filename().wstring();
+        return _wcsicmp(name.c_str(), L"FlightSimulator.exe") == 0 ||
+               _wcsicmp(name.c_str(), L"FlightSimulator2024.exe") == 0;
+    }();
+    return preserve;
+}
+
 bool ShouldBlockKeyboardInputLocked() { return ShouldApplyBlockingPolicyLocked() && _state.BlockKeyboard; }
 
 bool ShouldBlockMouseInputLocked() { return ShouldApplyBlockingPolicyLocked() && _state.BlockMouse; }
@@ -699,6 +711,8 @@ void ApplyMenuVisibilityChangeLocked(bool visible)
 
     if (wasMenuVisible != visible)
     {
+        LOG_INFO("flight-controller passthrough:{} (keyboard/mouse capture remains separate)",
+                 PreserveFlightControllerInput());
         LOG_INFO("menu visibility changed {} -> {} blockMouse:{} blockKeyboard:{} blockCursor:{} input:{} target:{}",
                  wasMenuVisible ? 1 : 0, visible ? 1 : 0, _state.BlockMouse ? 1 : 0, _state.BlockKeyboard ? 1 : 0,
                  _state.BlockCursor ? 1 : 0, static_cast<void*>(_state.InputHwnd),

@@ -315,13 +315,18 @@ $form.FindName('MsfsCopies').Add_SelectionChanged({$copy=$form.FindName('MsfsCop
 
 $form.FindName('TroubleshootingNav').Add_Click({ShowPage 'Troubleshooting'})
 $buttons+=@($form.FindName('ExportSupport'),$form.FindName('ExportDetailedSupport'))
+$script:additionalCrashDump=''
+$form.FindName('AddCrashDump').Add_Click({
+ $pick=New-Object Windows.Forms.OpenFileDialog;$pick.Filter='Crash dumps (*.dmp;*.mdmp)|*.dmp;*.mdmp'
+ try{if($pick.ShowDialog() -eq 'OK'){$script:additionalCrashDump=$pick.FileName;$form.FindName('IncludeCrashDumps').IsChecked=$true;$status.Text='Crash dump selected for the next diagnostic ZIP. It will be included only if it fits.'}}finally{$pick.Dispose()}
+})
 $form.FindName('ExportDetailedSupport').Add_Click({RunAction {
  $dialog=New-Object Windows.Forms.SaveFileDialog;$dialog.Filter='Discord diagnostic ZIP (*.zip)|*.zip|Plain text report (*.txt)|*.txt';$dialog.DefaultExt='zip';$dialog.FileName='OptiShade-diagnostics-'+(Get-Date -Format 'yyyyMMdd-HHmmss')
  try{if($dialog.ShowDialog() -eq 'OK'){
   $format=if($dialog.FilterIndex -eq 2){'txt'}else{'zip'}
   $report=GetDetailedSupportReport $path.Text $store
-  $bytes=ExportDiagnosticReport $report $dialog.FileName $format
-  $status.Text=('Diagnostics saved locally ({0:N0} KB). Review the text and logs, then attach to Discord: {1}' -f ($bytes/1KB),$dialog.FileName)
+  $bytes=ExportDiagnosticReport $report $dialog.FileName $format $path.Text ([bool]$form.FindName('IncludeCrashDumps').IsChecked) $script:additionalCrashDump
+  $status.Text=('Diagnostics saved locally ({0:N0} KB). Review the report and crash-dump index. Share privately with support: {1}' -f ($bytes/1KB),$dialog.FileName)
  }}finally{$dialog.Dispose()}
 }})
 $form.FindName('ExportSupport').Add_Click({RunAction {

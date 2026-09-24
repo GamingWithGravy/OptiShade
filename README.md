@@ -4,7 +4,7 @@
   <p><strong>Microsoft Flight Simulator 2024 · Microsoft Flight Simulator 2020</strong></p>
   <p>Created by gravy · Powered by Fusion Engine</p>
   <p>
-    <img src="https://img.shields.io/badge/Version-0.20.8-9755E9?style=flat-square" alt="Version 0.20.8">
+    <img src="https://img.shields.io/badge/Version-0.20.9-9755E9?style=flat-square" alt="Version 0.20.9">
     <img src="https://img.shields.io/badge/Windows-x64-272133?style=flat-square" alt="Windows x64">
     <img src="https://img.shields.io/badge/Graphics-NVIDIA%20%2B%20AMD-9755E9?style=flat-square" alt="NVIDIA and AMD graphics">
   </p>
@@ -17,11 +17,11 @@
 
 Optishade brings image effects, saved looks and optional NVIDIA neural rendering together in one custom in-game menu. This edition is built for **Microsoft Flight Simulator 2024 on NVIDIA and AMD graphics cards (AMD support is early experimental)**, with automatic Steam and Xbox detection.
 
-### New in 0.20.8
+### New in 0.20.9
 
-A simpler manager and Setup page, automatic Fusion Cinema installation, a full FX catalogue or INI-only dependency installation, and ReShade Performance Mode in the Image Effects menu. GPU selection, update notices, diagnostics and mixed-GPU installation warnings have also been improved.
+- Further improved diagnostics for needed fixes.
+- Fixed an issue with the UI causing aircraft controls to malfunction temporarily when opening and closing the UI.
 
-MSFS 2020 now appears without a test label. Use DirectX 12 and the supported in-game upscaler path. The earlier Steam/RTX 5090 test confirmed loading and active Neural Rendering; removing the label does not certify every GPU, Xbox configuration, VR or multi-monitor setup. Older RTX Neural Rendering remains experimental. AMD image effects and supported FSR/XeSS paths are separate from AMD Neural Rendering, which is not enabled.
 
 ### Image effects
 

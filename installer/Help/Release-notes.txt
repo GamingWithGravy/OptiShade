@@ -1,30 +1,4 @@
-OptiShade Manager 0.20.8
+OptiShade 0.20.9
 
-Manager and installation
-- Refresh the home page, splash and updater with Your simulator. Your way. branding, detected hardware and NVIDIA/AMD feature status.
-- Simplify Setup: download the full FX package or install the shaders required by your own INI. Repair and Update preserve the selected package choice and existing effects.
-- Include Fusion Cinema automatically with either install option, Repair and Update. Preserve edited presets and the selected look.
-- Remove the MSFS 2020 test label. DirectX 12 setup guidance remains in place.
-- Show the AMD installation warning only for recognised dedicated Radeon systems without NVIDIA. Integrated Radeon graphics no longer trigger it.
-- Warn before installation when the NVIDIA driver is below the recommended 616.92 baseline or its version cannot be read. Allow cancellation or continuation; the recommendation is not a compatibility guarantee.
-
-In-game improvements
-- Add ReShade Performance Mode to Image Effects. Save or revert changes before enabling; disable it to edit effects. Performance gains depend on the shaders in use.
-- Fix incorrect UPDATE AVAILABLE notices when the installed version is current or newer.
-- Select DX11/DX12 upscaler backends using the game's rendering adapter, preserving explicit backend choices and checking fallback availability.
-- Check the actual D3D12 adapter and device health before initializing NVIDIA Neural Rendering. Reject resources from a different device and keep capability state tied to its owning device.
-- Show measured rendering-device capabilities and clearer backend initialization diagnostics.
-- Prevent owned pop-ups and tool windows from claiming the main presentation surface. Independent pop-outs and multi-monitor configurations still require live testing.
-- Correct misleading errors for successful DXGI status returns.
-
-Diagnostics
-- Include managed and legacy engine logs, installed Windows metadata, startup timestamps, process health and event-query status.
-- Preserve a bounded, redacted diagnostic snapshot before Restore removes logs. Subsequent reports identify it as historical evidence. No automatic uploads.
-
-Compatibility
-- Older RTX Neural Rendering remains experimental and requires the matching runtime/model.
-- AMD image effects and supported FSR/XeSS paths are available separately. AMD DLSS 5 / Neural Rendering is not enabled.
-- MSFS 2020 has previously been tested on Steam with an RTX 5090. This does not certify every GPU, Xbox, VR or multi-monitor configuration.
-
-Notices
-- Clarify ownership of original OptiShade contributions and retain third-party attribution and licences. Existing open-source permissions remain unchanged.
+- Further improved diagnostics for needed fixes.
+- Fixed an issue with the UI causing aircraft controls to malfunction temporarily when opening and closing the UI.
