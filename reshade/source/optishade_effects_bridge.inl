@@ -1,3 +1,4 @@
+#include "../../shared/PresetHotSwapPolicy.h"
 // OptiShade additions, GPL-3.0-or-later. Upstream runtime remains BSD-3-Clause.
 #include "../../shared/EffectsBridge.h"
 #include <mutex>
@@ -56,14 +57,15 @@ static bool Pump(reshade::api::effect_runtime* runtime,bool loading,bool& perfor
    ok=std::filesystem::is_regular_file(path,ec);
    if(ok){enableAfterLoad.clear();{std::lock_guard guard(lock);edits.clear();snapshot.dirty=0;}reshade::ini_file::clear_cache(path);runtime->set_current_preset_path(current);}break;
   }
-  case osfx::Preset:{std::error_code ec;auto path=std::filesystem::u8path(c.path);if(path.extension()==L".ini"&&std::filesystem::is_regular_file(path,ec)){enableAfterLoad.clear();{std::lock_guard guard(lock);edits.clear();snapshot.dirty=0;}runtime->set_current_preset_path(c.path);}else ok=false;break;}
+  case osfx::HotSwapPreset:{bool dirty;{std::lock_guard guard(lock);dirty=snapshot.dirty!=0;}if(!optishade::hotswap::may_switch(true,loading,dirty)){ok=false;break;}} [[fallthrough]];
+  case osfx::Preset:{std::error_code ec;auto path=std::filesystem::u8path(c.path);if(_wcsicmp(path.extension().c_str(),L".ini")==0&&std::filesystem::is_regular_file(path,ec)){enableAfterLoad.clear();{std::lock_guard guard(lock);edits.clear();snapshot.dirty=0;}runtime->set_current_preset_path(c.path);}else ok=false;break;}
   case osfx::Technique:{if(performanceMode){ok=false;break;}auto t=runtime->find_technique(c.effect,c.name);if(t.handle)runtime->set_technique_state(t,c.enabled!=0);else ok=false;break;}
   case osfx::Uniform:{if(performanceMode){ok=false;break;}auto u=runtime->find_uniform_variable(c.effect,c.name);if(!u.handle){ok=false;break;}reshade::api::format type;uint32_t rows,columns,array;runtime->get_uniform_variable_type(u,&type,&rows,&columns,&array);auto n=std::min<uint32_t>(16,rows*columns*std::max(1u,array));if(c.count!=n){ok=false;break;}if((type==reshade::api::format::r32_float||type==reshade::api::format::r16_float))runtime->set_uniform_value_float(u,c.value,n);else if((type==reshade::api::format::r32_sint||type==reshade::api::format::r16_sint)){int32_t v[16]{};for(unsigned i=0;i<n;i++)v[i]=(int32_t)c.value[i];runtime->set_uniform_value_int(u,v,n);}else if((type==reshade::api::format::r32_uint||type==reshade::api::format::r16_uint)){uint32_t v[16]{};for(unsigned i=0;i<n;i++)v[i]=(uint32_t)std::max(0.f,c.value[i]);runtime->set_uniform_value_uint(u,v,n);}else{bool v[16]{};for(unsigned i=0;i<n;i++)v[i]=c.value[i]!=0;runtime->set_uniform_value_bool(u,v,n);}break;}
   default:ok=false;
   }
   if(ok&&(c.kind==osfx::Uniform||c.kind==osfx::Technique))Remember(c);
   std::lock_guard guard(lock);if(ok)++snapshot.applied;else ++snapshot.rejected;
-  if(reload||c.kind==osfx::Preset||c.kind==osfx::SaveAs||c.kind==osfx::Discard){pending.insert(pending.begin(),work.begin(),work.end());break;} // Handle invalidation must finish before more edits.
+  if(reload||c.kind==osfx::Preset||c.kind==osfx::HotSwapPreset||c.kind==osfx::SaveAs||c.kind==osfx::Discard){pending.insert(pending.begin(),work.begin(),work.end());break;} // Handle invalidation must finish before more edits.
  }
  return reload;
 }

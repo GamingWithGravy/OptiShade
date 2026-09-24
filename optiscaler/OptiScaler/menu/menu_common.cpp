@@ -301,6 +301,9 @@ void MenuCommon::UpdateManualInput(HWND targetHwnd)
     const auto currentTick = GetTickCount64();
     const bool canAcceptInputs = lastInputTick + debounceThreshold < currentTick;
 
+    const int swapKey=config->PresetHotSwapKey.value_or_default();
+    const bool swapAllowed=canAcceptInputs&&!capturingKey&&OptiInput::IsFocused()&&swapKey>0&&swapKey<256&&!OptiShadeUI::SwapKeyConflict(swapKey)&&(!ImGui::GetCurrentContext()||!ImGui::GetIO().WantTextInput)&&!OptiInput::IsKeyDown(VK_CONTROL)&&!OptiInput::IsKeyDown(VK_SHIFT)&&!OptiInput::IsKeyDown(VK_MENU);
+    OptiShadeUI::PollHotSwap(swapAllowed&&OptiInput::IsKeyPressed(swapKey),swapAllowed&&OptiInput::IsKeyReleased(swapKey),swapAllowed);
     if (!capturingKey && canAcceptInputs)
     {
         const int backup=config->BackupShortcutKey.value_or_default();
@@ -428,7 +431,7 @@ class Keybind
         return "Unknown";
     }
 
-    void Render(CustomOptional<int>& configKey)
+    void Render(CustomOptional<int>& configKey, bool showValue=true)
     {
         ImGui::PushID(id);
         if (ImGui::Button(name.c_str()))
@@ -463,8 +466,7 @@ class Keybind
             return;
         }
 
-        ImGui::SameLine();
-        ImGui::Text(KeyNameFromVirtualKeyCode(configKey.value_or_default()).c_str());
+        if(showValue){ImGui::SameLine();ImGui::TextUnformatted(KeyNameFromVirtualKeyCode(configKey.value_or_default()).c_str());}
 
         ImGui::SameLine();
         ImGui::PushID(id);
@@ -7154,6 +7156,8 @@ void MenuCommon::RenderApiAndTextureSettings(RenderMenuContext& ctx)
     }
 }
 
+void OptiShadeUI::DrawHotSwapKeybind(){auto& value=Config::Instance()->PresetHotSwapKey;auto code=value.value_or_default();ImGui::Text("Hotswap: %s",code<=0?"Not set":Keybind::KeyNameFromVirtualKeyCode(code).c_str());ImGui::SameLine();static auto key=Keybind("Change",15);key.Render(value,false);ImGui::TextDisabled("Save settings to keep this key. Escape cancels; Backspace clears it.");}
+
 void MenuCommon::RenderKeybindSettings(RenderMenuContext& ctx)
 {
     auto config = ctx.config;
@@ -7180,6 +7184,7 @@ void MenuCommon::RenderKeybindSettings(RenderMenuContext& ctx)
         fpsOverlayCycle.Render(config->FpsCycleShortcutKey);
         fgEnable.Render(config->FGShortcutKey);
         dlssNrToggle.Render(config->DlssNrToggleKey);
+        OptiShadeUI::DrawHotSwapKeybind();
     }
 }
 

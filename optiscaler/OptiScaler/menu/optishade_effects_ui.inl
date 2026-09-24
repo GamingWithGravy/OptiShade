@@ -1,5 +1,6 @@
 // OptiShade additions, GPL-3.0-or-later.
 #include "../../../shared/EffectsBridge.h"
+#include "../../../shared/PresetHotSwapPolicy.h"
 #include <cctype>
 #include <fstream>
 #include <set>
@@ -21,11 +22,13 @@ static bool EffectSwitch(const char* id,bool on){
  draw->AddCircleFilled(ImVec2(pos.x+(on?width-height*.5f:height*.5f),pos.y+height*.5f),height*.36f,IM_COL32(246,238,255,255));
  ImGui::PopID();return clicked;
 }
+static void RememberMainPreset(const char* path);
 static bool Send(osfx::Command command){
  auto module=GetModuleHandleW(L"ReShade64.dll");auto send=module?(osfx::Send)GetProcAddress(module,"OptiShadeEffectsSend"):nullptr;
  command.version=osfx::Version;command.generation=fx.generation;
- bool queued=send&&send(&command,sizeof(command));strcpy_s(feedback,queued?"Applying your change...":"Image effects are not ready yet. Try again after loading.");return queued;
+ bool queued=send&&send(&command,sizeof(command));strcpy_s(feedback,queued?"Applying your change...":"Image effects are not ready yet. Try again after loading.");if(queued&&command.kind==osfx::Preset)RememberMainPreset(command.path);return queued;
 }
+#include "optishade_preset_hotswap.inl"
 #include "optishade_preset_browser.inl"
 static bool startupDone=false;
 static bool NeedsStartupFrame(){return !startupDone||OptiShadeUpdates::NeedsFrame();}
@@ -130,12 +133,13 @@ static void DrawEffects(){
  if(zipProcess)ImGui::TextWrapped("Installing files in the background... You can keep flying; reopen Image effects to see the result.");
  ImGui::TextWrapped("Import INI / Install FX adds files. Saved looks below load an installed preset.");
  static char nextPreset[1024]="";static bool askSwitch=false,waitingSwitch=false;static uint64_t switchSaveSerial=0;
- ImGui::TextUnformatted("Saved look");ImGui::SameLine();ImGui::SetNextItemWidth(300);
- if(ImGui::BeginCombo("##Look presets",std::filesystem::path(fx.preset).filename().string().c_str())){
+ LoadSwapPair();ImGui::TextUnformatted("Main Preset");ImGui::SameLine();ImGui::SetNextItemWidth(300);
+ if(ImGui::BeginCombo("##Look presets",(swapMain.empty()?std::filesystem::u8path(fx.preset):swapMain).filename().string().c_str())){
   for(std::filesystem::recursive_directory_iterator i(root/L"Presets",error),end;i!=end&&!error;i.increment(error)){
    if(i->path().extension()!=L".ini")continue;auto label=i->path().lexically_relative(root/L"Presets").string();if(ImGui::Selectable(label.c_str())){auto path=i->path().u8string();if(fx.dirty){strncpy_s(nextPreset,(const char*)path.c_str(),_TRUNCATE);askSwitch=true;}else{osfx::Command c{};c.kind=osfx::Preset;strncpy_s(c.path,(const char*)path.c_str(),_TRUNCATE);Send(c);}}
   }ImGui::EndCombo();
  }
+ DrawHotSwap();
  if(askSwitch){ImGui::OpenPopup("Unsaved preset changes");askSwitch=false;}
  if(ImGui::BeginPopupModal("Unsaved preset changes",nullptr,ImGuiWindowFlags_AlwaysAutoResize)){
   ImGui::TextColored(ImVec4(1.f,.3f,.4f,1.f),"Your current preset has unsaved changes.");
