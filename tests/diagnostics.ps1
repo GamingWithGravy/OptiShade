@@ -18,7 +18,7 @@ $report=GetDetailedSupportReport $game ''
 Check ($report.Windows.Version -eq '10.0.26100' -and $report.Windows.Build -eq '26100') 'Installed OS metadata replaces misleading compatibility version'
 Check ($report.LogTails.'OptiShadeData/ReShade.log' -match 'Managed effects log fixture') 'Managed effects log is included alongside legacy root logs'
 $json=$report|ConvertTo-Json -Depth 10
-Check ($report.SchemaVersion -eq 4 -and $report.ReportId -match '^[0-9a-f]{32}$') 'Versioned report has anonymous unique ID'
+Check ($report.SchemaVersion -eq 5 -and $report.ReportId -match '^[0-9a-f]{32}$') 'Versioned report has anonymous unique ID'
 Check ($report.FeatureSettings.'Menu.ShortcutKey' -eq '45' -and -not $json.Contains('do-not-export')) 'Settings whitelist excludes unrelated credentials'
 Check (-not $json.Contains(($game|ConvertTo-Json -Compress).Trim('"')) -and $report.GameFolder -eq '<GAME>' -and $report.LogTails.'OptiShadeData/Performance.log'.Contains('<USERPROFILE>')) 'Game and profile paths redacted from logs and events'
 Check ($report.RecentCrashEvents.Count -eq 1 -and $report.GameExecutable.Name -eq 'FlightSimulator2024.exe') 'Crash metadata and game executable metadata present'

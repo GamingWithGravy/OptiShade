@@ -15,7 +15,7 @@ foreach($url in @('https://github.com/AnotherOwner/OptiShade/releases/download/v
 }
 'PASS: unrelated repositories and hosts rejected'
 
-foreach($version in @('0.20','0.20.1','0.21','1.0.0')){
+foreach($version in @('0.20','0.20.1','0.20.9.1','0.20.10','0.21','1.0.0')){
  $script:testVersion=$version
  $script:testUrl="https://github.com/GamingWithGravy/OptiShade/releases/download/v$version/OptiShade_Version_$version.exe"
  if(-not(GetOptiShadeUpdate -Current '0.19.19')){throw "Failed version $version"}
@@ -23,3 +23,6 @@ foreach($version in @('0.20','0.20.1','0.21','1.0.0')){
 $script:testVersion='0.20'
 if(GetOptiShadeUpdate -Current '0.20'){throw 'Current version falsely offers an update'}
 'PASS: two- and three-part versions and current-version suppression'
+$script:testVersion='0.20.10'
+if(GetOptiShadeUpdate -Current '0.20.10'){throw 'Current version falsely offers an update'}
+'PASS: four-part hotfix accepted; current version suppressed'

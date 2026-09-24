@@ -30,12 +30,30 @@ function GetCrashDumpCandidates([string]$Game,[string]$AdditionalDump=''){
  @($found.Values | Sort-Object @{Expression={if($_.Origin -eq 'Manually selected'){0}else{1}}},@{Expression='ModifiedUtc';Descending=$true} | Select-Object -First 20)
 }
 
-function AddCrashDumpsToArchive($Zip,$Stream,$Candidates,[string]$Temporary,[long]$Limit=19000000){
- $inventory=@();$included=0;$readBytes=0L
+function AddCrashDumpsToArchive($Zip,$Stream,$Candidates,[string]$Temporary,[long]$Limit=19000000,[bool]$IncludeRaw=$false){
+ $inventory=@();$included=0;$readBytes=0L;$analysed=0
+ $analysisReady=$false
+ try{
+  if(-not ('OptiShade.Diagnostics.DumpSummary' -as [type])){Add-Type -Path (Join-Path $PSScriptRoot 'DumpSummary.cs') -ErrorAction Stop}
+  $analysisReady=$true
+ }catch{}
  foreach($candidate in $Candidates){
   # No source paths in the public inventory. The binary itself cannot be redacted.
-  $row=[ordered]@{Name=$candidate.Name;Origin=$candidate.Origin;Bytes=$candidate.Bytes;ModifiedUtc=$candidate.ModifiedUtc;Status='Not included';SHA256=$null;Entry=$null}
+  $row=[ordered]@{Name=$candidate.Name;Origin=$candidate.Origin;Bytes=$candidate.Bytes;ModifiedUtc=$candidate.ModifiedUtc;Status='Not included';SHA256=$null;Entry=$null;TextEntry=$null;AnalysisStatus='Not analysed: eight-summary limit'}
   $inventory+=,$row
+  # Extract metadata BEFORE binary size limits. Seek only relevant streams, even
+  # for multi-GB dumps; never copy arbitrary memory strings into the text report.
+  if($analysed -lt 8 -and $Stream.Position+1MB -lt $Limit){
+   $analysed++
+   $summary=if($analysisReady){[OptiShade.Diagnostics.DumpSummary]::Analyze($candidate.Path)}else{'Analysis status: unavailable; local dump reader could not be initialized.'}
+   if($summary.Length -gt 262144){$summary=$summary.Substring(0,262144)+"`r`nAnalysis output truncated at text limit."}
+   $row.TextEntry="Crash-analysis/$analysed-summary.txt"
+   $row.AnalysisStatus=if($summary -match 'incomplete/unavailable|unavailable;|truncated at text limit'){'Partial or unavailable: see text report'}else{'Metadata extracted; not an unwound call stack'}
+   $entry=$Zip.CreateEntry($row.TextEntry,[IO.Compression.CompressionLevel]::Optimal)
+   $writer=[IO.StreamWriter]::new($entry.Open(),[Text.UTF8Encoding]::new($false))
+   try{$writer.Write($summary)}finally{$writer.Dispose()}
+  }
+  if(-not $IncludeRaw){$row.Status='Text analysis only; original dump retained locally';continue}
   if($included -ge 3){$row.Status='Skipped: three-dump limit';continue}
   if($candidate.Bytes -gt 256MB -or $readBytes+$candidate.Bytes -gt 512MB){$row.Status='Skipped: source-size limit; original file retained';continue}
   $trial=$Temporary+'.dump'
@@ -68,7 +86,7 @@ function AddCrashDumpsToArchive($Zip,$Stream,$Candidates,[string]$Temporary,[lon
    if(Test-Path -LiteralPath $trial){Remove-Item -LiteralPath $trial -Force}
   }
  }
- $index=[ordered]@{Context='Existing crash dumps only; no live-process dump created. A dump may be from an earlier session. Match timestamps and fault events. Binaries contain unredacted memory: share privately with support, not publicly.';Search='Selected game folders, simulator-named Windows CrashDumps, matching WER folders, and any manually selected dump. Recent automatic discovery: 3 days. No whole-drive search.';Included=$included;Candidates=$inventory;IfMissing='If no dump is available, export immediately after the next crash or add the dump supplied by the simulator. Black screens without a crash may produce no dump.'}
+ $index=[ordered]@{Context='Existing crash dumps only; no live-process dump created. Text summaries are extracted locally, even when raw dumps exceed ZIP limits. Stack-address candidates are not debugger-unwound call stacks. Match dump timestamps and fault events. Share reports privately.';Search='Selected game folders, simulator-named Windows CrashDumps, matching WER folders, and any manually selected dump. Recent automatic discovery: 3 days. No whole-drive search.';Included=$included;TextReports=$analysed;Candidates=$inventory;IfMissing='If no dump is available, export immediately after the next crash or add the dump supplied by the simulator. Black screens without a crash may produce no dump.'}
  $entry=$Zip.CreateEntry('Crash-dump-index.json',[IO.Compression.CompressionLevel]::Optimal)
  $writer=[IO.StreamWriter]::new($entry.Open(),[Text.UTF8Encoding]::new($false))
  try{$writer.Write(($index|ConvertTo-Json -Depth 6))}finally{$writer.Dispose()}

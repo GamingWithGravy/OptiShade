@@ -30,7 +30,7 @@ function SavePreRestoreEvidence([string]$Game,[string]$Folder){
 }
 function GetDetailedSupportReport([string]$Game,[string]$Store){
  $report=GetOptiShadeSupportReport $Game $Store
- $report.SchemaVersion=4;$report.ReportId=[guid]::NewGuid().ToString('N');$report.RuntimeEvidence='Logs and optional process metadata. Installed files alone do not establish active features.'
+ $report.SchemaVersion=5;$report.ReportId=[guid]::NewGuid().ToString('N');$report.RuntimeEvidence='Logs and optional process metadata. Installed files alone do not establish active features.'
  $report.StartupEvidence=GetStartupEvidence $Game
  $report.PreRestoreEvidence='No saved pre-restore evidence available'
  try{if($Store){$saved=OwnedPath (Split-Path (ManifestPath $Store $Game)) 'PreRestoreDiagnostics.json';if((Get-Item -LiteralPath $saved -ErrorAction Stop).Length -le 1MB){$report.PreRestoreEvidence=Get-Content -LiteralPath $saved -Raw -Encoding UTF8|ConvertFrom-Json}}}catch{$report.PreRestoreEvidence='No readable pre-restore evidence available'}
@@ -74,7 +74,7 @@ function GetDetailedSupportReport([string]$Game,[string]$Store){
   $events=Get-WinEvent -FilterHashtable @{LogName='Application';Id=1000,1001;StartTime=(Get-Date).AddDays(-3)} -MaxEvents 100 -ErrorAction Stop
   $report.RecentCrashEvents=@($events|Where-Object {$_.Message -match 'FlightSimulator(2024)?\.exe'}|Select-Object -First 20|ForEach-Object {@{Time=$_.TimeCreated.ToString('o');Provider=$_.ProviderName;EventId=$_.Id;Details=$_.Message.Substring(0,[Math]::Min(4096,$_.Message.Length))}})
  }catch{$report.CrashEventQuery='No events returned or event log unavailable: '+$_.FullyQualifiedErrorId}
- $report.Limitations='No simulator/hardware reproduction is implied. Existing crash dumps can be included in ZIP exports; no live-process dump is created and nothing is uploaded. Windows fault events may be unavailable; a faulting module is not proof of root cause. Active API/backend, swapchains, NR/FG and device-removed details are available only where runtime logs captured them.'
+ $report.Limitations='No simulator/hardware reproduction is implied. Existing crash dumps are summarized as text in ZIP exports; summaries contain exception/module/thread metadata and stack-address candidates, not debugger-unwound call stacks; no live-process dump is created and nothing is uploaded. Windows fault events may be unavailable; a faulting module is not proof of root cause. Active API/backend, swapchains, NR/FG and device-removed details are available only where runtime logs captured them.'
  $report.Note='Local report only. Paths for the selected game and user profile are redacted. Review all remaining log/event text before sharing. No credentials or automatic upload service are configured.'
  $json=$report|ConvertTo-Json -Depth 10
  foreach($pair in @(@($Game,'<GAME>'),@($env:USERPROFILE,'<USERPROFILE>'))){if($pair[0]){$escaped=($pair[0]|ConvertTo-Json -Compress).Trim('"');$json=$json.Replace($escaped,$pair[1])}}

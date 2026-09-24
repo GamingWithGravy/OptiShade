@@ -20,9 +20,13 @@ int main(){
 using namespace OptiShadeUpdates;
 assert(ApplyReleaseResponse("{\"tag_name\":\"v" OPTISHADE_VERSION_TEXT "\"}"));
 assert(!available);
+assert(ApplyReleaseResponse("{\"tag_name\":\"v0.20.9\"}"));
+assert(!available);
+assert(ApplyReleaseResponse("{\"tag_name\":\"v0.20.10.1\"}"));
+assert(available);
 assert(ApplyReleaseResponse("{\"tag_name\":\"v0.20.7\"}"));
 assert(!available);
-assert(ApplyReleaseResponse("{\"tag_name\":\"v0.20.10\"}"));
+assert(ApplyReleaseResponse("{\"tag_name\":\"v0.20.11\"}"));
 assert(available);
 assert(ApplyReleaseResponse("{\"tag_name\":\"v" OPTISHADE_VERSION_TEXT "\"}"));
 assert(!available);

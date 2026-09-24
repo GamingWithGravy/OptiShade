@@ -1,8 +1,8 @@
-﻿function GetOptiShadeUpdate([string]$Current='0.20.9',[switch]$ReportErrors){
+﻿function GetOptiShadeUpdate([string]$Current='0.20.10',[switch]$ReportErrors){
  [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
  try{
   $release=Invoke-RestMethod 'https://api.github.com/repos/GamingWithGravy/OptiShade/releases/latest' -Headers @{'User-Agent'='OptiShade-update-check'} -TimeoutSec 12
-  if($release.draft -or $release.prerelease -or $release.tag_name -notmatch '^v?(\d+\.\d+(?:\.\d+)?)$'){return $null}
+  if($release.draft -or $release.prerelease -or $release.tag_name -notmatch '^v?(\d+\.\d+(?:\.\d+){0,2})$'){return $null}
   $version=$Matches[1];if([version]$version -le [version]$Current){return $null}
   $asset=@($release.assets|Where-Object {$_.name -eq "OptiShade_Version_$version.exe" -and $_.digest -match '^sha256:[a-fA-F0-9]{64}$'})
   if($asset.Count -ne 1){return $null}

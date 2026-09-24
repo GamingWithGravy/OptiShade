@@ -1,4 +1,4 @@
-OptiShade 0.20.9
+OptiShade 0.20.10
 
-- Further improved diagnostics for needed fixes.
-- Fixed an issue with the UI causing aircraft controls to malfunction temporarily when opening and closing the UI.
+- Possible fix for frame generation crashes in Microsoft Flight Simulator 2020.
+- Further improved diagnostics: extracts crash details from dump files into compact text reports, including dumps too large to attach.

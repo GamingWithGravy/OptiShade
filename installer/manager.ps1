@@ -318,7 +318,7 @@ $buttons+=@($form.FindName('ExportSupport'),$form.FindName('ExportDetailedSuppor
 $script:additionalCrashDump=''
 $form.FindName('AddCrashDump').Add_Click({
  $pick=New-Object Windows.Forms.OpenFileDialog;$pick.Filter='Crash dumps (*.dmp;*.mdmp)|*.dmp;*.mdmp'
- try{if($pick.ShowDialog() -eq 'OK'){$script:additionalCrashDump=$pick.FileName;$form.FindName('IncludeCrashDumps').IsChecked=$true;$status.Text='Crash dump selected for the next diagnostic ZIP. It will be included only if it fits.'}}finally{$pick.Dispose()}
+ try{if($pick.ShowDialog() -eq 'OK'){$script:additionalCrashDump=$pick.FileName;$form.FindName('IncludeCrashDumps').IsChecked=$true;$status.Text='Crash dump selected for the next diagnostic ZIP. Its crash details will be extracted into text; the raw dump stays on your PC.'}}finally{$pick.Dispose()}
 })
 $form.FindName('ExportDetailedSupport').Add_Click({RunAction {
  $dialog=New-Object Windows.Forms.SaveFileDialog;$dialog.Filter='Discord diagnostic ZIP (*.zip)|*.zip|Plain text report (*.txt)|*.txt';$dialog.DefaultExt='zip';$dialog.FileName='OptiShade-diagnostics-'+(Get-Date -Format 'yyyyMMdd-HHmmss')

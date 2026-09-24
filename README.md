@@ -4,7 +4,7 @@
   <p><strong>Microsoft Flight Simulator 2024 · Microsoft Flight Simulator 2020</strong></p>
   <p>Created by gravy · Powered by Fusion Engine</p>
   <p>
-    <img src="https://img.shields.io/badge/Version-0.20.9-9755E9?style=flat-square" alt="Version 0.20.9">
+    <img src="https://img.shields.io/badge/Version-0.20.10-9755E9?style=flat-square" alt="Version 0.20.10">
     <img src="https://img.shields.io/badge/Windows-x64-272133?style=flat-square" alt="Windows x64">
     <img src="https://img.shields.io/badge/Graphics-NVIDIA%20%2B%20AMD-9755E9?style=flat-square" alt="NVIDIA and AMD graphics">
   </p>
@@ -16,6 +16,11 @@
 ## Your flight. Your look.
 
 Optishade brings image effects, saved looks and optional NVIDIA neural rendering together in one custom in-game menu. This edition is built for **Microsoft Flight Simulator 2024 on NVIDIA and AMD graphics cards (AMD support is early experimental)**, with automatic Steam and Xbox detection.
+
+### New in 0.20.10
+
+- Possible fix for frame generation crashes in Microsoft Flight Simulator 2020.
+- Improved diagnostics with compact text summaries from crash dumps, including oversized dumps.
 
 ### New in 0.20.9
 

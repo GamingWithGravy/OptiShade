@@ -1,6 +1,7 @@
 #include <pch.h>
 
 #include "Streamline_Hooks.h"
+#include "../../../shared/OptiShadeStreamlinePolicy.h"
 
 #include <Util.h>
 #include <Config.h>
@@ -109,6 +110,18 @@ sl::Result StreamlineHooks::hkslInit(const sl::Preferences& pref, uint64_t sdkVe
 
     sl::Preferences localPref = pref;
 
+    const auto& nativeVersion = State::Instance().streamlineVersion;
+    const bool gamePluginsOnly = OptiShadeStreamlinePolicy::ApplyNativePolicy(
+        Util::ExePath().filename().wstring(), nativeVersion.major, nativeVersion.minor, localPref);
+    if (gamePluginsOnly)
+    {
+        // Keep the game's interposer and plugins together. Old MSFS 2020
+        // interposers do not implement all hooks advertised by newer OTA plugins.
+        LOG_INFO("MSFS2020 native Streamline compatibility: game plugin paths preserved; OTA download/load disabled; sdk:{} flags:{}->{} paths:{} features:{}",
+                 sdkVersion, static_cast<uint64_t>(pref.flags), static_cast<uint64_t>(localPref.flags),
+                 pref.numPathsToPlugins, pref.numFeaturesToLoad);
+    }
+
     if (localPref.logMessageCallback != &streamlineLogCallback)
         o_logCallback = localPref.logMessageCallback;
     localPref.logLevel = sl::LogLevel::eCount;
@@ -131,7 +144,7 @@ sl::Result StreamlineHooks::hkslInit(const sl::Preferences& pref, uint64_t sdkVe
     std::vector<const wchar_t*> storage;
 
     // Replace the SL files to allow for MFG
-    if (State::Instance().activeFgInput == FGInput::NvngxFG && std::filesystem::exists(localSlPath / L"sl.common.dll"))
+    if (!gamePluginsOnly && State::Instance().activeFgInput == FGInput::NvngxFG && std::filesystem::exists(localSlPath / L"sl.common.dll"))
     {
         storage.assign(localPref.pathsToPlugins, localPref.pathsToPlugins + localPref.numPathsToPlugins);
 

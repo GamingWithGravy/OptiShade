@@ -120,7 +120,7 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
         if($hash){Copy-Item -LiteralPath $dest -Destination $copy;if((HashFile $copy) -ne $hash){throw 'Rollback snapshot verification failed.'}}
         $rollback+=@{Path=$entry.Path;Hash=$hash;Copy=$copy}
     }
-    $manifest=@{Version='P0.20.9-MSFS24';Game=$Game;Installer=(FullPath $Installer);Status='Installing';Files=$files;OwnedDirectories=@('OptiShadeData');IncludeEffects=$IncludeEffects;PreserveThirdParty=$true;Created=(Get-Date -Format o)}
+    $manifest=@{Version='P0.20.10-MSFS24';Game=$Game;Installer=(FullPath $Installer);Status='Installing';Files=$files;OwnedDirectories=@('OptiShadeData');IncludeEffects=$IncludeEffects;PreserveThirdParty=$true;Created=(Get-Date -Format o)}
     WriteState $manifest $mp
     try{
         # The entry-point proxy is copied last so an incomplete install cannot start.

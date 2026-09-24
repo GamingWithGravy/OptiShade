@@ -9,9 +9,9 @@ static std::atomic<ULONGLONG> nextCheck{0};
 static bool ApplyReleaseResponse(const std::string& body){
  try{
   std::smatch match;
-  static const std::regex tag("\"tag_name\"\\s*:\\s*\"v?([0-9]+)\\.([0-9]+)(?:\\.([0-9]+))?\"");
+  static const std::regex tag("\"tag_name\"\\s*:\\s*\"v?([0-9]+)\\.([0-9]+)(?:\\.([0-9]+))?(?:\\.([0-9]+))?\"");
   if(!std::regex_search(body,match,tag))return false;
-  const std::array<int,3> release{std::stoi(match[1]),std::stoi(match[2]),match[3].matched?std::stoi(match[3]):0};
+  const std::array<int,4> release{std::stoi(match[1]),std::stoi(match[2]),match[3].matched?std::stoi(match[3]):0,match[4].matched?std::stoi(match[4]):0};
   available=release>OptiShadeVersion::Current;
   return true;
  }catch(...){return false;}
