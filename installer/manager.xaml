@@ -46,7 +46,7 @@
     <StackPanel DockPanel.Dock="Bottom" VerticalAlignment="Bottom">
      <TextBlock Text="OptiShade - created by gravy" Foreground="#D4B7F9" FontWeight="SemiBold" FontSize="12"/>
 
-     <TextBlock Text="VERSION  /  0.20.10" Foreground="#71657F" FontSize="10" Margin="0,22,0,0"/>
+     <TextBlock Text="VERSION  /  0.20.11" Foreground="#71657F" FontSize="10" Margin="0,22,0,0"/>
     </StackPanel>
     <Grid/>
    </DockPanel>

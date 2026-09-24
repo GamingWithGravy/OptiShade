@@ -3,13 +3,13 @@
     "FileVersion": {
       "Major": 0,
       "Minor": 20,
-      "Patch": 10,
+      "Patch": 11,
       "Build": 0
     },
     "ProductVersion": {
       "Major": 0,
       "Minor": 20,
-      "Patch": 10,
+      "Patch": 11,
       "Build": 0
     }
   },
@@ -17,8 +17,8 @@
     "CompanyName": "created by gravy",
     "FileDescription": "OptiShade Manager - Your simulator. Your way.",
     "ProductName": "OptiShade Manager",
-    "FileVersion": "0.20.10.0",
-    "ProductVersion": "0.20.10.0"
+    "FileVersion": "0.20.11.0",
+    "ProductVersion": "0.20.11.0"
   },
   "IconPath": "OptiShade.ico"
 }

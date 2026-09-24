@@ -4,7 +4,7 @@
 // Shared by the overlay title and release comparison; not the upstream engine version.
 #define OPTISHADE_VERSION_MAJOR 0
 #define OPTISHADE_VERSION_MINOR 20
-#define OPTISHADE_VERSION_PATCH 10
+#define OPTISHADE_VERSION_PATCH 11
 #define OPTISHADE_VERSION_REVISION 0
 #define OPTISHADE_STRINGIFY_IMPL(x) #x
 #define OPTISHADE_STRINGIFY(x) OPTISHADE_STRINGIFY_IMPL(x)
