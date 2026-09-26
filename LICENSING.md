@@ -12,12 +12,23 @@ summary. The GNU GPL text in LICENSE is retained unchanged.
 
 ## Original OptiShade work
 
-Original manager workflows, interface code, installation and update handling,
-integration code, compatibility safeguards, diagnostics and tests are credited
-to gravy / GamingWithGravy to the extent original. They are distributed under
-the project's existing GPL-3.0 licence unless a file has a separate applicable
-licence. Original modifications to GPL-covered components remain GPL-covered.
-Fusion Cinema retains the GPL-3.0 licence in installer/FusionCinema/LICENSE.
+Original OptiShade contributions are credited to gravy / GamingWithGravy to the
+extent original. Their applicable licence depends on the component and its
+provenance, not just the author's identity or the directory containing it.
+See [OPTISHADE_LICENSING.md](OPTISHADE_LICENSING.md) for the component boundaries
+and the policy for future independently owned work.
+
+OptiScaler-derived runtime code and OptiShade additions forming part of that
+GPL-covered runtime remain GPL-3.0. ReShade retains its BSD 3-Clause terms.
+Separately identified original standalone Manager/tooling may carry All Rights
+Reserved terms in future versions only where ownership and legal separability
+are established and third-party obligations permit it. No current source file
+is designated proprietary by this cleanup: existing manager/tooling licences
+remain unchanged pending file-specific provenance review. Previously released
+GPL versions retain all previously granted GPL rights.
+
+Existing Fusion Cinema material retains the GPL-3.0 licences in
+addons/FusionCinema/LICENSE and installer/FusionCinema/LICENSE.
 
 Recipients may copy, modify and redistribute GPL-covered work under that
 licence. Distribution must comply with its notice, licensing and corresponding
@@ -25,9 +36,10 @@ source requirements. Modified versions must be identified as modified as the
 licence requires. OptiShade authorship must not be falsely attributed to someone
 else; required copyright and licence notices must be preserved.
 
-There is no proprietary or "no reuse" exception for this release's original
-GPL-covered contributions. Merely identifying code as original does not remove
-the permissions granted by its licence.
+There is no proprietary or "no reuse" exception for GPL-covered contributions.
+Merely identifying code as original does not remove its licence permissions.
+File-level notices control where more specific; nothing in this summary
+overrides third-party licence rights.
 
 ## Upstream components
 
@@ -56,5 +68,6 @@ of software or artwork where an existing licence permits it. See BRANDING.md.
 Future independently developed material can carry separate terms only where
 its owners have the necessary rights and those terms are compatible with its
 dependencies and distribution. No such future restriction applies retroactively
-to this release. Private research, private prompts and model weights are not
-granted a licence by this document and are not included in this release.
+to existing grants. The designation process and proprietary-material disclaimer
+are in OPTISHADE_LICENSING.md. This summary grants no rights to private research
+or vendor model weights.
