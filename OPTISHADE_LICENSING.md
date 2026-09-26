@@ -100,9 +100,7 @@ not an application release or a retroactive change to v0.20.11 or earlier copies
 | installer/OptiShade.ico | Owner-confirmed original icon artwork; same adjacent notice |
 | installer/OptiShade-app.ico | Owner-confirmed original application icon artwork; same adjacent notice |
 
-See [docs/Ownership-licensing-audit.md](docs/Ownership-licensing-audit.md) for the
-current file register, evidence and outstanding questions. The earlier
-Licensing-review-2026-09-26.md is a historical review, not the current register.
+The table above is the current proprietary designation register.
 
 Any file not expressly listed or carrying an applicable, valid proprietary
 header remains governed by its existing licence. Future entries must identify
