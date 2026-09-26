@@ -1,3 +1,10 @@
+// Copyright (c) 2026 gravy / GamingWithGravy. All Rights Reserved.
+// OptiShade Proprietary Material: standalone launcher source only.
+// See LICENSES/OPTISHADE-PROPRIETARY.txt and OPTISHADE_LICENSING.md.
+// Embedded third-party/GPL payloads retain their own licences.
+// Earlier GPL grants and applicable platform permissions remain intact.
+// No further copying, modification, redistribution or incorporation into
+// another project is permitted except under the applicable licence or law.
 package main
 
 import (

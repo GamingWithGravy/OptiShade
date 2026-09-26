@@ -20,7 +20,9 @@ and the policy for future independently owned work.
 The boundary is dated 2026-09-26 against baseline commit
 3058628a6ed2b5161a26da04ba44a77ad01da2f9. LICENSE.md provides the mixed-licence
 map; LICENSES/OPTISHADE-PROPRIETARY.txt supplies terms only for expressly
-designated eligible revisions. The current proprietary source register is empty.
+designated eligible revisions. The current register covers the standalone
+main.go launcher, FusionSetup.cs host and three original logo/icon assets,
+with full paths and evidence in OPTISHADE_LICENSING.md.
 The same file-specific rule applies to original standalone Fusion Engine support
 tools and assets. The Fusion Engine name does not relicense its GPL/BSD runtime
 implementation. Expanded ownership and anti-reupload wording does not withdraw
@@ -30,9 +32,9 @@ OptiScaler-derived runtime code and OptiShade additions forming part of that
 GPL-covered runtime remain GPL-3.0. ReShade retains its BSD 3-Clause terms.
 Separately identified original standalone Manager/tooling may carry All Rights
 Reserved terms in future versions only where ownership and legal separability
-are established and third-party obligations permit it. No current source file
-is designated proprietary by this cleanup: existing manager/tooling licences
-remain unchanged pending file-specific provenance review. Previously released
+are established and third-party obligations permit it. Only the explicit
+register defines this distribution's proprietary files. All other manager/tooling
+licences remain unchanged pending file-specific review. Previously released
 GPL versions retain all previously granted GPL rights.
 
 Existing Fusion Cinema material retains the GPL-3.0 licences in

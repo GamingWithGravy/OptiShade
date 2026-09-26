@@ -19,7 +19,7 @@ necessary permissions.
   Submitting a change does not silently assign copyright or constitute agreement
   to proprietary use. Any assignment requires a separate express agreement.
 
-There are currently no proprietary-designated source files; see the register in
+The proprietary-designated paths are listed in
 [OPTISHADE_LICENSING.md](OPTISHADE_LICENSING.md). Do not assume that all manager
 files, tests or assets are proprietary, or that a date alone changes a licence.
 Review ownership, provenance, dependencies and legal separability before adding

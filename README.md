@@ -73,7 +73,9 @@ Official OptiShade repository: https://github.com/GamingWithGravy/OptiShade
 OptiShade and Fusion Engine use component-specific licences. Forks of open-source
 portions are permitted under their applicable terms. Only explicitly designated,
 verified proprietary material is subject to the OptiShade Proprietary Licence;
-the current proprietary code/asset register is empty. Official branding does not
+the register identifies the standalone launcher, host and three logo/icon assets.
+Other manager scripts and all runtime components keep their existing terms.
+Official branding does not
 imply permission to present an unofficial build as official. See the
 [licence map](LICENSE.md), [designation register](OPTISHADE_LICENSING.md) and
 [branding policy](BRANDING.md). Earlier licence grants remain intact.

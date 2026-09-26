@@ -23,8 +23,10 @@ See OPTISHADE_LICENSING.md for the boundary between GPL-covered runtime work,
 BSD-covered ReShade work and eligible future standalone OptiShade components.
 LICENSE.md provides the licence map. LICENSES contains full GPL and ReShade BSD
 texts and the OptiShade Proprietary Licence for expressly designated eligible
-standalone revisions. No existing source file is newly designated proprietary
-by the 2026-09-26 boundary. Official branding is not granted for use as another
+standalone revisions. The local 2026-09-26 designation covers only the standalone
+launcher, host and three logo/icon assets listed in OPTISHADE_LICENSING.md;
+embedded payloads and hosted scripts retain their own terms. Official branding
+is not granted for use as another
 distribution's identity, subject to existing rights and the BRANDING.md exceptions.
 These identity rules also cover OptiShade Fusion Engine branding where owned by
 the project maintainer. Fusion Engine implementation components retain their
@@ -37,7 +39,7 @@ The project is distributed under the GPL-3.0 terms in LICENSE where applicable; 
 
 Original standalone OptiShade Manager/tooling may be separately licensed for
 future versions only where explicitly identified, independently owned and legally
-separable. This documentation cleanup does not relicense existing source files.
+separable. No unlisted source file is relicensed by this change.
 Original branding and eligible future assets may be separately protected, without
 overriding existing grants. Third-party material remains the property of its
 respective authors; its licence and attribution requirements remain intact.

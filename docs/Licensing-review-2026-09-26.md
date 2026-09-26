@@ -1,5 +1,10 @@
 # Licensing review: 2026-09-26
 
+Historical review, superseded for current decisions by
+[Ownership-licensing-audit.md](Ownership-licensing-audit.md). Statements below
+about an empty register describe the earlier review, before additional ownership
+confirmation and architecture review; they are not the current designation list.
+
 Baseline: `3058628a6ed2b5161a26da04ba44a77ad01da2f9`.
 Scope: repository licensing notices, listed manager candidates, their available
 Git history and integration references. This is a technical provenance review,

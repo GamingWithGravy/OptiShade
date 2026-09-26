@@ -19,6 +19,8 @@ New-Item -ItemType Directory -Path "$payload/OptiShadeData/Licenses/LICENSES" -F
 foreach($notice in @('GPL-3.0.txt','ReShade-BSD-3-Clause.txt','OPTISHADE-PROPRIETARY.txt')){Copy-Item (Join-Path "$root/LICENSES" $notice) (Join-Path "$payload/OptiShadeData/Licenses/LICENSES" $notice) -Force}
 New-Item -ItemType Directory -Path "$payload/OptiShadeData/Licenses/docs" -Force|Out-Null
 Copy-Item "$root/docs/Licensing-review-2026-09-26.md" "$payload/OptiShadeData/Licenses/docs/" -Force
+Copy-Item "$root/docs/Ownership-licensing-audit.md" "$payload/OptiShadeData/Licenses/docs/" -Force
+Copy-Item "$root/installer/BRANDING-LICENSE.md" "$payload/OptiShadeData/Licenses/BRANDING-LICENSE.md" -Force
 Copy-Item "$root/reshade/LICENSE.md" "$payload/OptiShadeData/Licenses/ReShade-BSD3.txt" -Force
 Copy-Item "$root/optiscaler/Licenses/*" "$payload/OptiShadeData/Licenses/" -Recurse -Force
 Copy-Item "$root/optiscaler/external/xess/LICENSE.txt" "$payload/OptiShadeData/Licenses/XeSS.txt" -Force

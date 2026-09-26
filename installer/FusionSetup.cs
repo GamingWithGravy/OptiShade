@@ -1,3 +1,10 @@
+// Copyright (c) 2026 gravy / GamingWithGravy. All Rights Reserved.
+// OptiShade Proprietary Material: standalone manager host source only.
+// See LICENSES/OPTISHADE-PROPRIETARY.txt and OPTISHADE_LICENSING.md.
+// Hosted scripts and third-party components retain their own licences.
+// Earlier GPL grants and applicable platform permissions remain intact.
+// No further copying, modification, redistribution or incorporation into
+// another project is permitted except under the applicable licence or law.
 using System;
 using System.IO;
 using System.Management.Automation;

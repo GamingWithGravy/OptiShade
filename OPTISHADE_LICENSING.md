@@ -74,8 +74,8 @@ Boundary date: **2026-09-26 (Europe/London)**. Repository baseline:
 licensing change. The boundary begins with the commit introducing this section;
 it does not retroactively apply to the baseline or earlier versions.
 
-Original standalone OptiShade Manager/tooling code first published or materially
-revised after this licensing boundary is All Rights Reserved **only where
+Original standalone OptiShade Manager/tooling code offered in designated
+distributions after this licensing boundary is All Rights Reserved **only where
 explicitly designated, independently owned and legally separable** from
 GPL/BSD/third-party components. A date, a new commit or a header-only change is
 not evidence of ownership or separability and does not erase earlier grants.
@@ -87,18 +87,31 @@ any earlier GPL grant; no exclusivity over previously granted material is claime
 
 ### OptiShade Proprietary Material
 
-**None designated at this boundary.** Candidate source files have not been
-cleared for proprietary treatment. See [docs/Licensing-review-2026-09-26.md](docs/Licensing-review-2026-09-26.md)
-for the evidence, integration concerns and outstanding provenance questions.
+The following files are expressly designated for the revised local distribution
+dated **2026-09-26**, in the patch based on
+`55547f60ecc13cb9468da7d7cda05fdfe3186472`. This is a source licensing change,
+not an application release or a retroactive change to v0.20.11 or earlier copies.
+
+| File | Designated scope and evidence |
+| --- | --- |
+| installer/main.go | Original standalone extraction/launcher code; owner-confirmed project creation, standard-library imports, payload extracted as separate files rather than linked runtime code |
+| installer/FusionSetup.cs | Original standalone Windows/.NET PowerShell host; owner-confirmed project creation, framework-only build references; hosted scripts are not covered by this designation |
+| installer/OptiShade-icon.png | Owner-confirmed original logo artwork; adjacent installer/BRANDING-LICENSE.md notice |
+| installer/OptiShade.ico | Owner-confirmed original icon artwork; same adjacent notice |
+| installer/OptiShade-app.ico | Owner-confirmed original application icon artwork; same adjacent notice |
+
+See [docs/Ownership-licensing-audit.md](docs/Ownership-licensing-audit.md) for the
+current file register, evidence and outstanding questions. The earlier
+Licensing-review-2026-09-26.md is a historical review, not the current register.
 
 Any file not expressly listed or carrying an applicable, valid proprietary
 header remains governed by its existing licence. Future entries must identify
 the path, first designated revision, review evidence and any third-party exclusions.
 The dedicated terms are [LICENSES/OPTISHADE-PROPRIETARY.txt](LICENSES/OPTISHADE-PROPRIETARY.txt).
 
-There are also **no confirmed proprietary Fusion Engine files or assets** in the
-current register. No source or artwork becomes proprietary solely through the
-expanded ownership or branding wording. Each approved future file must appear
+No additional Fusion Engine implementation files are designated. No source or
+artwork becomes proprietary solely through ownership or branding wording. Each
+approved future file must appear
 in this register and carry a matching notice (or an adjacent notice for binary
 assets), with its first designated revision recorded.
 
@@ -147,14 +160,15 @@ excluded.
 
 ## Existing files and previous releases
 
-This cleanup does not designate any existing source file as proprietary. The
-existing manager/tooling files retain their applicable licences. Their history
-records project authorship and prior publication, but is not a complete
-provenance or separability determination. In particular, `installer/main.go`,
-`manager.ps1`, `manager.xaml`, `FusionSetup.cs`, `DumpSummary.cs`, the other
-installer scripts, and associated tests are not relicensed by this policy.
+Only the five files in the explicit register receive the new designation for
+this distribution. Other manager/tooling files, including manager.ps1,
+manager.xaml, DumpSummary.cs, other installer scripts and associated tests, keep
+their existing terms. Ownership confirmation for the dump reader does not by
+itself clear its direct loading into the still-GPL diagnostic script combination.
 Mixed or uncertain material keeps its existing licence pending a file-specific
-review; absence of a header does not establish proprietary status.
+review; absence of a header does not establish proprietary status. An owner with
+the necessary rights can offer an independently separable work under different
+terms without a substantive rewrite. That does not withdraw earlier grants.
 
 Previously released GPL versions retain the GPL rights already granted to them.
 Future separately licensed work does not revoke those grants. Existing Fusion

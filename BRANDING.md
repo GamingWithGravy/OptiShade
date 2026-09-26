@@ -33,6 +33,11 @@ installer/OptiShade-icon.png, installer/OptiShade.ico, installer/OptiShade-app.i
 and docs/images/optishade.png; listing these paths does not relicense their
 previously published artwork or claim ownership of embedded third-party material.
 
+The new-distribution copyright designation covers only the three installer
+logo/icon files explicitly listed in OPTISHADE_LICENSING.md and
+installer/BRANDING-LICENSE.md. It does not designate docs/images/optishade.png
+or other screenshots. Earlier copies retain their valid prior licence grants.
+
 Legally permitted nominative use, accurate attribution and rights already granted
 under software or artwork licences remain intact. These branding rules concern
 identity and endorsement, not restrictions on GPL-covered source, modification

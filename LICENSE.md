@@ -12,9 +12,10 @@ replace their licences or change previously granted rights.
 | Official OptiShade / Fusion Engine names, logos and identity | [BRANDING.md](BRANDING.md), subject to existing artwork licences and legally permitted references |
 
 The proprietary designation register is in [OPTISHADE_LICENSING.md](OPTISHADE_LICENSING.md).
-**It currently contains no source files.** The presence of a proprietary licence
-does not relicense unlisted files. Existing Manager/tooling licences remain in
-effect unless a verified eligible revision is explicitly designated.
+It designates installer/main.go, installer/FusionSetup.cs and the three original
+logo/icon assets listed there, for the new distribution only. The presence of
+a proprietary licence does not relicense unlisted files, embedded payloads or
+hosted scripts. Earlier GPL copies retain their existing permissions.
 
 Specific file-level notices and applicable third-party licences take precedence.
 Previously released GPL versions retain their GPL rights. The root GPL text is

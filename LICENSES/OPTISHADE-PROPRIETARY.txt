@@ -11,6 +11,16 @@ expressly identify the OptiShade Proprietary Licence as applicable, or that are
 expressly listed as covered in OPTISHADE_LICENSING.md. Directory membership,
 project branding and the presence of this licence are not designations.
 
+LIMITED END-USER PERMISSION
+
+You may install and run official OptiShade builds lawfully obtained from the
+maintainer for their intended purpose, including necessary extraction, execution,
+backup and display of the covered launcher, host and artwork. This permission
+does not authorise redistributing covered copies or using covered assets as
+another product's identity. Broader rights in GPL/BSD/third-party components and
+earlier copies remain unaffected. It does not grant rights in vendor files that
+the maintainer does not have authority to license.
+
 Except under prior written permission from the copyright holder, applicable
 law, a previously granted licence, or applicable hosting-platform terms, no
 permission is granted to:
@@ -39,7 +49,7 @@ public interfaces or independently created implementations.
 Viewing source, reviewing security or compiling for evaluation does not itself
 grant further reuse permissions. This sentence is not an independent grant of
 permission to compile, copy or modify. Any evaluation or end-user permissions
-must be supplied separately and explicitly before a proprietary build is offered.
+are limited to the express end-user permission above unless separately granted.
 
 Rights granted through applicable hosting-platform terms, including GitHub's
 public-repository viewing and in-service forking permissions, remain intact.
