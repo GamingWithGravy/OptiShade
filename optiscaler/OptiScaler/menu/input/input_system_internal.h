@@ -530,6 +530,7 @@ void ResetRawInputBlockStateLocked();
 void ResetRawInputSanitizeCacheLocked();
 bool ShouldApplyBlockingPolicyLocked();
 bool PreserveFlightControllerInput();
+bool IsReservedMenuKeyLocked(int vk);
 bool ShouldBlockKeyboardInputLocked();
 bool ShouldBlockMouseInputLocked();
 bool ShouldBlockCursorInputLocked();

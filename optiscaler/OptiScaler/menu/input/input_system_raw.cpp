@@ -256,6 +256,8 @@ void ResetRawInputSanitizeCacheLocked()
 
 RawSanitizeAction GetRawKeyboardSanitizeActionLocked(const RAWKEYBOARD& keyboard)
 {
+    if (IsReservedMenuKeyLocked(NormalizeRawKeyboardVirtualKey(keyboard)))
+        return RawSanitizeAction::SanitizeAll;
     if (!_state.MenuVisible || !_state.BlockKeyboard)
         return RawSanitizeAction::Pass;
 

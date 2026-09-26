@@ -72,6 +72,13 @@ bool PreserveFlightControllerInput()
     return preserve;
 }
 
+bool IsReservedMenuKeyLocked(int vk)
+{
+    return bypassHookDepth == 0 && _state.Initialized && _state.Focused &&
+           PreserveFlightControllerInput() && vk > 0 && vk < 256 &&
+           vk == Config::Instance()->ShortcutKey.value_or_default();
+}
+
 bool ShouldBlockKeyboardInputLocked() { return ShouldApplyBlockingPolicyLocked() && _state.BlockKeyboard; }
 
 bool ShouldBlockMouseInputLocked() { return ShouldApplyBlockingPolicyLocked() && _state.BlockMouse; }
@@ -1388,6 +1395,9 @@ bool ShouldBlockCursor()
 bool ShouldBlockVirtualKey(int vk)
 {
     std::unique_lock lock(_state.Mutex);
+
+    if (IsReservedMenuKeyLocked(vk))
+        return true;
 
     if (!ShouldApplyBlockingPolicyLocked())
         return false;

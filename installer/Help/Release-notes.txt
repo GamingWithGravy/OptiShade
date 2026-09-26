@@ -1,19 +1,6 @@
-OptiShade 0.20.11
+OptiShade 0.20.12
 
-New Feature Added: Preset HotSwap
+- Fixed an issue where changing your menu key binding could cause aircraft controls to glitch when opening or closing the UI.
+- Updated Preset HotSwap: choose Preset 1 and Preset 2, and set your Preset hotswap key. An on-screen message now shows which preset is active after swapping.
 
-Uses:
-- Quickly compare two different presets.
-- Switch between day and night presets while flying.
-- Keep two favourites ready to swap whenever you cannot decide.
-
-How to use:
-1. Open the OptiShade UI and go to Image effects.
-2. Choose a Main Preset and a different Hotswap Preset.
-3. Click Change beside Hotswap and press your preferred key.
-4. Save settings.
-5. Close the UI and swap as you wish!
-
-Save or revert unsaved preset edits before swapping. Different shaders may briefly reload.
-
-Updating: Close MSFS, run the 0.20.11 installer, select your simulator and click Repair OptiShade. No restore or uninstall is needed. Restart MSFS afterwards.
+Updating: Close MSFS, run the 0.20.12 installer, select your simulator and click Repair OptiShade. No restore or uninstall is needed. Restart MSFS afterwards.

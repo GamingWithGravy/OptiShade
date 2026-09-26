@@ -21,9 +21,9 @@ def extract(file, name):
     return text[start:end]
 
 names = ['ShouldBlockDirectInputKeyboardLocked', 'ShouldBlockDirectInputMouseLocked',
-         'ShouldBlockDirectInputOtherLocked', 'ShouldBlockDirectInputDeviceLocked',
+         'ShouldBlockDirectInputOtherLocked', 'ShouldBlockDirectInputDeviceLocked', 'IsReservedDirectInputKeyLocked',
          'hkDirectInputGetDeviceState', 'hkDirectInputGetDeviceData']
-functions = '\n'.join(extract('input_system_directinput.cpp', n) for n in names)
+functions = extract('input_system.cpp', 'IsReservedMenuKeyLocked') + '\n' + '\n'.join(extract('input_system_directinput.cpp', n) for n in names)
 functions += '\n' + '\n'.join(extract('input_system_xinput.cpp', n) for n in
     ['ShouldBlockXInputLocked', 'hkXInputGetState', 'hkXInputGetStateEx'])
 functions += '\n' + extract('input_system_raw.cpp', 'HandleRawInputLocked')
@@ -43,6 +43,9 @@ struct State { std::mutex Mutex; bool Initialized=true, Focused=true, BlockKeybo
 prefix += ''.join('unsigned ' + c + '=0;\n' for c in counters) + '} _state;\n'
 prefix += r'''
 bool preserve=true, visible=true;
+int bypassHookDepth=0;
+struct Option { int value=VK_INSERT; int value_or_default(){return value;} };
+struct Config { Option ShortcutKey; static Config* Instance(){static Config config;return &config;} };
 bool PreserveFlightControllerInput(){return preserve;}
 bool ShouldApplyBlockingPolicyLocked(){return visible;}
 bool ShouldBlockKeyboardInputLocked(){return visible && _state.BlockKeyboard;}
@@ -53,8 +56,9 @@ DirectInputDeviceKind kind=DirectInputDeviceKind::Other;
 DirectInputDeviceKind GetDirectInputDeviceKindLocked(void*){return kind;}
 HRESULT deviceResult=DI_OK;
 unsigned stateCalls=0, dataCalls=0;
+DWORD eventScan=0;
 HRESULT WINAPI DeviceState(void*,DWORD size,void* data){++stateCalls;if(SUCCEEDED(deviceResult))std::memset(data,0x5a,size);return deviceResult;}
-HRESULT WINAPI DeviceData(void*,DWORD,LPDIDEVICEOBJECTDATA data,LPDWORD count,DWORD){++dataCalls;if(SUCCEEDED(deviceResult)&&data&&*count){data[0].dwData=0x80;*count=1;}return deviceResult;}
+HRESULT WINAPI DeviceData(void*,DWORD,LPDIDEVICEOBJECTDATA data,LPDWORD count,DWORD){++dataCalls;if(SUCCEEDED(deviceResult)&&data&&*count){data[0].dwOfs=eventScan;data[0].dwData=0x80;*count=1;}return deviceResult;}
 auto o_DirectInputDeviceGetDeviceState=&DeviceState;
 auto o_DirectInputDeviceGetDeviceData=&DeviceData;
 DWORD xresult=ERROR_SUCCESS;
@@ -110,6 +114,28 @@ int main(){
     assert(hkDirectInputGetDeviceState(nullptr,sizeof(data),data)==DI_OK);
     for(BYTE b:data)assert(b==0);
   }
+  // Reserve a rebound shortcut even with the overlay closed, including extended keys.
+  kind=DirectInputDeviceKind::Keyboard;visible=false;
+  for(int key:{int(VK_INSERT),int(VK_HOME),int(VK_F7),int('E')}){
+    Config::Instance()->ShortcutKey.value=key;
+    const UINT sc=MapVirtualKeyW(key,MAPVK_VK_TO_VSC_EX);
+    const DWORD di=(sc&0x7f)|((sc&0xff00)?0x80:0);
+    assert(IsReservedMenuKeyLocked(key));
+    assert(hkDirectInputGetDeviceState(nullptr,256,data)==DI_OK);
+    assert(data[di]==0 && data[DIK_A]==0x5a);
+    eventScan=di;count=1;
+    assert(hkDirectInputGetDeviceData(nullptr,sizeof(event),&event,&count,0)==DI_OK && count==0);
+    eventScan=DIK_A;count=1;
+    assert(hkDirectInputGetDeviceData(nullptr,sizeof(event),&event,&count,DIGDD_PEEK)==DI_OK && count==1);
+    _state.Focused=false;assert(!IsReservedMenuKeyLocked(key));_state.Focused=true;
+    bypassHookDepth=1;assert(!IsReservedMenuKeyLocked(key));bypassHookDepth=0;
+    preserve=false;assert(!IsReservedMenuKeyLocked(key));preserve=true;
+  }
+  Config::Instance()->ShortcutKey.value=VK_F7;
+  assert(!IsReservedMenuKeyLocked('E')); // previous binding no longer reserved
+  deviceResult=DIERR_INPUTLOST;
+  assert(hkDirectInputGetDeviceState(nullptr,256,data)==DIERR_INPUTLOST);
+  deviceResult=DI_OK;visible=true;
   // Non-MSFS behavior remains unchanged.
   preserve=false;kind=DirectInputDeviceKind::Other;memset(data,0x5a,sizeof(data));
   assert(hkDirectInputGetDeviceState(nullptr,sizeof(data),data)==DI_OK);

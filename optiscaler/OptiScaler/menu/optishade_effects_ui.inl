@@ -134,7 +134,7 @@ static void DrawEffects(){
  if(zipProcess)ImGui::TextWrapped("Installing files in the background... You can keep flying; reopen Image effects to see the result.");
  ImGui::TextWrapped("Import INI / Install FX adds files. Saved looks below load an installed preset.");
  static char nextPreset[1024]="";static bool askSwitch=false,waitingSwitch=false;static uint64_t switchSaveSerial=0;
- LoadSwapPair();ImGui::TextUnformatted("Main Preset");ImGui::SameLine();ImGui::SetNextItemWidth(300);
+ LoadSwapPair();ImGui::TextUnformatted("Preset 1");ImGui::SameLine();ImGui::SetNextItemWidth(300);
  if(ImGui::BeginCombo("##Look presets",(swapMain.empty()?std::filesystem::u8path(fx.preset):swapMain).filename().string().c_str())){
   for(std::filesystem::recursive_directory_iterator i(root/L"Presets",error),end;i!=end&&!error;i.increment(error)){
    if(i->path().extension()!=L".ini"||SameSwapPreset(i->path(),swapAlternate))continue;auto label=i->path().lexically_relative(root/L"Presets").string();if(ImGui::Selectable(label.c_str())){auto path=i->path().u8string();if(fx.dirty){strncpy_s(nextPreset,(const char*)path.c_str(),_TRUNCATE);askSwitch=true;}else{osfx::Command c{};c.kind=osfx::Preset;strncpy_s(c.path,(const char*)path.c_str(),_TRUNCATE);Send(c);}}

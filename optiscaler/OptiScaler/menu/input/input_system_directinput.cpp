@@ -702,6 +702,12 @@ HRESULT WINAPI hkDirectInputCreateDeviceW(void* directInput, REFGUID guid, void*
     return result;
 }
 
+bool IsReservedDirectInputKeyLocked(DWORD scan)
+{
+    const UINT winScan = (scan & 0x7f) | ((scan & 0x80) ? 0xe000 : 0);
+    return scan < 256 && IsReservedMenuKeyLocked(MapVirtualKeyW(winScan, MAPVK_VSC_TO_VK_EX));
+}
+
 HRESULT WINAPI hkDirectInputGetDeviceState(void* device, DWORD dataSize, LPVOID data)
 {
     {
@@ -726,8 +732,16 @@ HRESULT WINAPI hkDirectInputGetDeviceState(void* device, DWORD dataSize, LPVOID 
     if (o_DirectInputDeviceGetDeviceState == nullptr)
         return DIERR_GENERIC;
 
-    ScopedHookBypass bypass;
-    return o_DirectInputDeviceGetDeviceState(device, dataSize, data);
+    HRESULT result;
+    { ScopedHookBypass bypass; result = o_DirectInputDeviceGetDeviceState(device, dataSize, data); }
+    if (SUCCEEDED(result) && data != nullptr)
+    {
+        std::unique_lock lock(_state.Mutex);
+        if (GetDirectInputDeviceKindLocked(device) == DirectInputDeviceKind::Keyboard && dataSize == 256)
+            for (DWORD scan = 0; scan < 256; ++scan)
+                if (IsReservedDirectInputKeyLocked(scan)) static_cast<BYTE*>(data)[scan] = 0;
+    }
+    return result;
 }
 
 HRESULT WINAPI hkDirectInputGetDeviceData(void* device, DWORD objectDataSize, LPDIDEVICEOBJECTDATA data, LPDWORD inOut,
@@ -755,8 +769,27 @@ HRESULT WINAPI hkDirectInputGetDeviceData(void* device, DWORD objectDataSize, LP
     if (o_DirectInputDeviceGetDeviceData == nullptr)
         return DIERR_GENERIC;
 
-    ScopedHookBypass bypass;
-    return o_DirectInputDeviceGetDeviceData(device, objectDataSize, data, inOut, flags);
+    const DWORD capacity = inOut ? *inOut : 0;
+    HRESULT result;
+    { ScopedHookBypass bypass; result = o_DirectInputDeviceGetDeviceData(device, objectDataSize, data, inOut, flags); }
+    if (SUCCEEDED(result) && data != nullptr && inOut != nullptr && *inOut <= capacity &&
+        objectDataSize >= sizeof(DWORD))
+    {
+        std::unique_lock lock(_state.Mutex);
+        if (GetDirectInputDeviceKindLocked(device) == DirectInputDeviceKind::Keyboard)
+        {
+            auto bytes = reinterpret_cast<BYTE*>(data);
+            DWORD kept = 0;
+            for (DWORD i = 0; i < *inOut; ++i)
+            {
+                DWORD scan; std::memcpy(&scan, bytes + size_t(i) * objectDataSize, sizeof(scan));
+                if (IsReservedDirectInputKeyLocked(scan)) continue;
+                std::memmove(bytes + size_t(kept++) * objectDataSize, bytes + size_t(i) * objectDataSize, objectDataSize);
+            }
+            *inOut = kept;
+        }
+    }
+    return result;
 }
 
 ULONG WINAPI hkDirectInputDeviceRelease(void* device)

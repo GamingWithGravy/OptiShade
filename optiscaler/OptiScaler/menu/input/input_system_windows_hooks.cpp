@@ -296,7 +296,7 @@ int WindowsHookMouseMessageToButton(int hookType, WPARAM wParam, LPARAM lParam)
 
 bool ShouldBlockWindowsKeyboardHookCallbackLocked(WindowsHookSlot& slot, int code, WPARAM wParam, LPARAM lParam)
 {
-    if (code < 0 || !ShouldBlockKeyboardInputLocked())
+    if (code < 0)
         return false;
 
     int vk = 0;
@@ -307,7 +307,7 @@ bool ShouldBlockWindowsKeyboardHookCallbackLocked(WindowsHookSlot& slot, int cod
         const KBDLLHOOKSTRUCT* keyboard = reinterpret_cast<const KBDLLHOOKSTRUCT*>(lParam);
 
         if (keyboard == nullptr)
-            return true;
+            return ShouldBlockKeyboardInputLocked();
 
         vk = static_cast<int>(keyboard->vkCode);
         released = (keyboard->flags & LLKHF_UP) != 0;
@@ -319,7 +319,10 @@ bool ShouldBlockWindowsKeyboardHookCallbackLocked(WindowsHookSlot& slot, int cod
     }
 
     if (vk <= 0 || vk >= 256)
-        return true;
+        return ShouldBlockKeyboardInputLocked();
+
+    if (IsReservedMenuKeyLocked(vk)) return true;
+    if (!ShouldBlockKeyboardInputLocked()) return false;
 
     if (!released)
     {

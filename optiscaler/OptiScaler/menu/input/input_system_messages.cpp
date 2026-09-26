@@ -565,10 +565,10 @@ bool HandleWindowMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, Inpu
     case WM_SYSKEYDOWN:
     {
         const int vk = NormalizeModifierVirtualKey(static_cast<int>(wParam), lParam);
-        SetKeyDown(vk, GetMessageTime(), _state.BlockKeyboard);
+        SetKeyDown(vk, GetMessageTime(), _state.BlockKeyboard || IsReservedMenuKeyLocked(vk));
         OPTIINPUT_LOG_VERBOSE("key down vk:{} blocked:{}", vk, _state.BlockKeyboard ? 1 : 0);
 
-        shouldBlock = _state.BlockKeyboard;
+        shouldBlock = _state.BlockKeyboard || IsReservedMenuKeyLocked(vk);
         break;
     }
 
@@ -581,7 +581,7 @@ bool HandleWindowMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, Inpu
 
         // If the game saw the key down before the menu opened,
         // let it see the matching key up to avoid stuck movement/actions.
-        shouldBlock = wasBlockedDown;
+        shouldBlock = wasBlockedDown || IsReservedMenuKeyLocked(vk);
         break;
     }
 
@@ -590,7 +590,9 @@ bool HandleWindowMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, Inpu
         if (wParam >= 0x20 && wParam <= 0xFFFF)
             _state.TextInput.push_back(static_cast<wchar_t>(wParam));
 
-        shouldBlock = _state.BlockKeyboard;
+        const UINT scan = (static_cast<ULONG_PTR>(lParam) >> 16) & 0xff;
+        const UINT extended = (lParam & (1UL << 24)) ? 0xe000 : 0;
+        shouldBlock = _state.BlockKeyboard || IsReservedMenuKeyLocked(MapVirtualKeyW(scan | extended, MAPVK_VSC_TO_VK_EX));
         break;
     }
 
@@ -1083,6 +1085,10 @@ BOOL WINAPI hkGetKeyboardState(PBYTE keyState)
 
     const bool shouldBlockKeyboard = ShouldBlockKeyboardInputLocked();
     const bool shouldBlockMouse = ShouldBlockMouseInputLocked();
+
+    // The overlay polls original APIs; only the game's view loses its menu key.
+    for (int vk = 1; vk < 256; ++vk)
+        if (IsReservedMenuKeyLocked(vk)) keyState[vk] = 0;
 
     if (!shouldBlockKeyboard && !shouldBlockMouse)
         return result;

@@ -4,7 +4,7 @@
   <p><strong>Microsoft Flight Simulator 2024 · Microsoft Flight Simulator 2020</strong></p>
   <p>Created by gravy · Powered by Fusion Engine</p>
   <p>
-    <img src="https://img.shields.io/badge/Version-0.20.11-9755E9?style=flat-square" alt="Version 0.20.11">
+    <img src="https://img.shields.io/badge/Version-0.20.12-9755E9?style=flat-square" alt="Version 0.20.12">
     <img src="https://img.shields.io/badge/Windows-x64-272133?style=flat-square" alt="Windows x64">
     <img src="https://img.shields.io/badge/Graphics-NVIDIA%20%2B%20AMD-9755E9?style=flat-square" alt="NVIDIA and AMD graphics">
   </p>
@@ -16,6 +16,12 @@
 ## Your flight. Your look.
 
 Optishade brings image effects, saved looks and optional NVIDIA neural rendering together in one custom in-game menu. This edition is built for **Microsoft Flight Simulator 2024 on NVIDIA and AMD graphics cards (AMD support is early experimental)**, with automatic Steam and Xbox detection.
+
+### New in 0.20.12
+
+- Fixed custom menu key bindings reaching the sim and triggering aircraft controls when opening or closing the UI.
+- Preset HotSwap now uses Preset 1 and Preset 2, with an on-screen notification showing the active preset after a swap.
+- Close MSFS and use Repair OptiShade to update. No restore or uninstall needed; restart MSFS afterwards.
 
 ### New in 0.20.11
 

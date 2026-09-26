@@ -2,6 +2,7 @@
 #include "menu_common.h"
 #include "../../../shared/RenderingCapability.h"
 #include "../../../shared/D3D12Capabilities.h"
+#include <imgui/ImGuiNotify.hpp>
 #include "optishade_effects_ui.inl"
 #include <framegen/dlssg/MfgUnlock.h>
 #include <framegen/dlssg/AmpereMfgLoader.h>
@@ -31,7 +32,6 @@
 #include <upscaler_time/UpscalerTime_Vk.h>
 
 #include <imgui/imgui_internal.h>
-#include <imgui/ImGuiNotify.hpp>
 #include <imgui/imgui_impl_win32.h>
 #include <imgui/imgui_impl_uwp.h>
 
@@ -7156,7 +7156,7 @@ void MenuCommon::RenderApiAndTextureSettings(RenderMenuContext& ctx)
     }
 }
 
-void OptiShadeUI::DrawHotSwapKeybind(){auto& value=Config::Instance()->PresetHotSwapKey;auto code=value.value_or_default();ImGui::Text("Hotswap: %s",code<=0?"Not set":Keybind::KeyNameFromVirtualKeyCode(code).c_str());ImGui::SameLine();static auto key=Keybind("Change",15);key.Render(value,false);ImGui::TextDisabled("Save settings to keep this key. Escape cancels; Backspace clears it.");}
+void OptiShadeUI::DrawHotSwapKeybind(){auto& value=Config::Instance()->PresetHotSwapKey;auto code=value.value_or_default();ImGui::Text("Preset hotswap: %s",code<=0?"Not set":Keybind::KeyNameFromVirtualKeyCode(code).c_str());ImGui::SameLine();static auto key=Keybind("Change",15);key.Render(value,false);ImGui::TextDisabled("Save settings to keep this key. Escape cancels; Backspace clears it.");}
 
 void MenuCommon::RenderKeybindSettings(RenderMenuContext& ctx)
 {

@@ -86,7 +86,7 @@ function InstallPresetDependencies([string]$Preset,[string]$Game,[string]$Catalo
    if($uri.Scheme -ne 'https' -or $uri.Host -ne 'github.com' -or $uri.AbsolutePath -notmatch '^/[^/]+/[^/]+/archive/.+\.zip$'){throw 'Unexpected catalogue download URL.'}
    $zip=Join-Path $downloads ($selection.Package.Id+'.zip')
    # Stream with hard bounds; a partial archive never reaches the importer.
-   $request=[Net.HttpWebRequest]::Create($uri);$request.UserAgent='OptiShade/0.20.11';$request.Timeout=30000;$request.ReadWriteTimeout=30000
+   $request=[Net.HttpWebRequest]::Create($uri);$request.UserAgent='OptiShade/0.20.12';$request.Timeout=30000;$request.ReadWriteTimeout=30000
    $response=$request.GetResponse()
    try{
     if($response.ResponseUri.Scheme -ne 'https' -or $response.ResponseUri.Host -notin @('github.com','codeload.github.com')){throw 'Unexpected download redirect.'}
