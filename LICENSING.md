@@ -21,6 +21,10 @@ The boundary is dated 2026-09-26 against baseline commit
 3058628a6ed2b5161a26da04ba44a77ad01da2f9. LICENSE.md provides the mixed-licence
 map; LICENSES/OPTISHADE-PROPRIETARY.txt supplies terms only for expressly
 designated eligible revisions. The current proprietary source register is empty.
+The same file-specific rule applies to original standalone Fusion Engine support
+tools and assets. The Fusion Engine name does not relicense its GPL/BSD runtime
+implementation. Expanded ownership and anti-reupload wording does not withdraw
+any earlier grant or designate unverified material proprietary.
 
 OptiScaler-derived runtime code and OptiShade additions forming part of that
 GPL-covered runtime remain GPL-3.0. ReShade retains its BSD 3-Clause terms.

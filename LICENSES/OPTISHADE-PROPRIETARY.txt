@@ -5,7 +5,8 @@ All Rights Reserved.
 
 SCOPE
 
-This licence applies only to eligible original standalone files/revisions that
+This licence applies only to eligible original standalone OptiShade / Fusion
+Engine files, assets and revisions that
 expressly identify the OptiShade Proprietary Licence as applicable, or that are
 expressly listed as covered in OPTISHADE_LICENSING.md. Directory membership,
 project branding and the presence of this licence are not designations.
@@ -14,13 +15,23 @@ Except under prior written permission from the copyright holder, applicable
 law, a previously granted licence, or applicable hosting-platform terms, no
 permission is granted to:
 
-- copy, publish or redistribute the covered material;
+- copy or reproduce the covered material;
 - modify or create derivative works;
-- incorporate substantial portions into another project;
-- rebrand, repurpose or republish the covered material;
-- sell, sublicense, lease or commercially distribute the covered material;
+- upload, reupload, mirror, repost, republish or redistribute it;
+- include it in another repository, ZIP/archive, installer or distribution;
+- incorporate it or substantial portions into another application;
+- rebrand, repurpose or remove its authorship/proprietary notices;
+- sell, sublicense, lease, license or commercially exploit it;
 - use protected expression from the material as the basis of a competing app;
-- remove required copyright or proprietary notices.
+- distribute copied or modified source or binaries to third parties;
+- use protected OptiShade / Fusion Engine branding as another product's identity;
+- remove or obscure required copyright, provenance or licence notices.
+
+These restrictions include repackaging a covered Manager under another name or
+copying covered UI/design assets into another project. They apply only to validly
+designated proprietary material, subject to the exceptions above. This licence
+grants no additional rights by implication, estoppel or otherwise; that statement
+does not negate independently existing rights or mandatory legal protections.
 
 This does not claim exclusive ownership of ideas, facts, general techniques,
 public interfaces or independently created implementations.

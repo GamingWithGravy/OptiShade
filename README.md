@@ -68,6 +68,16 @@ Close the game before changing installed files. **Restore** removes tracked Opti
 
 Fusion Engine is the name for Optishade's integration of modified [ReShade](https://github.com/crosire/reshade) and [OptiScaler-DLSSNR-PreSR-Multipass](https://github.com/wilsjo2/OptiScaler-DLSSNR-PreSR-Multipass), including RenoDX-derived colour processing, with gravy's installer and interface. Underlying technologies retain their authors' credits and licences. See [NOTICE.md](NOTICE.md), [LICENSE](LICENSE), and the component licence files.
 
+Official OptiShade repository: https://github.com/GamingWithGravy/OptiShade
+
+OptiShade and Fusion Engine use component-specific licences. Forks of open-source
+portions are permitted under their applicable terms. Only explicitly designated,
+verified proprietary material is subject to the OptiShade Proprietary Licence;
+the current proprietary code/asset register is empty. Official branding does not
+imply permission to present an unofficial build as official. See the
+[licence map](LICENSE.md), [designation register](OPTISHADE_LICENSING.md) and
+[branding policy](BRANDING.md). Earlier licence grants remain intact.
+
 ## Feedback
 
 When reporting a problem, include your graphics card, Steam/Xbox edition, Optishade version and the steps that reproduce it. Check diagnostic files for personal information before sharing them. Compatibility and performance vary; see [DISCLAIMER.txt](DISCLAIMER.txt).

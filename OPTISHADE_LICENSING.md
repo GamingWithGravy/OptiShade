@@ -7,6 +7,41 @@ material. Specific file-level notices and applicable third-party licences take
 precedence over general project summaries. No statement here overrides rights
 granted by those licences.
 
+## Ownership of original OptiShade / Fusion Engine material
+
+Copyright (c) 2026 gravy / GamingWithGravy for independently created and owned
+original project material. All Rights Reserved **only for validly designated
+proprietary material**, subject to applicable law, platform terms and earlier
+licence grants. This is not an All Rights Reserved designation of the repository.
+
+Original code, tooling, user interfaces, workflows, documentation, artwork,
+diagnostic, installer and compatibility systems remain the property of their
+respective copyright holders. Original contributions owned by gravy /
+GamingWithGravy remain owned by that rights holder even when licensed under GPL
+or BSD; ownership is distinct from recipients' licence permissions. No exclusive
+ownership is claimed over third-party contributions, ideas or general architecture.
+
+For expressly designated proprietary material, no additional permission is
+granted to copy, modify, redistribute, reupload, mirror, repackage, rebrand,
+sublicense, sell, publish or incorporate it into another application without
+prior written permission. The dedicated proprietary licence supplies the full
+terms and exceptions. Existing GPL/BSD/CC/vendor and earlier grants prevail for
+their material. The register below, not this ownership statement, defines scope.
+
+## Fusion Engine identity and implementation
+
+Fusion Engine and OptiShade Fusion Engine identify this project's technology
+where owned by gravy / GamingWithGravy. Identity and endorsement are addressed
+in BRANDING.md; no registered trademark or exclusive right to unrelated uses of
+the words is asserted.
+
+The implementation is not one proprietary work by virtue of its name. Its
+OptiScaler-derived runtime and incorporated OptiShade modifications remain GPL;
+ReShade-derived portions retain applicable BSD terms. RenoDX, shaders, CC-licensed
+TAA helpers, NVIDIA, AMD, Intel/XeSS and other dependencies retain their own terms.
+Standalone Fusion Engine support tools require the same file-specific provenance
+and separability review as Manager code before proprietary designation.
+
 ## GPL-covered work
 
 The root [LICENSE](LICENSE) remains the GNU GPL version 3. It governs GPL-covered
@@ -50,7 +85,7 @@ they were released. The proprietary designation applies only to eligible future
 revisions/files expressly marked as such. The same code remains available under
 any earlier GPL grant; no exclusivity over previously granted material is claimed.
 
-### Proprietary OptiShade components
+### OptiShade Proprietary Material
 
 **None designated at this boundary.** Candidate source files have not been
 cleared for proprietary treatment. See [docs/Licensing-review-2026-09-26.md](docs/Licensing-review-2026-09-26.md)
@@ -60,6 +95,12 @@ Any file not expressly listed or carrying an applicable, valid proprietary
 header remains governed by its existing licence. Future entries must identify
 the path, first designated revision, review evidence and any third-party exclusions.
 The dedicated terms are [LICENSES/OPTISHADE-PROPRIETARY.txt](LICENSES/OPTISHADE-PROPRIETARY.txt).
+
+There are also **no confirmed proprietary Fusion Engine files or assets** in the
+current register. No source or artwork becomes proprietary solely through the
+expanded ownership or branding wording. Each approved future file must appear
+in this register and carry a matching notice (or an adjacent notice for binary
+assets), with its first designated revision recorded.
 
 ## Future standalone OptiShade Manager and tooling
 

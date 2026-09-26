@@ -7,9 +7,9 @@ replace their licences or change previously granted rights.
 | --- | --- |
 | OptiScaler-derived runtime, its OptiShade additions and other GPL-covered work | [GPL-3.0](LICENSES/GPL-3.0.txt); see also the unchanged root LICENSE and optiscaler/LICENSE |
 | ReShade and its BSD-covered modifications | [ReShade BSD 3-Clause](LICENSES/ReShade-BSD-3-Clause.txt); reshade/LICENSE.md remains authoritative |
-| Explicitly designated, verified standalone OptiShade Manager/tooling revisions | [OptiShade Proprietary Licence](LICENSES/OPTISHADE-PROPRIETARY.txt), only when listed or marked as covered |
+| Explicitly designated, verified standalone OptiShade / Fusion Engine code and assets | [OptiShade Proprietary Licence](LICENSES/OPTISHADE-PROPRIETARY.txt), only for validly designated revisions |
 | Dependencies, shaders, vendor files and other third-party material | Their own file/component licences and notices |
-| Official name, logos and identity | [BRANDING.md](BRANDING.md), subject to existing artwork licences and legally permitted references |
+| Official OptiShade / Fusion Engine names, logos and identity | [BRANDING.md](BRANDING.md), subject to existing artwork licences and legally permitted references |
 
 The proprietary designation register is in [OPTISHADE_LICENSING.md](OPTISHADE_LICENSING.md).
 **It currently contains no source files.** The presence of a proprietary licence

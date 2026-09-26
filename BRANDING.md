@@ -1,4 +1,4 @@
-# OptiShade branding and attribution
+# OptiShade and Fusion Engine branding and attribution
 
 OptiShade is the project identity used by gravy / GamingWithGravy. The software licences do not grant permission to imply that an independent fork, product or service is the official OptiShade project or is endorsed by its maintainer. No registered-trademark status is asserted here.
 
@@ -37,3 +37,23 @@ Legally permitted nominative use, accurate attribution and rights already grante
 under software or artwork licences remain intact. These branding rules concern
 identity and endorsement, not restrictions on GPL-covered source, modification
 or redistribution. No registered trademark status is asserted.
+
+## Fusion Engine and official origin
+
+Fusion Engine, OptiShade Fusion Engine and associated original logos, artwork
+and identity are part of this project's identity to the extent owned by gravy /
+GamingWithGravy. No permission is granted here to use that identity to market an
+unrelated fork or product as official, endorsed, sponsored or affiliated.
+No registered trademark status or ownership of unrelated third-party uses of
+these names is claimed.
+
+An unofficial fork may accurately say "Forked from OptiShade". It must not
+present unofficial binaries as official releases, use official OptiShade or
+Fusion Engine branding as its own identity without the necessary permission,
+or imitate release pages/branding to falsely imply official origin. Forks should
+use their own name, logo and identity.
+
+These provisions preserve lawful nominative references, required attribution,
+applicable platform permissions and existing software/artwork licence grants.
+They do not restrict GPL source rights or claim third-party game imagery as
+OptiShade artwork. Branding protection is distinct from implementation licensing.

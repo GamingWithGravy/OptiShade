@@ -26,6 +26,10 @@ texts and the OptiShade Proprietary Licence for expressly designated eligible
 standalone revisions. No existing source file is newly designated proprietary
 by the 2026-09-26 boundary. Official branding is not granted for use as another
 distribution's identity, subject to existing rights and the BRANDING.md exceptions.
+These identity rules also cover OptiShade Fusion Engine branding where owned by
+the project maintainer. Fusion Engine implementation components retain their
+individual licences; its name is not a claim of proprietary ownership over
+OptiScaler, ReShade, RenoDX or vendor material.
 
 OptiShade-specific manager workflows, user interface integration, installation ownership/update handling, compatibility safeguards and associated tests are project contributions credited to gravy / GamingWithGravy, to the extent original. This attribution does not assert ownership of upstream algorithms, SDKs, model weights, shader packages or contributors' work. Existing file-level notices and revision history remain authoritative.
 

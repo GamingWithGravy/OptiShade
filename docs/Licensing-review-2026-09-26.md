@@ -116,3 +116,81 @@ them. No technical or legal guarantee against copying is asserted.
 
 References: [GNU licensing FAQ](https://www.gnu.org/licenses/gpl-faq.html),
 [GitHub Terms of Service](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service).
+
+## Final ownership-protection addendum
+
+Reviewed against local commit `9f79fc0273f4fe13b2cde8cf5b0423d6934fd98c`.
+This addendum expands identity, contribution and proprietary-term wording; it
+supplies no new chain-of-title evidence for the unresolved candidates above.
+
+### Confirmed proprietary OptiShade files
+
+None. No source or asset was newly cleared and no proprietary source headers
+were applied. Existing licensing remains authoritative.
+
+### Confirmed proprietary Fusion Engine files
+
+None. The name describes the integrated technology, not a blanket proprietary
+implementation. No independently verified standalone Fusion Engine component
+was identified in this checkout for designation.
+
+### Component classifications
+
+| Component | Classification and action |
+| --- | --- |
+| OptiScaler-derived runtime and incorporated OptiShade menus/hooks | GPL - derivative/combined; unchanged |
+| ReShade and integrated ReShade modifications, including optishade_taa_bridge.inl | BSD / third-party; unchanged |
+| shared/EffectsBridge.h, shared/TaaBridge.h | AMBIGUOUS as independently licensable interfaces; compiled into the existing runtime integration. Existing terms retained; no proprietary designation |
+| Existing Fusion Cinema shader and preset copies | GPL under existing notices; unchanged |
+| Manager/tooling candidates in the table above and associated tests | AMBIGUOUS for proprietary clearance; unchanged |
+| NVIDIA, AMD/FidelityFX, Intel/XeSS, RenoDX, shader packs, CC TAA helpers and other dependencies | BSD / third-party or their specific GPL/CC/vendor terms, as applicable; unchanged |
+| Existing logos/icons and documentation artwork, including docs/images/installer.png | AMBIGUOUS for new copyright restrictions; prior grants and any third-party imagery remain intact |
+| Other original documentation, diagrams, presets and release artwork | No new file-specific clearance; no proprietary designation |
+
+The shared headers define runtime interfaces; their comments use "private" to
+describe those interfaces, not to establish a proprietary copyright licence.
+Their current contents and available history were inspected. These boundaries
+do not infer legal independence from filenames or from a DLL/process boundary.
+
+### Private-repository candidates
+
+No existing file is cleared for removal from public distribution in this review.
+If independently developed and legally separable future Manager/tooling or
+Fusion Engine support components are cleared, private development may reduce
+casual copying. Such future components could instead be public under express
+proprietary terms, subject to hosting-platform rights; public visibility cannot
+make copying technically impossible. No source is moved or deleted here.
+
+GPL-covered distributions must continue to provide corresponding source by a
+GPL-compliant method. GPL does not universally require a public GitHub repository;
+source obligations to recipients must still be met. BSD also does not generally
+require publishing modified source, but its notices and conditions remain
+mandatory. This task deliberately preserves both existing source trees and all
+notices, rather than changing their publication model.
+
+### Historical rights
+
+Earlier releases and revisions keep every licence grant validly made for them,
+including the existing GPL Manager code and Fusion Cinema. New proprietary terms
+cannot prevent reuse of copies obtained under those grants. No tags, releases,
+source history or previously granted rights are removed.
+
+### Remaining legal risks
+
+Ownership/separability clearance is still needed before any proprietary register
+entry. A new ownership statement does not resolve it. Exclusive ownership of
+outside contributions would require an appropriate lawyer-drafted agreement/CLA;
+the current contribution policy requires written permission without inventing
+an assignment. Branding terms claim neither registered trademark status nor
+rights in unrelated uses of "Fusion Engine". Platform rights, lawful references,
+ideas and independently implemented functionality are not excluded.
+
+### Final changes and checks
+
+The proprietary licence now expressly covers reuploads, mirrors, repackaging,
+copied/modified binaries and covered UI/design assets, only where validly
+designated. Ownership, Fusion Engine identity, README origin, component maps and
+contributor rules agree that the register remains empty. The existing licensing
+packaging block automatically includes these revised documents. No functional
+code, application version, package operations or dependency licence texts changed
+in this addendum. No executable is built and no release is created.
