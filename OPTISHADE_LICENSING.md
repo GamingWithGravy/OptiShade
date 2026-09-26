@@ -32,6 +32,35 @@ model files and other vendor material remain owned by their respective authors
 and governed by their own terms. OptiShade does not grant additional rights to
 them. See [NOTICE.md](NOTICE.md) and [LICENSING.md](LICENSING.md).
 
+## Licensing boundary and designation register
+
+Boundary date: **2026-09-26 (Europe/London)**. Repository baseline:
+`3058628a6ed2b5161a26da04ba44a77ad01da2f9`, the state immediately before this
+licensing change. The boundary begins with the commit introducing this section;
+it does not retroactively apply to the baseline or earlier versions.
+
+Original standalone OptiShade Manager/tooling code first published or materially
+revised after this licensing boundary is All Rights Reserved **only where
+explicitly designated, independently owned and legally separable** from
+GPL/BSD/third-party components. A date, a new commit or a header-only change is
+not evidence of ownership or separability and does not erase earlier grants.
+
+Previously published versions remain available under the licences under which
+they were released. The proprietary designation applies only to eligible future
+revisions/files expressly marked as such. The same code remains available under
+any earlier GPL grant; no exclusivity over previously granted material is claimed.
+
+### Proprietary OptiShade components
+
+**None designated at this boundary.** Candidate source files have not been
+cleared for proprietary treatment. See [docs/Licensing-review-2026-09-26.md](docs/Licensing-review-2026-09-26.md)
+for the evidence, integration concerns and outstanding provenance questions.
+
+Any file not expressly listed or carrying an applicable, valid proprietary
+header remains governed by its existing licence. Future entries must identify
+the path, first designated revision, review evidence and any third-party exclusions.
+The dedicated terms are [LICENSES/OPTISHADE-PROPRIETARY.txt](LICENSES/OPTISHADE-PROPRIETARY.txt).
+
 ## Future standalone OptiShade Manager and tooling
 
 Future versions of genuinely original, independently owned and legally separable
@@ -55,7 +84,9 @@ For a verified eligible source file, a language-appropriate comment may use:
 Copyright (c) 2026 gravy / GamingWithGravy. All Rights Reserved.
 
 This file is an original standalone OptiShade component.
-See OPTISHADE_LICENSING.md and its accompanying permissions.
+Licensed under the OptiShade Proprietary Licence.
+See LICENSES/OPTISHADE-PROPRIETARY.txt and OPTISHADE_LICENSING.md.
+Previously granted rights remain intact.
 ```
 
 Unless expressly permitted in writing by the rights holder or by applicable law,
@@ -63,6 +94,8 @@ separately designated proprietary material may not be copied, modified,
 redistributed or incorporated into another product. This restriction applies
 only to material validly designated under these terms, never to GPL/BSD-covered
 code, third-party material or rights already granted under another licence.
+Applicable hosting-platform permissions also remain intact. The dedicated
+proprietary licence controls proprietary terms; this section is a summary.
 
 To the extent permitted by applicable law, original proprietary portions are
 provided "AS IS", without express or implied warranties, including merchantability,

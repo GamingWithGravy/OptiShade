@@ -17,6 +17,10 @@ extent original. Their applicable licence depends on the component and its
 provenance, not just the author's identity or the directory containing it.
 See [OPTISHADE_LICENSING.md](OPTISHADE_LICENSING.md) for the component boundaries
 and the policy for future independently owned work.
+The boundary is dated 2026-09-26 against baseline commit
+3058628a6ed2b5161a26da04ba44a77ad01da2f9. LICENSE.md provides the mixed-licence
+map; LICENSES/OPTISHADE-PROPRIETARY.txt supplies terms only for expressly
+designated eligible revisions. The current proprietary source register is empty.
 
 OptiScaler-derived runtime code and OptiShade additions forming part of that
 GPL-covered runtime remain GPL-3.0. ReShade retains its BSD 3-Clause terms.

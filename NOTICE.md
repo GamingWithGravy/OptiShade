@@ -21,6 +21,11 @@ Downloaded effects retain their authors' licences, installed under OptiShadeData
 See LICENSING.md for the component-by-component ownership and licensing summary.
 See OPTISHADE_LICENSING.md for the boundary between GPL-covered runtime work,
 BSD-covered ReShade work and eligible future standalone OptiShade components.
+LICENSE.md provides the licence map. LICENSES contains full GPL and ReShade BSD
+texts and the OptiShade Proprietary Licence for expressly designated eligible
+standalone revisions. No existing source file is newly designated proprietary
+by the 2026-09-26 boundary. Official branding is not granted for use as another
+distribution's identity, subject to existing rights and the BRANDING.md exceptions.
 
 OptiShade-specific manager workflows, user interface integration, installation ownership/update handling, compatibility safeguards and associated tests are project contributions credited to gravy / GamingWithGravy, to the extent original. This attribution does not assert ownership of upstream algorithms, SDKs, model weights, shader packages or contributors' work. Existing file-level notices and revision history remain authoritative.
 

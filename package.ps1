@@ -14,7 +14,11 @@ foreach($name in @('amd_fidelityfx_loader_dx12.dll','amd_fidelityfx_upscaler_dx1
 Copy-Item "$root/optiscaler/external/FidelityFX-SDK/PrebuiltSignedDLL/amd_fidelityfx_vk.dll" "$payload/OptiShadeData/Engine/" -Force
 Copy-Item "$root/optiscaler/external/directx_agility_sdk/lib/D3D12Core.dll" "$payload/OptiShadeData/Engine/D3D12_OptiScaler/" -Force
 Copy-Item "$root/optiscaler/LICENSE" "$payload/OptiShadeData/Licenses/OptiScaler-GPL3.txt" -Force
-foreach($notice in @('LICENSE','NOTICE.md','BRANDING.md','LICENSING.md')){Copy-Item (Join-Path $root $notice) (Join-Path "$payload/OptiShadeData/Licenses" $notice) -Force}
+foreach($notice in @('LICENSE','LICENSE.md','OPTISHADE_LICENSING.md','NOTICE.md','BRANDING.md','LICENSING.md')){Copy-Item (Join-Path $root $notice) (Join-Path "$payload/OptiShadeData/Licenses" $notice) -Force}
+New-Item -ItemType Directory -Path "$payload/OptiShadeData/Licenses/LICENSES" -Force|Out-Null
+foreach($notice in @('GPL-3.0.txt','ReShade-BSD-3-Clause.txt','OPTISHADE-PROPRIETARY.txt')){Copy-Item (Join-Path "$root/LICENSES" $notice) (Join-Path "$payload/OptiShadeData/Licenses/LICENSES" $notice) -Force}
+New-Item -ItemType Directory -Path "$payload/OptiShadeData/Licenses/docs" -Force|Out-Null
+Copy-Item "$root/docs/Licensing-review-2026-09-26.md" "$payload/OptiShadeData/Licenses/docs/" -Force
 Copy-Item "$root/reshade/LICENSE.md" "$payload/OptiShadeData/Licenses/ReShade-BSD3.txt" -Force
 Copy-Item "$root/optiscaler/Licenses/*" "$payload/OptiShadeData/Licenses/" -Recurse -Force
 Copy-Item "$root/optiscaler/external/xess/LICENSE.txt" "$payload/OptiShadeData/Licenses/XeSS.txt" -Force

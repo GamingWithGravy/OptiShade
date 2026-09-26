@@ -1,0 +1,55 @@
+OPTISHADE PROPRIETARY LICENCE
+
+Copyright (c) 2026 gravy / GamingWithGravy.
+All Rights Reserved.
+
+SCOPE
+
+This licence applies only to eligible original standalone files/revisions that
+expressly identify the OptiShade Proprietary Licence as applicable, or that are
+expressly listed as covered in OPTISHADE_LICENSING.md. Directory membership,
+project branding and the presence of this licence are not designations.
+
+Except under prior written permission from the copyright holder, applicable
+law, a previously granted licence, or applicable hosting-platform terms, no
+permission is granted to:
+
+- copy, publish or redistribute the covered material;
+- modify or create derivative works;
+- incorporate substantial portions into another project;
+- rebrand, repurpose or republish the covered material;
+- sell, sublicense, lease or commercially distribute the covered material;
+- use protected expression from the material as the basis of a competing app;
+- remove required copyright or proprietary notices.
+
+This does not claim exclusive ownership of ideas, facts, general techniques,
+public interfaces or independently created implementations.
+
+Viewing source, reviewing security or compiling for evaluation does not itself
+grant further reuse permissions. This sentence is not an independent grant of
+permission to compile, copy or modify. Any evaluation or end-user permissions
+must be supplied separately and explicitly before a proprietary build is offered.
+
+Rights granted through applicable hosting-platform terms, including GitHub's
+public-repository viewing and in-service forking permissions, remain intact.
+Those permissions do not automatically grant unrelated reuse rights.
+
+EXCLUSIONS AND EXISTING RIGHTS
+
+This licence does not apply to GPL-covered, BSD-covered or third-party material.
+It cannot restrict rights or corresponding-source obligations under those
+licences. It does not claim ownership of upstream code, dependencies, shaders,
+vendor components or models. Their respective licences remain authoritative.
+
+Previously granted rights under earlier licences are not revoked. Existing
+GPL-published versions remain usable, modifiable and redistributable under GPL.
+A new designation cannot prevent use of the same material lawfully obtained
+under an earlier grant. File-specific notices and applicable law control.
+
+DISCLAIMER
+
+THE COVERED MATERIAL IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE
+AND NON-INFRINGEMENT, TO THE MAXIMUM EXTENT PERMITTED BY LAW. TO THAT EXTENT,
+THE RIGHTS HOLDERS ARE NOT LIABLE FOR CLAIMS OR DAMAGES ARISING FROM ITS USE.
+NOTHING EXCLUDES RIGHTS OR LIABILITY THAT CANNOT LAWFULLY BE EXCLUDED.

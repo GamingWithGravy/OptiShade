@@ -10,10 +10,20 @@ A blanket no-reuse restriction cannot be added to the GPL-covered combined progr
 
 ## Unofficial distributions
 
+Official repository: https://github.com/GamingWithGravy/OptiShade
+
+The OptiShade name identifies the official project maintained by gravy /
+GamingWithGravy. Forks and modified builds are not official OptiShade releases
+unless explicitly identified as such by GamingWithGravy.
+
 Unofficial forks may accurately describe themselves as forks of OptiShade and
 retain legally required attribution. They must not present themselves as official
 OptiShade releases or imply endorsement by gravy / GamingWithGravy. Identify the
 fork's maintainer and modified status clearly.
+Forks should use their own name, logos and release identity. Do not imply
+sponsorship, affiliation or approval that has not been granted. This policy also
+covers official visual identity, original artwork and release branding, subject
+to the existing-rights exceptions below.
 
 No permission is granted here to use OptiShade logos, icons or official branding
 as the product identity of a competing or unofficial distribution. Obtain written
