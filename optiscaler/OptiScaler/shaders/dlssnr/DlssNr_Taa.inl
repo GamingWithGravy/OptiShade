@@ -13,12 +13,23 @@ std::string status = "Enable OptiShade_TAA_Guides in Image effects. Use TAA, SDR
 void Say(const char* value) { if (status != value) { status = value; LOG_INFO("TAA NR: {}", value); } }
 bool Wait(ID3D12CommandQueue* queue) {
     if (FAILED(queue->Signal(fence.Get(), ++fenceValue))) return false;
+    if (fence->GetCompletedValue() >= fenceValue)
+        return fence->GetCompletedValue() != UINT64_MAX;
+    // Wake on completion rather than adding Sleep(1) scheduling delay to each barrier.
+    struct CompletionEvent {
+        HANDLE handle = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+        ~CompletionEvent() { if (handle) CloseHandle(handle); }
+    };
+    static thread_local CompletionEvent completion;
+    if (!completion.handle || FAILED(fence->SetEventOnCompletion(fenceValue, completion.handle))) return false;
     const auto start = GetTickCount64();
-    while (fence->GetCompletedValue() < fenceValue) {
-        if (GetTickCount64() - start > 5000 || FAILED(device->GetDeviceRemovedReason())) return false;
-        Sleep(1);
+    for (;;) {
+        const DWORD result = WaitForSingleObject(completion.handle, 100);
+        const auto completed = fence->GetCompletedValue();
+        if (completed == UINT64_MAX || FAILED(device->GetDeviceRemovedReason())) return false;
+        if (completed >= fenceValue) return true;
+        if (result == WAIT_FAILED || GetTickCount64() - start >= 5000) return false;
     }
-    return fence->GetCompletedValue() != UINT64_MAX;
 }
 void Submit(const ostaa::Frame* input) {
     std::lock_guard<std::recursive_mutex> guard(g_nrMutex);
@@ -59,6 +70,7 @@ void Submit(const ostaa::Frame* input) {
     if (device && device != current) { Say("Graphics device changed. Restart MSFS before retrying TAA NR."); return; }
     device = current;
     if (!fence && FAILED(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)))) return;
+    const auto waitStart = std::chrono::steady_clock::now();
     // Drain preceding ReShade/game work before touching the shared NR scratch set.
     if (!Wait(queue)) { poisoned = true; Say("TAA GPU synchronization failed."); return; }
     if (!allocator && FAILED(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&allocator)))) return;
@@ -103,6 +115,12 @@ void Submit(const ostaa::Frame* input) {
     ID3D12CommandList* lists[] = {submission.Get()}; queue->ExecuteCommandLists(1, lists);
     if (!Wait(queue)) { poisoned = true; Say("TAA GPU work did not finish. Restart MSFS."); return; }
     borrowedColor.Reset(); borrowedDepth.Reset(); borrowedMotion.Reset();
+    static ULONGLONG lastTimingLog = 0;
+    if (now - lastTimingLog >= 5000) {
+        lastTimingLog = now;
+        LOG_INFO("TAA NR synchronous frame cost: {:.2f} ms (includes recording and GPU waits)",
+            std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - waitStart).count());
+    }
     if (g_nr.successfulDispatches > before) {
         lastRun = now;
         Say(cfg.DlssNrApplyModel.value_or_default() ? "TAA NR submitted and GPU work completed (experimental estimated motion)." : "TAA NR completed; model changes are hidden.");

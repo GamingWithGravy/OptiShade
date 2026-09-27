@@ -45,7 +45,7 @@ function RemoveUnreferencedBackups($Manifest,[string]$Folder){
  if(Test-Path -LiteralPath $root){foreach($f in Get-ChildItem -LiteralPath $root -File -Recurse){$safe=OwnedPath $Folder $f.FullName.Substring($Folder.Length+1);if($safe -notin $keep){Remove-Item -LiteralPath $safe -Force}}}
 }
 function FindFusionConflicts([string]$Game){
- foreach($name in @('ReShade.ini','OptiScaler.ini','ReShade.log','OptiScaler.log','nvngx_dlssnr.dll','nvngx.dll_dlssnr.dll')){if(Test-Path -LiteralPath (Join-Path $Game $name) -PathType Leaf){[pscustomobject]@{Path=$name;Recognised=$true;Description='Graphics mod file';Hash=(HashFile (Join-Path $Game $name))}}}
+ foreach($name in @('ReShade.ini','OptiScaler.ini','nvngx_dlssnr.dll','nvngx.dll_dlssnr.dll')){if(Test-Path -LiteralPath (Join-Path $Game $name) -PathType Leaf){[pscustomobject]@{Path=$name;Recognised=$true;Description='Graphics mod file';Hash=(HashFile (Join-Path $Game $name))}}}
  foreach($addon in Get-ChildItem -LiteralPath $Game -Filter '*.addon64' -File -ErrorAction SilentlyContinue|Where-Object Name -match '(?i)dlss5|renodx'){
   [pscustomobject]@{Path=$addon.Name;Recognised=$true;Description='External neural-rendering/ReShade add-on';Hash=(HashFile $addon.FullName)}
  }

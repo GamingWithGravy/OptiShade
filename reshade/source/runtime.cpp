@@ -4889,7 +4889,7 @@ void reshade::runtime::save_screenshot(const char *postfix_in)
 			// Default to a save failure unless it is reported to succeed below
 			bool save_success = false;
 
-			if (FILE *const file = _wfsopen(screenshot_path.c_str(), L"wb", SH_DENYNO))
+			if (FILE *const file = _wfsopen(screenshot_path.c_str(), L"wbx", SH_DENYNO))
 			{
 				const auto write_callback = [](void *context, void *data, int size) {
 					fwrite(data, 1, size, static_cast<FILE *>(context));
@@ -5047,7 +5047,14 @@ void reshade::runtime::save_screenshot(const char *postfix_in)
 				if (fclose(file) != 0) save_success = false;
 			}
 
-			if (save_success) optishade::snapshot::receipt(screenshot_path);
+			if (save_success && !optishade::snapshot::receipt(screenshot_path)) {
+				std::error_code remove_error;
+				std::filesystem::remove(screenshot_path, remove_error);
+				osfx_impl::SnapshotComplete(false, remove_error ?
+					"Picture saved, but its cleanup record failed. Remove it manually from Optishade Snapshots." :
+					"Capture could not be recorded for cleanup. Check permissions and free space; no picture was kept.");
+				return;
+			}
 			osfx_impl::SnapshotComplete(save_success, screenshot_path.u8string());
 			if (save_success)
 			{

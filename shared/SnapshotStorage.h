@@ -37,6 +37,18 @@ inline std::string hash(const std::filesystem::path& path){
 }
 inline std::filesystem::path folder(const std::string& parent){
  auto p=std::filesystem::u8path(parent).lexically_normal();
+ if(!p.is_absolute())throw std::runtime_error("Snapshot game folder must be absolute");
+ // Resolve the existing game directory, including Xbox package aliases.
+ HANDLE directory=CreateFileW(p.c_str(),FILE_READ_ATTRIBUTES,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS,nullptr);
+ if(directory==INVALID_HANDLE_VALUE)throw std::runtime_error("Cannot open snapshot game folder");
+ std::vector<wchar_t> target(32768);
+ DWORD count=GetFinalPathNameByHandleW(directory,target.data(),static_cast<DWORD>(target.size()),FILE_NAME_NORMALIZED|VOLUME_NAME_DOS);
+ CloseHandle(directory);
+ if(!count||count>=target.size())throw std::runtime_error("Cannot resolve snapshot game folder");
+ std::wstring resolved(target.data(),count);
+ if(resolved.compare(0,8,L"\\\\?\\UNC\\")==0)resolved=L"\\\\"+resolved.substr(8);
+ else if(resolved.compare(0,4,L"\\\\?\\")==0)resolved=resolved.substr(4);
+ p=std::filesystem::path(resolved).lexically_normal();
  if(p.filename()!=L"Optishade Snapshots")p/=L"Optishade Snapshots";
  if(!safe(p))throw std::runtime_error("Choose an absolute, non-linked snapshot folder");
  return p;
@@ -53,8 +65,13 @@ inline bool receipt(const std::filesystem::path& file){
  try {auto root=receipts();if(!safe(root)||!safe(file))return false;std::filesystem::create_directories(root);
  auto digest=hash(file);if(digest.empty())return false;
  auto target=root/(file.stem().wstring()+L".txt");
- std::ofstream out(target,std::ios::binary|std::ios::trunc);
- out<<file.u8string()<<'\n'<<std::filesystem::file_size(file)<<'\n'<<digest<<'\n';out.flush();return out.good();
+ const auto temporary=root/(file.stem().wstring()+L".pending");
+ struct PendingRecord { std::filesystem::path path; ~PendingRecord(){std::error_code ec;std::filesystem::remove(path,ec);} } cleanup{temporary};
+ std::ofstream out(temporary,std::ios::binary|std::ios::trunc);
+ out<<file.u8string()<<'\n'<<std::filesystem::file_size(file)<<'\n'<<digest<<'\n';out.flush();out.close();
+ if(!out)return false;
+ // A partial record must never enter the uninstall catalogue.
+ return MoveFileExW(temporary.c_str(),target.c_str(),MOVEFILE_WRITE_THROUGH)!=FALSE;
  }catch(...){return false;}
 }
 }

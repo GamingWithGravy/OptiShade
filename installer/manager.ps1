@@ -21,6 +21,20 @@ $script:cachePath=Join-Path $store 'msfs-2020-2024-cache.json'
 [xml]$xaml=Get-Content "$PSScriptRoot/manager.xaml" -Raw -Encoding UTF8
 $form=[Windows.Markup.XamlReader]::Load((New-Object Xml.XmlNodeReader $xaml))
 $path=$form.FindName('GamePath');$status=$form.FindName('Status')
+function RefreshUpdateChannelLabel {
+ $channel=GetOptiShadeUpdateChannel
+ $form.FindName('BetaUpdates').IsChecked=($channel -eq 'beta')
+ $form.FindName('UpdateChannelStatus').Text='Download channel: '+$channel
+}
+RefreshUpdateChannelLabel
+$form.FindName('BetaUpdates').Add_Click({
+ try{
+  SetOptiShadeUpdateChannel ([bool]$form.FindName('BetaUpdates').IsChecked)
+  $script:availableUpdate=$null;$form.FindName('UpdateAvailable').Visibility='Collapsed'
+  RefreshUpdateChannelLabel
+  $status.Text='Download channel saved. Select Check for updates to refresh. Nothing has been installed.'
+ }catch{RefreshUpdateChannelLabel;$status.Text='Could not save the update channel. '+$_.Exception.Message}
+})
 $form.FindName('DiscordCommunity').Add_Click({
  try{Start-Process 'https://discord.gg/6hjR9cSsy7' -ErrorAction Stop}
  catch{$status.Text='Could not open your browser. Visit https://discord.gg/6hjR9cSsy7';$status.Foreground='#FFBE83'}
@@ -30,7 +44,7 @@ $form.FindName('SupportDevelopment').Add_Click({
  ShowSupportDevelopment $form $store
  if(Test-Path -LiteralPath (Join-Path $store 'support-hidden.txt')){$form.FindName('SupportDevelopment').Visibility='Collapsed'}
 })
-$buttons=@('Browse','Install','Repair','Restore','Runtime','Retry','Uninstall','Scan','Play','LibraryGames','GamePath','Method','AddGame','HomeNav','LibraryNav','SetupNav','SettingsNav','KeybindsNav','ChangeMenuKey','ChangeHotSwapKey','ClearHotSwapKey','ChangeSnapshotKey','ClearSnapshotKey','BrowseSnapshots','OpenLibrary','CheckCompatibility','TroubleshootingNav','ResetDefaults','ImportZip','RecoveryRepair','RecoveryRestore','CheckUpdates','SaveMenuKeys','DefaultMenuKeys','LoadMenuKeys','IncludeEffects','OwnIniMode','ChooseOwnIni','ApplyFxChoice','PrepareOlderRtx','PrepareMfg','OpenMsfs2020','OpenXPlane12')|ForEach-Object {$form.FindName($_)}
+$buttons=@('Browse','Install','Repair','Restore','Runtime','Retry','Uninstall','Scan','Play','LibraryGames','GamePath','Method','AddGame','HomeNav','LibraryNav','SetupNav','SettingsNav','KeybindsNav','ChangeMenuKey','ChangeHotSwapKey','ClearHotSwapKey','ChangeSnapshotKey','ClearSnapshotKey','BrowseSnapshots','OpenLibrary','CheckCompatibility','TroubleshootingNav','ResetDefaults','ImportZip','RecoveryRepair','RecoveryRestore','CheckUpdates','BetaUpdates','SaveMenuKeys','DefaultMenuKeys','LoadMenuKeys','IncludeEffects','OwnIniMode','ChooseOwnIni','ApplyFxChoice','PrepareOlderRtx','PrepareMfg','OpenMsfs2020','OpenXPlane12')|ForEach-Object {$form.FindName($_)}
 $form.Icon=[Windows.Media.Imaging.BitmapFrame]::Create([uri](Join-Path $PSScriptRoot 'OptiShade-app.ico'))
 $form.FindName('BrandIcon').Source=[Windows.Media.Imaging.BitmapFrame]::Create([uri](Join-Path $PSScriptRoot 'OptiShade-icon.png'))
 $form.FindName('BrandIcon').Cursor='SizeAll'
@@ -54,10 +68,17 @@ $form.FindName('RevertUpdate').Add_Click({
 $form.FindName('UpdateAvailable').Add_Click({StartManagerUpdate $script:availableUpdate})
 function StartManagerUpdate($Update){
  if($script:busy -or -not $Update){return}
+ if($Update.Channel -and $Update.Channel -ne (GetOptiShadeUpdateChannel)){$status.Text='The download channel changed. Check for updates again.';return}
  if($env:OPTISHADE_PORTABLE -eq '1'){
-  if($Update.Rollback){$status.Text='Automatic rollback of a portable installation is not supported by older managers. Download the older portable ZIP into a separate folder; keep your Data folder as a backup.';return}
+  if($Update.Rollback){
+   $status.Text='Portable version change: download the selected portable ZIP into a separate folder. Keep your Data folder as a backup; installed game files are not changed automatically.'
+   $releasePage=if($Update.ReleaseUrl){$Update.ReleaseUrl}else{'https://github.com/GamingWithGravy/OptiShade/releases'}
+   Start-Process $releasePage
+   return
+  }
   [void][Windows.MessageBox]::Show($form,'Portable update: download the new portable ZIP from the official releases page. Close OptiShade, extract it, and copy your existing Data folder into the new folder. Keep portable.txt beside the EXE. Game installations still need updating through setup.','OptiShade portable update')
-  Start-Process 'https://github.com/GamingWithGravy/OptiShade/releases/latest'
+  $releasePage=if($Update.ReleaseUrl){$Update.ReleaseUrl}else{'https://github.com/GamingWithGravy/OptiShade/releases'}
+  Start-Process $releasePage
   return
  }
  if(Get-Process FlightSimulator2024,FlightSimulator,X-Plane -ErrorAction SilentlyContinue){$status.Text='Close all simulators before changing versions.';return}
@@ -371,7 +392,7 @@ $script:startupTimer.Add_Tick({
    $form.FindName('IntroStatus').Text='Your setup is ready.'
    $form.FindName('IntroProgress').IsIndeterminate=$false;$form.FindName('IntroProgress').Value=100
    $copies=@($result.Games)
-   if($result.Update){$script:availableUpdate=$result.Update;$form.FindName('UpdateAvailable').Content='Update available - '+$result.Update.Version;$form.FindName('UpdateAvailable').Visibility='Visible'}
+   if($result.Update -and $result.Update.Channel -eq (GetOptiShadeUpdateChannel)){$script:availableUpdate=$result.Update;$form.FindName('UpdateAvailable').Content='Update available - '+$result.Update.Version;$form.FindName('UpdateAvailable').Visibility='Visible'}
    $form.FindName('MsfsCopies').ItemsSource=$copies
    if($copies.Count){$form.FindName('MsfsCopies').SelectedIndex=0}else{$path.Text=''}
    $status.Text='Simulator detection complete. Open Setup to install, play or restore.'
@@ -422,7 +443,7 @@ $form.FindName('CheckUpdates').Add_Click({RunAction {
  $status.Text='Checking GitHub releases...';$form.Dispatcher.Invoke([Action]{},[Windows.Threading.DispatcherPriority]::Background)
  $script:availableUpdate=GetOptiShadeUpdate -ReportErrors
  if($script:availableUpdate){$form.FindName('UpdateAvailable').Content='Update available - '+$script:availableUpdate.Version;$form.FindName('UpdateAvailable').Visibility='Visible';$status.Text='An update is available. Use the update button to install it.'}
- else{$form.FindName('UpdateAvailable').Visibility='Collapsed';$status.Text='No newer stable release is available.'}
+ else{$form.FindName('UpdateAvailable').Visibility='Collapsed';$status.Text='No eligible release is available in the '+(GetOptiShadeUpdateChannel)+' channel.'}
 }})
 
 function CancelSnapshotCapture {$script:capturingSnapshot=$false;$form.FindName('ChangeSnapshotKey').Content='Change'}

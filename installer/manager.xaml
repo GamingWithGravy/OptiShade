@@ -1,5 +1,5 @@
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- Title="OptiShade Manager | Your simulator. Your way." Width="1100" Height="780" MinWidth="1000" MinHeight="740" WindowStartupLocation="CenterScreen" WindowStyle="None" AllowsTransparency="True" Background="Transparent" FontFamily="Segoe UI" Foreground="#F3EFFB">
+ Title="OptiShade Manager BETA | Your simulator. Your way." Width="1100" Height="780" MinWidth="1000" MinHeight="740" WindowStartupLocation="CenterScreen" WindowStyle="None" AllowsTransparency="True" Background="Transparent" FontFamily="Segoe UI" Foreground="#F3EFFB">
  <Window.Resources>
   <Style TargetType="RadioButton"><Setter Property="Foreground" Value="#EAE1F6"/><Setter Property="Cursor" Value="Hand"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton"><Border x:Name="Choice" Background="#282238" BorderBrush="#40314F" BorderThickness="1" CornerRadius="9" Padding="14,12"><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property="IsChecked" Value="True"><Setter TargetName="Choice" Property="Background" Value="#54346F"/><Setter TargetName="Choice" Property="BorderBrush" Value="#B68BE8"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter TargetName="Choice" Property="Opacity" Value="0.4"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
   <Style TargetType="Button">
@@ -38,7 +38,7 @@
    <DockPanel>
     <StackPanel DockPanel.Dock="Top">
      <Image x:Name="BrandIcon" Width="80" Height="80" HorizontalAlignment="Center" Margin="0,0,0,14"/>
-     <TextBlock Text="Optishade" HorizontalAlignment="Center" FontSize="26" FontWeight="SemiBold"/>
+     <TextBlock HorizontalAlignment="Center" FontSize="26" FontWeight="SemiBold"><Run Text="OptiShade"/><Run Text=" BETA" FontSize="12" Foreground="#C4A0FF"/></TextBlock>
      <TextBlock Text="NVIDIA + AMD&#10;powered by fusion engine" TextAlignment="Center" Foreground="#BD9CEC" FontSize="11" Margin="0,6,0,8"/>
      <Button Padding="18,9" x:Name="HomeNav" Content="Home" Margin="0,0,0,10"/><Button Visibility="Collapsed" x:Name="LibraryNav" Content="Library" Margin="0,0,0,10"/><Button Padding="18,9" x:Name="SetupNav" Content="Setup" Margin="0,0,0,10"/><Button Padding="18,9" x:Name="KeybindsNav" Content="Keybinds" Margin="0,0,0,10"/><Button Padding="18,9" x:Name="SettingsNav" Content="Settings" Margin="0,0,0,10"/><Button Padding="18,9" x:Name="TroubleshootingNav" Content="Troubleshooting"/>
      <TextBlock Text="Install once.&#10;Make it yours in game." Foreground="#A499B6" Margin="16,8,0,0" FontSize="13"/><Button x:Name="CheckUpdates" Content="Check for updates" Margin="0,14,0,0"/><Button x:Name="UpdateAvailable" Content="Update available" Visibility="Collapsed" Background="#8650C8" Margin="0,20,0,0" ToolTip="Update the manager and installed game files. Close MSFS first."/><Button x:Name="RevertUpdate" Content="Revert update" Margin="0,8,0,0" Padding="18,9" ToolTip="Choose a previous official release and view rollback instructions"/>
@@ -60,7 +60,7 @@
     <Grid x:Name="HomePage"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*" MinHeight="50"/></Grid.RowDefinitions><StackPanel>
      <Border CornerRadius="16" Padding="20,8" Margin="0,0,0,6">
       <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#3A2156" Offset="0"/><GradientStop Color="#21172F" Offset="1"/></LinearGradientBrush></Border.Background>
-      <StackPanel><TextBlock Text="Optishade" HorizontalAlignment="Center" FontSize="28" FontWeight="SemiBold"/><TextBlock Text="Your simulator. Your way." HorizontalAlignment="Center" Foreground="#C2B0D7" FontSize="13" Margin="0,4,0,0"/>
+      <StackPanel><TextBlock HorizontalAlignment="Center" FontSize="28" FontWeight="SemiBold"><Run Text="OptiShade"/><Run Text=" BETA" FontSize="12" Foreground="#C4A0FF"/></TextBlock><TextBlock Text="Your simulator. Your way." HorizontalAlignment="Center" Foreground="#C2B0D7" FontSize="13" Margin="0,4,0,0"/>
        <TextBlock Text="Performance &#x00D7; Image Effects" HorizontalAlignment="Center" Foreground="#D4B7F9" FontWeight="SemiBold" FontSize="12" Margin="0,10,0,2"/>
 </StackPanel>
      </Border>
@@ -116,7 +116,7 @@
 <TextBlock x:Name="BackupMenuHint" Text="Recovery shortcut: Ctrl+Shift+O (no Insert or numpad needed)." Margin="0,12,0,6" Foreground="#AA9CB9"/>
 <WrapPanel Margin="0,12,0,0"><Button x:Name="LoadMenuKeys" Content="Read installed keys" Margin="0,0,8,8"/><Button x:Name="SaveMenuKeys" Content="Save shortcuts" Margin="0,0,8,8"/><Button x:Name="DefaultMenuKeys" Content="Restore default shortcuts" Margin="0,0,8,8"/></WrapPanel>
 </StackPanel></StackPanel></ScrollViewer>
-    <StackPanel x:Name="SettingsPage" Visibility="Collapsed" Margin="0,14,0,0"><TextBlock Text="Settings" FontSize="28" FontWeight="SemiBold"/><Button x:Name="GitHub" Content="GitHub releases and downloads" HorizontalAlignment="Left" Margin="0,18,0,0"/><Button x:Name="Help" Content="Tutorial, how it works and features" HorizontalAlignment="Left" Background="#8650C8" Margin="0,18,0,8"/><TextBlock Text="Remove OptiShade from all games recorded by this installer." Foreground="#AA9CB9" Margin="0,20,0,12"/><TextBlock Text="Uninstall removes OptiShade and restores files it backed up. Choose whether to keep or remove saved INI presets and snapshots. Game settings, controls and saves stay untouched. Your original installer EXE is kept." Foreground="#AA9CB9" Margin="0,0,0,20"/><Button x:Name="Uninstall" Content="Uninstall OptiShade" Background="#30212C" Foreground="#E3B7CC" Margin="0,0,10,10"/></StackPanel>
+    <StackPanel x:Name="SettingsPage" Visibility="Collapsed" Margin="0,14,0,0"><TextBlock Text="Settings" FontSize="28" FontWeight="SemiBold"/><CheckBox x:Name="BetaUpdates" Content="Opt into beta versions for testing" Margin="0,14,0,8"/><TextBlock x:Name="UpdateChannelStatus" Foreground="#AA9CB9" TextWrapping="Wrap"/><TextBlock Text="Changing channel changes offered downloads. Nothing installs until you press the update button. Beta builds may be unstable." Foreground="#AA9CB9" TextWrapping="Wrap" Margin="0,8,0,0"/><Button x:Name="GitHub" Content="GitHub releases and downloads" HorizontalAlignment="Left" Margin="0,18,0,0"/><Button x:Name="Help" Content="Tutorial, how it works and features" HorizontalAlignment="Left" Background="#8650C8" Margin="0,18,0,8"/><TextBlock Text="Remove OptiShade from all games recorded by this installer." Foreground="#AA9CB9" Margin="0,20,0,12"/><TextBlock Text="Uninstall removes OptiShade and restores files it backed up. Choose whether to keep or remove saved INI presets and snapshots. Game settings, controls and saves stay untouched. Your original installer EXE is kept." Foreground="#AA9CB9" Margin="0,0,0,20"/><Button x:Name="Uninstall" Content="Uninstall OptiShade" Background="#30212C" Foreground="#E3B7CC" Margin="0,0,10,10"/></StackPanel>
     <ScrollViewer x:Name="TroubleshootingPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
      <ScrollViewer.Resources>
       <Style TargetType="ScrollBar">
@@ -165,7 +165,7 @@
   </Grid>
   <Border x:Name="Intro" Grid.ColumnSpan="2" Background="#171020" CornerRadius="20">
    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="620">
-    <TextBlock Text="Optishade" FontSize="48" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+    <TextBlock FontSize="48" HorizontalAlignment="Center" FontWeight="SemiBold"><Run Text="OptiShade"/><Run Text=" BETA" FontSize="16" Foreground="#C4A0FF"/></TextBlock>
     <TextBlock Text="Your simulator. Your way." Foreground="#BD9CEC" FontSize="22" HorizontalAlignment="Center" Margin="0,8,0,36"/>
     <TextBlock x:Name="IntroStatus" Text="Welcome. Your hardware check starts next." HorizontalAlignment="Center" Foreground="#C9B6DF"/>
     <ProgressBar x:Name="IntroProgress" Width="360" Height="7" Margin="0,24,0,0" Foreground="#9755E9" Background="#332246" BorderThickness="0" IsIndeterminate="True" Minimum="0" Maximum="100"/>
