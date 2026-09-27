@@ -1,3 +1,26 @@
+NEXT PATCH - LOCAL PREVIEW
+
+NEW FEATURES
+- Permanent Revert update button: choose a supported older build and install it automatically, keeping presets and settings. Incompatible X-Plane downgrades are blocked.
+- SnapShot: assign a key in the manager or in-game Keybinds. Saves one PNG with your rendered effects to Optishade Snapshots in the game folder, then shows a notification.
+- Browse screenshots from the manager or in-game UI.
+- Choose what to keep when uninstalling: app files, INI presets and snapshots. Remove everything requires confirmation.
+
+FIXES
+- Added NR GPU-memory checks at startup and during use, plus device-failure protection and memory details in logs. These safeguards may help with NR-related failures; the reported MSFS crashes remain under investigation.
+- NR tuning waits for sliders to settle and the previous model to retire before rebuilding, reducing repeated allocations while adjusting settings.
+- X-Plane Play now supplies its required ReShade launch argument.
+- Generated graphics logs no longer block automatic updates as untracked loaders. Conflicting DLLs still stop the update and are now named in the message.
+
+ANTIVIRUS NOTICE - SUSPECTED FALSE POSITIVES
+Some antivirus products may flag OptiShade. The installer extracts a helper and graphics components, and the in-game features use graphics hooks. These behaviours, together with an unsigned executable, can trigger heuristic detections in legitimate software; they do not prove the cause of any particular alert.
+
+The reported 0.20.12 VirusTotal result shows detections from Bkav Pro and Trapmine. The matching official installer and its FusionSetup.exe helper had no detections in our local Microsoft Defender checks on 27 September 2026. Vendor confirmation is still needed, and a clean scan is not a guarantee.
+
+Download only from the official GamingWithGravy/OptiShade GitHub releases. If a file is blocked, leave it blocked and report the antivirus name, detection name, affected file path and OptiShade version in BlackBox Discord. Do not disable your antivirus or add blanket exclusions.
+
+--- PREVIOUS RELEASE ---
+
 OPTISHADE 0.21 XP12
 
 EXPERIMENTAL RELEASE

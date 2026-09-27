@@ -5,6 +5,7 @@
 
 #include <set>
 #include <wrl/client.h>
+#include <dxgi1_4.h>
 #include <resource_tracking/ResTrack_Dx12.h>
 
 #include <dlssnr/DlssNr.h>
@@ -1731,6 +1732,48 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
         ReportSkipOnce("the upscaler could not restore state this frame");
         return;
     }
+    // Refuse new NR allocations before recording any transitions. The reserve is
+    // a conservative headroom policy, not a prediction of the proprietary model's
+    // allocation size. Existing game resources remain untouched on refusal.
+    if (!_device || FAILED(_device->GetDeviceRemovedReason()))
+    {
+        g_nr.failed = true;
+        g_nr.reason = "the graphics device has failed; restart the simulator";
+        Config::Instance()->DlssNrEnabled = false;
+        LOG_ERROR("DLSS-NR stopped: {}", g_nr.reason);
+        return;
+    }
+    const auto admissionDesc = output->GetDesc();
+    const bool allocating = !g_nr.feature || g_nr.width != admissionDesc.Width || g_nr.height != admissionDesc.Height;
+    static ULONGLONG lastMemoryCheck = 0;
+    const auto memoryCheckTime = GetTickCount64();
+    if (!lastMemoryCheck || memoryCheckTime - lastMemoryCheck >= 1000)
+    {
+        lastMemoryCheck = memoryCheckTime;
+        Microsoft::WRL::ComPtr<IDXGIFactory4> factory;
+        Microsoft::WRL::ComPtr<IDXGIAdapter3> adapter;
+        DXGI_QUERY_VIDEO_MEMORY_INFO memory {};
+        if (SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&factory))) &&
+            SUCCEEDED(factory->EnumAdapterByLuid(_device->GetAdapterLuid(), IID_PPV_ARGS(&adapter))) &&
+            SUCCEEDED(adapter->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &memory)))
+        {
+            const UINT64 free = memory.Budget > memory.CurrentUsage ? memory.Budget - memory.CurrentUsage : 0;
+            const UINT64 reserve = allocating ? 256ull * 1024 * 1024 + admissionDesc.Width * admissionDesc.Height * 64ull : 64ull * 1024 * 1024;
+            if (allocating || (memory.Budget && free < reserve))
+                LOG_INFO("DLSS-NR memory admission: {}x{}, independent={}, budget={} MiB, usage={} MiB, reserve={} MiB",
+                     admissionDesc.Width, admissionDesc.Height, frame.IndependentCommands,
+                     memory.Budget / 1048576, memory.CurrentUsage / 1048576, reserve / 1048576);
+            if (memory.Budget && free < reserve)
+            {
+                g_nr.failed = true;
+                g_nr.reason = "GPU memory pressure stopped NR; lower graphics/resolution and restart";
+                Config::Instance()->DlssNrEnabled = false;
+                LOG_WARN("DLSS-NR stopped: {}", g_nr.reason);
+                return;
+            }
+        }
+        else LOG_WARN("DLSS-NR: GPU memory budget query unavailable; allocation checks remain active");
+    }
     ScopedNrStateEnvelope stateEnvelope(cmdList);
 
     // A completed upscaler output normally arrives as a UAV. The pre-SR colour input instead arrives
@@ -1920,7 +1963,27 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
     // effect when the feature is rebuilt. TuningMatchesFeature was written to notice that and then
     // never called, which is why every one of these controls appeared to do nothing until something
     // else -- a resolution change -- happened to force a rebuild by accident.
-    const bool tuningChanged = !TuningMatchesFeature(cfg, requestedPasses);
+    // Sliders can change every frame. Wait for a settled value and for the
+    // previous feature to retire before allocating another model generation.
+    static NrPassTuning pendingTuning[DlssNr::MaxPassCount] {};
+    static unsigned pendingPreset[DlssNr::MaxPassCount] {}, pendingStyle[DlssNr::MaxPassCount] {};
+    static unsigned pendingPasses = 0;
+    static ULONGLONG tuningChangedAt = 0;
+    bool pendingChanged = pendingPasses != requestedPasses;
+    pendingPasses = requestedPasses;
+    for (unsigned pass = 0; pass < requestedPasses; ++pass)
+    {
+        const auto tuning = PassTuning(cfg, pass);
+        const auto preset = PassPreset(cfg, pass), style = PassStyle(cfg, pass);
+        pendingChanged |= pendingTuning[pass] != tuning || pendingPreset[pass] != preset || pendingStyle[pass] != style;
+        pendingTuning[pass] = tuning; pendingPreset[pass] = preset; pendingStyle[pass] = style;
+    }
+    const auto tuningTime = GetTickCount64();
+    if (pendingChanged) tuningChangedAt = tuningTime;
+    const bool modelRetiring = std::any_of(g_nrRetired.begin(), g_nrRetired.end(),
+                                         [](const NrRetired& item) { return item.feature != nullptr; });
+    const bool tuningChanged = !TuningMatchesFeature(cfg, requestedPasses) &&
+                               tuningTime - tuningChangedAt >= 500 && !modelRetiring;
     if (tuningChanged)
         g_nr.residualHistoryPrimed = false;
 

@@ -1,4 +1,5 @@
-﻿$ErrorActionPreference='Stop'
+﻿param([switch]$VerifySecurity,[switch]$RequireSigned)
+$ErrorActionPreference='Stop'
 $root=$PSScriptRoot;$payload=Join-Path $root 'installer/PayloadFusion'
 if((Get-FileHash "$root/installer/OptionalMFG/RTXMFG.dll").Hash -ne 'E9CA3587854EEB723E0579F7DDF6CFB1E6CF4BED79B0D75BC716003ED98FE040'){throw 'Pinned RTXMFG payload hash mismatch'}
 New-Item -ItemType Directory -Path "$payload/OptiShadeData/MFG","$payload/OptiShadeData/Licenses/RTXMFG" -Force|Out-Null
@@ -64,7 +65,10 @@ SkipLoadingDisabledEffects=1
 ShowSplash=0
 TutorialProgress=4
 [SCREENSHOT]
-SavePath=.\OptiShadeData\Screenshots
+SavePath=.\Optishade Snapshots
+SaveBeforeShot=0
+SaveOverlayShot=0
+KeyScreenshot=0,0,0,0
 '@ | Set-Content "$payload/ReShade.ini" -Encoding ASCII
 "Techniques=`r`nTechniqueSorting=" | Set-Content "$payload/OptiShadeData/Presets/My look.ini" -Encoding ASCII
 foreach($dir in @('Shaders','Textures','Cache')){'OptiShade managed folder'|Set-Content "$payload/OptiShadeData/$dir/.keep"}
@@ -85,6 +89,7 @@ $files=@(Get-ChildItem $payload -File -Recurse|Where-Object {$_.FullName -ne (Jo
 $files|ConvertTo-Json|Set-Content "$payload/files.json" -Encoding UTF8
 $preview=Join-Path $root 'dist'
 New-Item -ItemType Directory -Path $preview -Force|Out-Null
+if($env:OPTISHADE_SIGNING_THUMBPRINT){& "$root/sign-release.ps1" -File "$root/installer/FusionSetup.exe" -Thumbprint $env:OPTISHADE_SIGNING_THUMBPRINT}
 Push-Location "$root/installer"
 try{
  & go test -count=1 -v .
@@ -92,6 +97,8 @@ try{
  & go build -trimpath -ldflags '-H=windowsgui -s -w' -o "$preview/OptiShade_Version_0.21.exe" .
  if($LASTEXITCODE){throw 'Installer build failed.'}
 }finally{Pop-Location}
+if($env:OPTISHADE_SIGNING_THUMBPRINT){& "$root/sign-release.ps1" -File "$preview/OptiShade_Version_0.21.exe" -Thumbprint $env:OPTISHADE_SIGNING_THUMBPRINT}
+if($VerifySecurity -or $RequireSigned){& "$root/verify-release-security.ps1" -Files @("$root/installer/FusionSetup.exe","$preview/OptiShade_Version_0.21.exe") -Report "$preview/security-check.json" -RequireSigned:$RequireSigned}
 Write-Output "Built: $preview"
 
 

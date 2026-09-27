@@ -1,4 +1,4 @@
-$ErrorActionPreference='Stop'
+﻿$ErrorActionPreference='Stop'
 . "$PSScriptRoot/../installer/diagnostics.ps1"
 function OwnedPath($Game,$Relative){Join-Path $Game $Relative}
 function GetOptiShadeSupportReport($Game,$Store){[ordered]@{GameFolder=$Game;InstallerVersion='0.20.5'}}
@@ -18,7 +18,7 @@ $report=GetDetailedSupportReport $game ''
 Check ($report.Windows.Version -eq '10.0.26100' -and $report.Windows.Build -eq '26100') 'Installed OS metadata replaces misleading compatibility version'
 Check ($report.LogTails.'OptiShadeData/ReShade.log' -match 'Managed effects log fixture') 'Managed effects log is included alongside legacy root logs'
 $json=$report|ConvertTo-Json -Depth 10
-Check ($report.SchemaVersion -eq 5 -and $report.ReportId -match '^[0-9a-f]{32}$') 'Versioned report has anonymous unique ID'
+Check ($report.SchemaVersion -eq 6 -and $report.ReportId -match '^[0-9a-f]{32}$') 'Versioned report has anonymous unique ID'
 Check ($report.FeatureSettings.'Menu.ShortcutKey' -eq '45' -and -not $json.Contains('do-not-export')) 'Settings whitelist excludes unrelated credentials'
 Check (-not $json.Contains(($game|ConvertTo-Json -Compress).Trim('"')) -and $report.GameFolder -eq '<GAME>' -and $report.LogTails.'OptiShadeData/Performance.log'.Contains('<USERPROFILE>')) 'Game and profile paths redacted from logs and events'
 Check ($report.RecentCrashEvents.Count -eq 1 -and $report.GameExecutable.Name -eq 'FlightSimulator2024.exe') 'Crash metadata and game executable metadata present'
@@ -32,7 +32,7 @@ $zipBytes=ExportDiagnosticReport $report $archive 'zip'
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $zip=[IO.Compression.ZipFile]::OpenRead($archive)
 try{
- Check ($zip.GetEntry('Report.txt') -and $zip.GetEntry('Reproduction-notes.txt') -and @($zip.Entries|Where-Object FullName -like 'Logs/*').Count -eq 6) 'Discord ZIP contains report, reproduction checklist and six log tails'
+ Check ($zip.GetEntry('Report.txt') -and $zip.GetEntry('Reproduction-notes.txt') -and @($zip.Entries|Where-Object FullName -like 'Logs/*').Count -eq 8) 'Discord ZIP contains report, reproduction checklist and eight log tails including XP12 and import failures'
  foreach($entry in $zip.Entries){$reader=[IO.StreamReader]::new($entry.Open());try{$contents=$reader.ReadToEnd();Check (-not $contents.Contains($game) -and -not $contents.Contains($env:USERPROFILE)) ('Redacted ZIP entry '+$entry.FullName)}finally{$reader.Dispose()}}
 }finally{$zip.Dispose()}
 Check ($zipBytes -lt 4MB) 'ZIP size remains bounded for fixture'
@@ -60,3 +60,40 @@ Check ($live.Processes[0].Responding -eq $false -and $live.Processes[0].CpuSecon
 function Get-Process { @([pscustomobject]@{ProcessName='FlightSimulator';Id=456;StartTime=(Get-Date);Responding=$true;WorkingSet64=1;TotalProcessorTime=[TimeSpan]::Zero;MainWindowHandle=[IntPtr]1;Modules=@([pscustomobject]@{ModuleName='190_E658703.dll';FileName='C:\ProgramData\NVIDIA\NGX\models\sl_common_0\versions\134656\files\190_E658703.dll';FileVersionInfo=[pscustomobject]@{FileVersion='2.14.0'}})}) }
 $ota=GetDetailedSupportReport $game $store
 Check ($ota.LoadedModules.Count -eq 1 -and $ota.LoadedModules[0].Version -eq '2.14.0' -and $ota.LoadedModules[0].Path -match 'sl_common_0') 'OTA modules with opaque filenames retain feature folder and version'
+
+# A middle-of-log failure must survive routine success messages and the ordinary tail cutoff.
+$largeLog=Join-Path $game 'middle-failure.log'
+[IO.File]::WriteAllText($largeLog, ('noise'+"`n")*20000+"`nDXGI_ERROR_DEVICE_HUNG marker-middle`n"+('DLSS-NR evaluate result 1 Success'+"`n")*40000)
+$window=GetDiagnosticLogWindow $largeLog
+Check (($window.FailureLines -join ' ') -match 'marker-middle') 'Reserved failure evidence survives success-message flooding'
+Check ($window.Lines.Count -le 300 -and $window.FailureLines.Count -le 100 -and $window.ScannedBytes -le 16MB) 'Evidence scan and output are bounded'
+Check ($window.ModifiedUtc -and $window.MatchesInWindow -gt 300) 'Log provenance and omitted match counts are retained'
+Set-Content "$game/OptiScaler.ini" "[Framerate]`nFramerateLimit=70`n[DLSSG]`nAdaMfgUnlock=true`n[Reflex]`nMode=1`n[Credentials]`nToken=do-not-export"
+Set-Content "$game/AsoboReport-Crash-fixture.txt" "Historical report $game $env:USERPROFILE"
+$extended=GetDetailedSupportReport $game ''
+Check ($extended.FeatureSettings.'Framerate.FramerateLimit' -eq '70' -and $extended.FeatureSettings.'DLSSG.AdaMfgUnlock' -eq 'true') 'Limiter and MFG settings are captured'
+Check ($extended.CaptureContext.ConfigIdentity[0].SHA256 -match '^[0-9A-F]{64}$' -and $extended.CaptureContext.LauncherScripts.Count -eq 5) 'Configuration and launcher identities available for comparison'
+Check ($extended.SimulatorCrashText.Count -eq 1 -and $extended.SimulatorCrashText[0].Text -match '<GAME>' -and $extended.SimulatorCrashText[0].Text -notmatch [regex]::Escape($env:USERPROFILE)) 'Simulator text reports are bounded and redacted'
+ExportDiagnosticReport $extended $archive 'zip'|Out-Null
+$zip=[IO.Compression.ZipFile]::OpenRead($archive)
+try{
+ $reader=[IO.StreamReader]::new($zip.GetEntry('Report.json').Open());try{$structured=$reader.ReadToEnd()|ConvertFrom-Json}finally{$reader.Dispose()}
+ Check ($structured.SchemaVersion -eq 6 -and $structured.FeatureSettings.'DLSSG.AdaMfgUnlock' -eq 'true') 'Structured JSON retains actionable settings'
+}finally{$zip.Dispose()}
+
+[IO.File]::WriteAllText("$game/OptiShadeData/Performance.log",('Failure '+$game.ToUpperInvariant().Replace('\','/')+' '+$env:USERPROFILE.ToLowerInvariant().Replace('\','/')))
+$redacted=GetDetailedSupportReport $game ''
+Check ($redacted.LogTails.'OptiShadeData/Performance.log' -match '<GAME> <USERPROFILE>') 'Mixed-case and forward-slash paths are redacted'
+
+$issue="Engine switches move after opening the menu.`r`nUnicode: café <tag> & details."
+ExportDiagnosticReport $extended $archive 'zip' -IssueDescription $issue | Out-Null
+$zip=[IO.Compression.ZipFile]::OpenRead($archive)
+try{
+ $reader=[IO.StreamReader]::new($zip.GetEntry('User-issue.txt').Open());try{$savedIssue=$reader.ReadToEnd()}finally{$reader.Dispose()}
+ Check ($savedIssue.Contains($issue)) 'User issue survives ZIP export with multiline Unicode text'
+ $reader=[IO.StreamReader]::new($zip.GetEntry('Report.txt').Open());try{$savedText=$reader.ReadToEnd()}finally{$reader.Dispose()}
+ Check ($savedText.Contains($issue)) 'Issue included in main text report'
+}finally{$zip.Dispose()}
+$hashBefore=(Get-FileHash $archive).Hash
+$rejected=$false;try{ExportDiagnosticReport $extended $archive 'zip' -IssueDescription ('x'*12001)|Out-Null}catch{$rejected=$true}
+Check ($rejected -and (Get-FileHash $archive).Hash -eq $hashBefore) 'Oversized description rejected without damaging an existing export'

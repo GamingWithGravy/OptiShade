@@ -654,7 +654,7 @@
     <ClCompile Include="source\openxr\openxr_hooks_swapchain.cpp" />
     <ClCompile Include="source\openxr\openxr_impl_swapchain.cpp" />
     <ClCompile Include="source\platform_utils_windows.cpp" />
-    <ClCompile Include="source\runtime.cpp" />
+    <ClCompile Include="source\runtime.cpp"><ExceptionHandling>Sync</ExceptionHandling></ClCompile>
     <ClCompile Include="source\runtime_api.cpp" />
     <ClCompile Include="source\runtime_gui.cpp" />
     <ClCompile Include="source\runtime_gui_vr.cpp" />

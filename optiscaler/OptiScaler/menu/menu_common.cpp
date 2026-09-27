@@ -3,6 +3,7 @@
 #include "../../../shared/RenderingCapability.h"
 #include "../../../shared/D3D12Capabilities.h"
 #include <imgui/ImGuiNotify.hpp>
+#include <shellapi.h>
 #include "optishade_effects_ui.inl"
 #include <framegen/dlssg/MfgUnlock.h>
 #include <framegen/dlssg/AmpereMfgLoader.h>
@@ -303,7 +304,10 @@ void MenuCommon::UpdateManualInput(HWND targetHwnd)
 
     const int swapKey=config->PresetHotSwapKey.value_or_default();
     const bool swapAllowed=canAcceptInputs&&!capturingKey&&OptiInput::IsFocused()&&swapKey>0&&swapKey<256&&!OptiShadeUI::SwapKeyConflict(swapKey)&&(!ImGui::GetCurrentContext()||!ImGui::GetIO().WantTextInput)&&!OptiInput::IsKeyDown(VK_CONTROL)&&!OptiInput::IsKeyDown(VK_SHIFT)&&!OptiInput::IsKeyDown(VK_MENU);
-    OptiShadeUI::PollHotSwap(swapAllowed&&OptiInput::IsKeyPressed(swapKey),swapAllowed&&OptiInput::IsKeyReleased(swapKey),swapAllowed);
+    OptiShadeUI::PollHotSwap(swapAllowed&&swapKey!=config->SnapshotKey.value_or_default()&&OptiInput::IsKeyPressed(swapKey),swapAllowed&&OptiInput::IsKeyReleased(swapKey),swapAllowed&&swapKey!=config->SnapshotKey.value_or_default());
+    const int snapshotKey=config->SnapshotKey.value_or_default();
+    const bool snapshotAllowed=canAcceptInputs&&!capturingKey&&OptiInput::IsFocused()&&snapshotKey>0&&snapshotKey<256&&!OptiShadeUI::SnapshotConflict(snapshotKey)&&(!ImGui::GetCurrentContext()||!ImGui::GetIO().WantTextInput)&&!OptiInput::IsKeyDown(VK_CONTROL)&&!OptiInput::IsKeyDown(VK_SHIFT)&&!OptiInput::IsKeyDown(VK_MENU);
+    OptiShadeUI::PollSnapshot(snapshotAllowed&&OptiInput::IsKeyPressed(snapshotKey),snapshotAllowed);
     if (!capturingKey && canAcceptInputs)
     {
         const int backup=config->BackupShortcutKey.value_or_default();
@@ -7156,6 +7160,17 @@ void MenuCommon::RenderApiAndTextureSettings(RenderMenuContext& ctx)
     }
 }
 
+void OptiShadeUI::DrawSnapshotKeybind(){
+ auto c=Config::Instance();auto& value=c->SnapshotKey;auto code=value.value_or_default();
+ ImGui::Text("SnapShot: %s",code<=0?"Not set":Keybind::KeyNameFromVirtualKeyCode(code).c_str());ImGui::SameLine();static auto key=Keybind("Change",16);key.Render(value,false);
+ if(SnapshotConflict(code))ImGui::TextColored(ImVec4(1,.4f,.3f,1),"Choose a key that is not assigned to another OptiShade action.");
+ auto folder=Util::DllPath().parent_path()/L"Optishade Snapshots";
+ if(ImGui::Button("Browse screenshots")){
+  std::error_code ec;std::filesystem::create_directories(folder,ec);
+  if(ec||reinterpret_cast<INT_PTR>(ShellExecuteW(nullptr,L"open",folder.c_str(),nullptr,nullptr,SW_SHOWNORMAL))<=32)SnapshotNotice(false,"Could not open the game's Optishade Snapshots folder.");
+ }
+ ImGui::TextWrapped("Saved as PNG inside Optishade Snapshots in this game's installation folder. Save settings to keep your keybind.");
+}
 void OptiShadeUI::DrawHotSwapKeybind(){auto& value=Config::Instance()->PresetHotSwapKey;auto code=value.value_or_default();ImGui::Text("Preset hotswap: %s",code<=0?"Not set":Keybind::KeyNameFromVirtualKeyCode(code).c_str());ImGui::SameLine();static auto key=Keybind("Change",15);key.Render(value,false);ImGui::TextDisabled("Save settings to keep this key. Escape cancels; Backspace clears it.");}
 
 void MenuCommon::RenderKeybindSettings(RenderMenuContext& ctx)
@@ -7185,6 +7200,7 @@ void MenuCommon::RenderKeybindSettings(RenderMenuContext& ctx)
         fgEnable.Render(config->FGShortcutKey);
         dlssNrToggle.Render(config->DlssNrToggleKey);
         OptiShadeUI::DrawHotSwapKeybind();
+        ImGui::Separator(); OptiShadeUI::DrawSnapshotKeybind();
     }
 }
 

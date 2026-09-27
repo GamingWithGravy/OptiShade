@@ -18,3 +18,21 @@ AssertTarget $steam 'Steam' 'FlightSimulator2024.exe' 'Steam MSFS selects the ma
 Copy-Item $binary (Join-Path $generic 'Binaries/Win64/OtherGame-Win64-Shipping.exe')
 $rejected=$false;try{FindFusionExecutable $generic}catch{$rejected=$true};if(-not $rejected){throw 'Non-MSFS target accepted'}; 'PASS: Other games remain unavailable in this MSFS-only patch'
 "Fixture: $fixture"
+
+foreach($inputPath in @(('  "'+$steam+'"  '),(Join-Path $steam 'FlightSimulator2024.exe'))){
+ if((ResolveFusionInstallFolder $inputPath) -ne $steam){throw 'Pasted/EXE path did not resolve'}
+}
+foreach($bad in @('', '   ', 'relative\game', 'C:game', 'C:\bad"path', 'C:\game*')){
+ $rejected=$false;try{ResolveFusionInstallFolder $bad|Out-Null}catch{$rejected=$true}
+ if(-not $rejected){throw "Invalid path accepted: $bad"}
+}
+# Isolated catalogues: a malformed registration must not hide a valid custom Store location.
+function Get-PSDrive { @() }
+function Get-ItemProperty { [pscustomobject]@{SteamPath='invalid"path';InstallPath='invalid"path'} }
+function Get-AppxPackage {
+ param($Name,$ErrorAction)
+ @([pscustomobject]@{Name=$Name;InstallLocation='invalid"path'},[pscustomobject]@{Name=$Name;InstallLocation=$xbox})
+}
+$detected=@(FindFusionGames (Join-Path $fixture 'Store')|Where-Object Folder -eq $xbox)
+if($detected.Count -ne 1 -or $detected[0].Launcher -ne 'Xbox'){throw 'Custom Store installation discovery failed'}
+'PASS: pasted paths, invalid entries and custom Store installation discovery'

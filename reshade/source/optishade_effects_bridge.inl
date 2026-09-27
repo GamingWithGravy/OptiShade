@@ -11,6 +11,10 @@ static std::deque<std::pair<std::string,uint32_t>> enableAfterLoad;
 static std::deque<osfx::Command> edits;
 static reshade::api::effect_runtime* owner=nullptr;
 static uint64_t serial=0;
+static std::string snapshotRequest;
+static bool snapshotBusy=false;
+static void SnapshotComplete(bool ok,const std::string& path){std::lock_guard guard(lock);snapshotBusy=false;++snapshot.snapshotSerial;snapshot.snapshotOK=ok;strncpy_s(snapshot.snapshotPath,path.c_str(),_TRUNCATE);}
+static std::string TakeSnapshotRequest(){std::lock_guard guard(lock);auto path=std::move(snapshotRequest);snapshotRequest.clear();return path;}
 static bool requested=true;
 static char inspected[128]="";
 static void Remember(const osfx::Command& c){
@@ -18,7 +22,7 @@ static void Remember(const osfx::Command& c){
  edits.push_back(c);snapshot.dirty=1;
 }
 static void OnEffectsReloaded(reshade::api::effect_runtime* runtime){std::lock_guard guard(lock);if(owner==runtime)pending.insert(pending.begin(),edits.begin(),edits.end());}
-static void Retire(reshade::api::effect_runtime* runtime){std::lock_guard guard(lock);if(owner==runtime){owner=nullptr;pending.clear();enableAfterLoad.clear();edits.clear();std::memset(&snapshot,0,sizeof(snapshot));}}
+static void Retire(reshade::api::effect_runtime* runtime){std::lock_guard guard(lock);if(owner==runtime){owner=nullptr;snapshotRequest.clear();snapshotBusy=false;pending.clear();enableAfterLoad.clear();edits.clear();std::memset(&snapshot,0,sizeof(snapshot));}}
 static bool Pump(reshade::api::effect_runtime* runtime,bool loading,bool& performanceMode){
  std::deque<osfx::Command> work;
  {std::lock_guard guard(lock);if(owner&&owner!=runtime)return false;if(!owner){owner=runtime;std::memset(&snapshot,0,sizeof(snapshot));snapshot.version=osfx::Version;snapshot.generation=++serial;pending.clear();enableAfterLoad.clear();edits.clear();}if(loading)return false;work.swap(pending);}
@@ -34,6 +38,7 @@ static bool Pump(reshade::api::effect_runtime* runtime,bool loading,bool& perfor
   auto c=work.front();work.pop_front();
   bool ok=true;
   switch(c.kind){
+  case osfx::TakeSnapshot:{std::lock_guard guard(lock);if(snapshotBusy){ok=false;break;}snapshotBusy=true;snapshotRequest="capture";break;}
   case osfx::PerformanceMode:{bool dirty;{std::lock_guard guard(lock);dirty=snapshot.dirty!=0;}if(dirty&&c.enabled){ok=false;break;}performanceMode=c.enabled!=0;reload=true;break;}
   case osfx::Effects:runtime->set_effects_state(c.enabled!=0);break;
   case osfx::Reload:reload=true;break;

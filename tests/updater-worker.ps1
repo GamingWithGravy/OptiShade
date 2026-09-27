@@ -10,7 +10,9 @@ try{& "$env:SystemRoot/Microsoft.NET/Framework64/v4.0.30319/csc.exe" /nologo /ta
 if($LASTEXITCODE){throw 'Fixture compile failed'}
 Copy-Item "$fixture/new.exe" "$fixture/current.exe"
 $script:downloadFixture="$fixture/new.exe"
-$config=@{Installer="$fixture/current.exe";Url='https://github.com/GamingWithGravy/OptiShade_V0.19.17/releases/download/v9.0.0/test.exe';Version='9.0.0';SHA256=(Get-FileHash "$fixture/new.exe").Hash;Notes='Fixture update; no game installation touched.'}
+$testDesktop=Join-Path $fixture 'Redirected Desktop';New-Item -ItemType Directory -Path $testDesktop|Out-Null
+$originalHash=(Get-FileHash "$fixture/current.exe").Hash
+$config=@{Desktop=$testDesktop;Installer="$fixture/current.exe";Url='https://github.com/GamingWithGravy/OptiShade_V0.19.17/releases/download/v9.0.0/test.exe';Version='9.0.0';SHA256=(Get-FileHash "$fixture/new.exe").Hash;Notes='Fixture update; no game installation touched.'}
 $config|ConvertTo-Json|Set-Content "$fixture/config.json"
 # Isolate the test from live processes and the network. All file replacement,
 # verification and child-process execution still run through the real worker.
@@ -27,17 +29,19 @@ Add-Type -AssemblyName PresentationFramework
 $script:launchChecked=$false
 $timer=[Windows.Threading.DispatcherTimer]::new();$timer.Interval=[TimeSpan]::FromMilliseconds(100)
 $timer.Add_Tick({if($window -and $window.FindName('Launch').Visibility -eq 'Visible'){
- if(Test-Path "$fixture/current.exe.opened"){throw 'Installer restarted before Launch was clicked'}
+ if(Test-Path ($target+'.opened')){throw 'Installer restarted before Launch was clicked'}
  if($window.FindName('Progress').Value -ne 100){throw 'Completion progress not shown'}
  if($window.WindowStyle -ne 'None' -or -not $window.AllowsTransparency){throw 'Native updater title bar remains'}
+ if($window.FindName('OpenLocation').Visibility -ne 'Visible' -or $window.FindName('Status').Text -notlike ('*'+$target+'*')){throw 'Desktop completion location missing'}
  if($window.FindName('DoneClose').Visibility -ne 'Visible'){throw 'Completion Close button missing'}
  $script:launchChecked=$true;$timer.Stop();$window.FindName('Launch').RaiseEvent([Windows.RoutedEventArgs]::new([Windows.Controls.Button]::ClickEvent))
 }});$timer.Start()
 . "$PSScriptRoot/../installer/update-worker.ps1" -Config "$fixture/config.json"
 if(-not $script:launchChecked){throw 'Completion screen was not checked'}
 Start-Sleep -Milliseconds 500
-foreach($name in @('download.exe.checked','current.exe.applied','current.exe.opened')){if(-not(Test-Path "$fixture/$name")){throw "Missing updater result: $name"}}
-'PASS: update window verifies, replaces installer, runs game update helper, then reopens setup'
+foreach($resultPath in @("$fixture/download.exe.checked",($target+'.applied'),($target+'.opened'))){if(-not(Test-Path -LiteralPath $resultPath)){throw "Missing updater result: $resultPath"}}
+if((Split-Path $target) -ne $testDesktop -or (Get-FileHash "$fixture/current.exe").Hash -ne $originalHash){throw 'Desktop destination or original preservation failed'}
+'PASS: update window verifies, saves new Desktop installer, preserves original, runs game update helper, then reopens setup'
 'Fixture: '+$fixture
 if(Test-Path "$fixture/current.exe.previous"){throw 'Successful update left recovery copy behind'}
 $before=(Get-FileHash "$fixture/current.exe").Hash

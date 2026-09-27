@@ -580,6 +580,8 @@ bool Config::Reload(std::filesystem::path iniPath)
             ShortcutKey.set_from_config(readInt("Menu", "ShortcutKey"));
             BackupShortcutKey.set_from_config(readInt("Menu", "BackupShortcutKey"));
             PresetHotSwapKey.set_from_config(readInt("Menu", "PresetHotSwapKey"));
+            SnapshotKey.set_from_config(readInt("Menu", "SnapshotKey"));
+
             ExtendedLimits.set_from_config(readBool("Menu", "ExtendedLimits"));
             ShowFps.set_from_config(readBool("Menu", "ShowFps"));
             UseHQFont.set_from_config(readBool("Menu", "UseHQFont"));
@@ -1503,6 +1505,8 @@ bool Config::SaveIni()
 
         ini.SetLongValue("Menu", "BackupShortcutKey", Instance()->BackupShortcutKey.value_or_default());
         ini.SetLongValue("Menu", "PresetHotSwapKey", Instance()->PresetHotSwapKey.value_or_default());
+        ini.SetLongValue("Menu", "SnapshotKey", Instance()->SnapshotKey.value_or_default());
+
         auto setting = Instance()->ShortcutKey.value_for_config();
         ini.SetValue("Menu", "ShortcutKey",
                      GetIntValue(Instance()->ShortcutKey.value_for_config(), setting > 0).c_str());

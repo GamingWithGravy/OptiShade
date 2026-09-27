@@ -1181,7 +1181,7 @@ void FeedImGui(bool menuVisible)
     auto AddKey = [&](ImGuiKey key, int vk)
     {
         if (vk >= 0 && vk < 256)
-            io.AddKeyEvent(key, _state.Keys[vk].Down && (vk != Config::Instance()->PresetHotSwapKey.value_or_default() || io.WantTextInput));
+            io.AddKeyEvent(key, _state.Keys[vk].Down && ((vk != Config::Instance()->PresetHotSwapKey.value_or_default() && vk != Config::Instance()->SnapshotKey.value_or_default()) || io.WantTextInput));
     };
 
     const bool polledCtrlDown = (RealGetAsyncKeyStateSafe(VK_CONTROL) & 0x8000) != 0 ||

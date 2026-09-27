@@ -7,7 +7,7 @@ $form=[Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($xaml))
 $path=$form.FindName('GamePath')
 $tokens=$null;$errors=$null
 $ast=[Management.Automation.Language.Parser]::ParseFile("$PSScriptRoot/../installer/manager.ps1",[ref]$tokens,[ref]$errors)
-foreach($name in @('RefreshMenuKeys','BeginMenuKeyCapture','CaptureMenuKey')){$fn=$ast.Find({param($n) $n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq $name},$true);Invoke-Expression $fn.Extent.Text}
+foreach($name in @('CancelSnapshotCapture','RefreshMenuKeys','BeginMenuKeyCapture','CaptureMenuKey')){$fn=$ast.Find({param($n) $n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq $name},$true);Invoke-Expression $fn.Extent.Text}
 RefreshMenuKeys
 $picker=$form.FindName('PrimaryMenuKey')
 if($picker.Text -ne 'Insert'){throw 'Default Insert missing'}

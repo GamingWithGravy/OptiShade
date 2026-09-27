@@ -29,6 +29,7 @@
 #include <immintrin.h>
 #include <fpng.h>
 #include <simple_lossless.h>
+#include "../../shared/SnapshotStorage.h"
 #include "optishade_effects_bridge.inl"
 #include "optishade_taa_bridge.inl"
 #include <stb_image.h>
@@ -739,8 +740,8 @@ void reshade::runtime::on_present()
 
 	_current_time = std::chrono::system_clock::now();
 
-	if (_should_save_screenshot && _screenshot_save_before && _effects_enabled && !_effects_rendered_this_frame)
-		save_screenshot("Before");
+	// SnapShot never changes which effects are rendered. Legacy capture requests are disabled.
+	_should_save_screenshot = false;
 
 	if (!is_loading() && !_techniques.empty())
 	{
@@ -756,8 +757,15 @@ void reshade::runtime::on_present()
 		}
 	}
 
-	if (_should_save_screenshot)
-		save_screenshot(_screenshot_save_before ? "After" : nullptr);
+	if (auto request = osfx_impl::TakeSnapshotRequest(); !request.empty()) {
+		try {
+			_screenshot_path = optishade::snapshot::folder(g_target_executable_path.parent_path().u8string());
+			_screenshot_name = std::filesystem::path(optishade::snapshot::unique_name()).stem().u8string();
+			_screenshot_format = 1; _screenshot_include_preset = false; _screenshot_clear_alpha = true;
+			_screenshot_post_save_command.clear(); _screenshot_sound_path.clear();
+			_optishade_snapshot = true; save_screenshot(nullptr); _optishade_snapshot = false;
+		} catch (...) { _optishade_snapshot = false; osfx_impl::SnapshotComplete(false, "Check the snapshot folder and free disk space."); }
+	}
 
 	osfx_impl::Publish(this, is_loading(), _last_reload_successful, _effects_rendered_this_frame, _performance_mode);
 	_frame_count++;
@@ -791,7 +799,7 @@ void reshade::runtime::on_present()
 				_effects_enabled = !_effects_enabled;
 		}
 
-		if (_input->is_key_pressed(_screenshot_key_data, _force_shortcut_modifiers))
+		if (false) // Legacy ReShade capture is replaced by OptiShade SnapShot
 		{
 			_screenshot_count++;
 			_should_save_screenshot = true; // Remember that we want to save a screenshot next frame
@@ -4376,7 +4384,7 @@ void reshade::runtime::save_texture(const texture &tex)
 			// Default to a save failure unless it is reported to succeed below
 			bool save_success = false;
 
-			if (FILE *const file = _wfsopen(screenshot_path.c_str(), L"wb", SH_DENYNO))
+			if (FILE *const file = _wfsopen(screenshot_path.c_str(), L"wbx", SH_DENYNO))
 			{
 				const auto write_callback = [](void *context, void *data, int size) {
 					fwrite(data, 1, size, static_cast<FILE *>(context));
@@ -4792,6 +4800,7 @@ template <> void reshade::runtime::set_uniform_value<uint32_t>(uniform &variable
 
 void reshade::runtime::save_screenshot(const char *postfix_in)
 {
+	if (!_optishade_snapshot) return; // One managed capture path, including add-on API calls.
 	std::string postfix;
 	if (postfix_in != nullptr)
 		postfix = postfix_in;
@@ -4856,7 +4865,7 @@ void reshade::runtime::save_screenshot(const char *postfix_in)
 		if (!_screenshot_sound_path.empty())
 			utils::play_sound_async(g_reshade_base_path / _screenshot_sound_path);
 
-		_worker_threads.emplace_back([this, screenshot_count, screenshot_format, screenshot_path, postfix, pixels = std::move(pixels), include_preset]() mutable {
+		_worker_threads.emplace_back([this, screenshot_count, screenshot_format, screenshot_path, postfix, pixels = std::move(pixels), include_preset, _width = _width, _height = _height, _screenshot_clear_alpha = _screenshot_clear_alpha, _back_buffer_format = _back_buffer_format, _back_buffer_color_space = _back_buffer_color_space]() mutable {
 			// Remove alpha channel
 			int comp = 4;
 			if (screenshot_format >= 4)
@@ -5035,9 +5044,11 @@ void reshade::runtime::save_screenshot(const char *postfix_in)
 				if (ferror(file))
 					save_success = false;
 
-				fclose(file);
+				if (fclose(file) != 0) save_success = false;
 			}
 
+			if (save_success) optishade::snapshot::receipt(screenshot_path);
+			osfx_impl::SnapshotComplete(save_success, screenshot_path.u8string());
 			if (save_success)
 			{
 				execute_screenshot_post_save_command(screenshot_path, screenshot_count, postfix);
@@ -5069,6 +5080,7 @@ void reshade::runtime::save_screenshot(const char *postfix_in)
 			}
 		});
 	}
+	else osfx_impl::SnapshotComplete(false, "Could not read the rendered frame.");
 }
 bool reshade::runtime::execute_screenshot_post_save_command(const std::filesystem::path &screenshot_path, unsigned int screenshot_count, std::string_view postfix)
 {
