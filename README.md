@@ -13,7 +13,7 @@
 
 <p align="center"><a href="https://buymeacoffee.com/GamingWithGravy"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support%20OptiShade-8650C8?style=for-the-badge" alt="Buy Me a Coffee — optional support for OptiShade"></a></p>
 
-![OptiShade Manager](docs/images/installer.png)
+[![OptiShade 0.21 Manager — click for full-resolution image](docs/images/optishade-021-manager-hires.png)](docs/images/optishade-021-manager-hires.png)
 
 ## Your flight. Your look.
 
