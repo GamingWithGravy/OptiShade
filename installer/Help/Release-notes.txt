@@ -1,31 +1,35 @@
-﻿# OptiShade 0.21.1 EMERGENCY UPDATE
+# OptiShade 0.21.2 Stable
 
-**IMPORTANT**
-- Release 0.21 has been withdrawn following reports of instability.
-- XP12 installation and experimental TAA/Vulkan Neural Rendering are removed from this emergency build. MSFS 2020/2024 image effects and supported DLSS-based NR remain available.
+**A NOTE FROM GRAVY**
+I'm sorry for the problems caused by the 0.21 release and the disruption to your flying. Thank you to everyone who sent reports and diagnostic ZIPs. This stable build keeps the safeguards from 0.21.1 and improves version switching and uninstall options. Experimental work will stay on beta while testing continues.
 
-**FIXES**
-- Added GPU-memory checks before and during NR. NR stops submitting work when memory headroom is too low or the graphics device has failed; restart the simulator after a failure.
-- NR tuning waits for sliders to settle and the previous model to retire before rebuilding, reducing repeated model allocations.
-- Improved Xbox/WindowsApps folder detection and guidance for selecting the actual simulator installation folder.
-- Generated graphics logs no longer block updates as untracked loaders. Changed or unknown graphics DLLs still stop installation and are identified in the message.
-- Added memory-budget details to NR logs. These are safeguards and possible fixes; the reported MSFS crashes are not yet confirmed resolved on affected systems.
+**IMPROVEMENTS**
+- New uninstall window: choose app files, saved INI presets, recorded OptiShade snapshots, or Remove everything. Removing everything requires an extra confirmation. Game saves, controls and unrelated pictures are kept.
+- The beta opt-in control now matches the Image effects style.
+- Update messages identify the selected stable or beta channel correctly. Changing channels clears the previous offer; downloads still require your choice.
 
-**ROLLBACK**
-- A permanent Revert update button is below the update controls. Select a supported previous build and press Install selected build to download, verify and install it automatically.
-- Presets and configuration are preserved. The selected manager EXE is saved to your Desktop.
-- Close all simulators first. Automatic rollback currently supports the regular EXE workflow and published compatible builds from 0.20.12 onward. Withdrawn releases are not listed. Portable users must use a separate older portable package. XP12 must be restored before reverting to a version that does not support it.
+**FIXES AND STABILITY**
+- Retains NR memory-budget checks, device-failure protection and reduced model rebuilding while adjusting sliders.
+- Retains Xbox installation-folder detection fixes and fixes for generated logs blocking updates.
+- These safeguards do not establish that every reported crash is resolved. Please continue reporting problems.
+- Stable supports MSFS 2020 and 2024. Experimental XP12 installation, TAA NR and Vulkan NR remain excluded and continue on beta.
 
-**INSTALLING THIS UPDATE**
-- Close MSFS and use the update workflow, or run this EXE and choose Update OptiShade for your installation. A restore/reinstall is normally not required. Repair only repairs the matching installed version.
-- Existing XP12 installations are not updated or automatically removed. To remove 0.21 from XP12, use Restore original files in the existing manager before moving to a future beta.
+**ROLLBACK — REVERT UPDATE**
+- Use the permanent Revert update button below the update controls, select an available compatible build, then press Install selected build.
+- The regular EXE workflow downloads and verifies the selected installer, updates recorded installations, and keeps presets and configuration. The selected EXE is saved to your Desktop.
+- Close all simulators first. Withdrawn releases are not listed. 0.21 and 0.21.1 are withdrawn from downloads; older available versions may lack current fixes. Portable users must download the selected portable package separately. Restore any XP12 installation before selecting a build that does not support it.
 
-**STABLE AND BETA**
-- main is the stable release branch. Experimental XP12, TAA and Vulkan work continues separately on beta.
-- The next beta patch will be published separately on GitHub Releases and marked Pre-release; no new beta download is being published with this emergency update. Settings now includes Opt into beta versions for testing, off by default. Enable it to see compatible prereleases in update checks; installation still requires your choice.
-- Keep a future beta manager in a separate folder, for example Desktop\OptiShade Beta. A separate manager folder does not isolate the game installation: do not install stable and beta over each other in the same game folder. Follow the beta release's migration instructions.
+**BETA TESTING**
+- In Settings, enable Opt into beta versions for testing, then select Check for updates. Enabled checks beta prereleases; disabled checks stable releases.
+- The setting changes offered downloads; it does not install anything automatically. If no eligible beta exists, the launcher says so.
+- Beta builds are experimental and are marked BETA in the manager and splash screen. A separate manager folder does not isolate files installed into your game.
+- Use the matching release's instructions when switching versions. Keep your presets backed up.
 
-**ANTIVIRUS NOTICE — SUSPECTED FALSE POSITIVES**
-OptiShade's unsigned installer extracts a helper and graphics components; its in-game features use graphics hooks. These behaviours can trigger heuristic antivirus alerts in legitimate software, but do not prove that any individual detection is a false positive. The reported 0.20.12 VirusTotal result flagged two vendors; its matching installer and helper scanned clean locally with Microsoft Defender. Vendor confirmation is still needed. Download only from the official GitHub releases. If blocked, report the exact detection and file path; do not disable antivirus or add blanket exclusions.
+**INSTALLING 0.21.2**
+- Close your simulators and update normally. A restore and reinstall is normally unnecessary. Repair uses the matching manager version rather than downloading an update.
+- Existing XP12 installations are not updated or removed automatically by this stable release.
 
-Please send diagnostic ZIPs, with a description of the issue, to the **diagnostic zips** channel in **BlackBox Discord**: https://discord.gg/6hjR9cSsy7
+**ANTIVIRUS — SUSPECTED FALSE POSITIVES**
+The unsigned installer extracts a helper and graphics components; in-game features use graphics hooks. These behaviours can trigger heuristic alerts, but do not prove a particular detection is a false positive. Download only from official releases. If blocked, report the detection name and affected file path; do not disable antivirus or add blanket exclusions.
+
+Please send diagnostic ZIPs with a description of the issue to the **diagnostic zips** channel in **BlackBox Discord**: https://discord.gg/6hjR9cSsy7

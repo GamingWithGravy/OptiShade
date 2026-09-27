@@ -4,7 +4,7 @@
   <p><strong>Microsoft Flight Simulator 2024 · Microsoft Flight Simulator 2020</strong></p>
   <p>Created by gravy · Powered by Fusion Engine</p>
   <p>
-    <img src="https://img.shields.io/badge/Version-0.21.1-9755E9?style=flat-square" alt="Version 0.21.1">
+    <img src="https://img.shields.io/badge/Version-0.21.2-9755E9?style=flat-square" alt="Version 0.21.2">
     <img src="https://img.shields.io/badge/Windows-x64-272133?style=flat-square" alt="Windows x64">
     <img src="https://img.shields.io/badge/Graphics-NVIDIA%20%2B%20AMD-9755E9?style=flat-square" alt="NVIDIA and AMD graphics">
   </p>
@@ -18,13 +18,13 @@
 
 Optishade brings image effects, saved looks and optional NVIDIA neural rendering together in one custom in-game menu. This edition supports **Microsoft Flight Simulator 2024 and 2020**, with image effects and supported performance options on NVIDIA and AMD graphics cards, with automatic Steam and Xbox detection.
 
-### OptiShade 0.21.1 EMERGENCY UPDATE
+### OptiShade 0.21.2 Stable
 
-Release 0.21 has been withdrawn. This emergency build removes XP12 installation and experimental TAA/Vulkan NR while adding NR memory-pressure safeguards, less frequent model rebuilding during tuning, Xbox installation-path fixes and automatic rollback to supported published builds.
+0.21.2 replaces the withdrawn 0.21 and 0.21.1 downloads. It retains NR memory-pressure safeguards, less frequent model rebuilding during tuning and Xbox installation-path fixes, and adds selective uninstall and clearer stable/beta update channels. XP12 installation and experimental TAA/Vulkan NR remain excluded from stable.
 
 **Revert update** is permanently available below the update controls. Select a compatible build and install it automatically. Regular EXE rollback preserves presets and settings; portable downgrades require a separate package. Restore XP12 before downgrading to a version without XP12 support.
 
-In Settings, **Opt into beta versions for testing** is off by default. Enable it to see compatible GitHub prereleases in update checks. It does not install them automatically. Experimental work continues on [beta](https://github.com/GamingWithGravy/OptiShade/tree/beta); future beta downloads will be marked Pre-release on GitHub Releases. No new beta binary is published with 0.21.1. Keep a future beta manager in a separate folder such as `Desktop\OptiShade Beta`; this does not isolate the game files. Follow its migration instructions rather than installing both builds into one game folder.
+In Settings, **Opt into beta versions for testing** is off by default. Enable it to check beta prereleases; turn it off to check stable releases. It does not install them automatically. Experimental work continues on [beta](https://github.com/GamingWithGravy/OptiShade/tree/beta); future beta downloads will be marked Pre-release on GitHub Releases. No new beta binary is published with 0.21.2. Keep a future beta manager in a separate folder such as `Desktop\OptiShade Beta`; this does not isolate the game files. Follow its migration instructions rather than installing both builds into one game folder.
 
 Close MSFS and use Update OptiShade; a restore/reinstall is normally unnecessary. Existing XP12 installations are left untouched and can be restored using the existing manager. Share diagnostic ZIPs in the **diagnostic zips** channel in [BlackBox Discord](https://discord.gg/6hjR9cSsy7). The MSFS crash reports remain under investigation; the safeguards are not a confirmed fix for every crash.
 
@@ -58,7 +58,7 @@ Search your FX shaders, switch effects on, adjust their settings and save a name
 
 Neural rendering always starts **off**, even with older saved settings. Your tuning
 values are retained; enable neural rendering manually for each game session.
-Experimental TAA and Vulkan NR are disabled in 0.21.1. Supported DLSS-based NR remains available, with additional memory-pressure protection.
+Experimental TAA and Vulkan NR are disabled in 0.21.2. Supported DLSS-based NR remains available, with additional memory-pressure protection.
 
 Choose **Yes or No** when setup asks about DLSS 5. Neural rendering requires compatible RTX hardware, a matching model and a supported game connection. Installing files does not automatically enable it or prove it is rendering. Extra effects and neural passes can reduce frame rate.
 

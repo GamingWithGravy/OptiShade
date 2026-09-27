@@ -1,5 +1,5 @@
 ﻿$ErrorActionPreference='Stop'
-function GetBundledOptiShadeVersion { 'P0.21.1' }
+function GetBundledOptiShadeVersion { 'P0.21.2' }
 function TestBundledUpdateVersion($Manifest){
  try{
   $installed=[regex]::Match([string]$Manifest.Version,'\d+\.\d+(?:\.\d+){0,2}').Value
@@ -62,7 +62,7 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
     if($Proxy -notin @('winmm.dll','dxgi.dll','d3d12.dll','version.dll','dbghelp.dll','wininet.dll','winhttp.dll')){throw 'Unsupported installation method.'}
     $Game=FullPath $Game;$Payload=FullPath $Payload;AssertClosed $Game
     if(-not(Test-Path -LiteralPath $Game -PathType Container)){throw 'Choose the game folder first.'}
-    if(Test-Path -LiteralPath (Join-Path $Game 'X-Plane.exe')){throw 'X-Plane installation is removed from 0.21.1. Use the beta channel when available. Existing installations can still be restored.'}
+    if(Test-Path -LiteralPath (Join-Path $Game 'X-Plane.exe')){throw 'X-Plane installation is removed from 0.21.2. Use the beta channel when available. Existing installations can still be restored.'}
     $mp=ManifestPath $StateRoot $Game
     $old=$null;$oldJson=$null
     if(Test-Path -LiteralPath $mp){$oldJson=Get-Content -LiteralPath $mp -Raw;$old=$oldJson|ConvertFrom-Json;if($old.Status -ne 'Restored' -and -not $ReplaceExisting){throw 'OptiShade is already recorded here. Choose Repair or approve reinstalling it.'};if($old.Status -eq 'Restored'){$old=$null}}
@@ -289,7 +289,9 @@ function ImportNrRuntime([string]$ManifestPath,[string]$Source){
 function UninstallFusion([string]$StateRoot,[string]$Installer,[string]$ActiveSession='',[bool]$KeepPresets=$true){
     $root=FullPath $StateRoot;$keep=FullPath $Installer
     if(-not(Test-Path -LiteralPath $root)){return}
-    if((Split-Path $root -Leaf) -ne 'OptiShade'){throw 'Cleanup requires the dedicated OptiShade storage folder.'}
+    $portableRoot=Join-Path (Split-Path $keep -Parent) 'Data'
+    $portable=($env:OPTISHADE_PORTABLE -eq '1' -and $root -eq (FullPath $portableRoot) -and (Test-Path -LiteralPath (Join-Path (Split-Path $keep -Parent) 'portable.txt') -PathType Leaf))
+    if((Split-Path $root -Leaf) -ne 'OptiShade' -and -not $portable){throw 'Cleanup requires the dedicated OptiShade storage folder.'}
     [void](OwnedPath $root 'cleanup-check')
     $records=@(Get-ChildItem -LiteralPath (Join-Path $root 'Games') -Filter manifest.json -File -Recurse -ErrorAction SilentlyContinue)
     if(-not $records.Count){throw 'No recorded game installations were found. Uninstall cannot confirm removal of untracked files. Select the actual game folder in Setup and inspect its installation before trying again.'}
@@ -304,6 +306,52 @@ function UninstallFusion([string]$StateRoot,[string]$Installer,[string]$ActiveSe
     }else{Remove-Item -LiteralPath $root -Recurse -Force}
 }
 
+function GetSnapshotRemovalPlan([string]$ReceiptRoot='',[string[]]$GameRoots) {
+ $root=if($ReceiptRoot){FullPath $ReceiptRoot}else{Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'OptiShade-SnapShot'}
+ if((Split-Path $root -Leaf) -ne 'OptiShade-SnapShot'){throw 'Invalid snapshot record folder.'}
+ if(-not(Test-Path -LiteralPath $root)){return}
+ [void](OwnedPath $root 'check')
+ foreach($receipt in Get-ChildItem -LiteralPath $root -Filter 'OptiShade-*.txt' -File){
+  $safe=OwnedPath $root $receipt.Name
+  $lines=[IO.File]::ReadAllLines($safe,[Text.Encoding]::UTF8)
+  if($lines.Count -ne 3 -or $lines[2] -notmatch '^[a-fA-F0-9]{64}$'){throw "Invalid SnapShot record: $safe. No snapshot cleanup was performed."}
+  $file=FullPath $lines[0];$folder=Split-Path $file -Parent;$name=Split-Path $file -Leaf
+  if($PSBoundParameters.ContainsKey('GameRoots') -and (FullPath (Split-Path $folder -Parent)) -notin $GameRoots){continue}
+  if((Split-Path $folder -Leaf) -cne 'Optishade Snapshots' -or $name -notmatch '^OptiShade-\d{8}-\d{6}-\{[a-fA-F0-9-]{36}\}\.png$' -or [IO.Path]::GetFileNameWithoutExtension($name) -cne $receipt.BaseName){throw 'Invalid SnapShot ownership record. Cleanup stopped.'}
+  [void](OwnedPath $folder $name)
+  if(Test-Path -LiteralPath $file){
+   if((Get-Item -LiteralPath $file).Length -ne [long]$lines[1] -or (HashFile $file) -ne $lines[2]){throw "This snapshot has changed since capture and will not be deleted automatically: $file"}
+  }
+  [pscustomobject]@{File=$file;Receipt=$safe;Folder=$folder}
+ }
+}
+function RemoveSelectedOptiShadeData([string]$StateRoot,[string]$Installer,[string]$ActiveSession,[bool]$AppFiles,[bool]$IniFiles,[bool]$Snapshots){
+ if(-not($AppFiles -or $IniFiles -or $Snapshots)){throw 'Choose at least one item to remove.'}
+ $records=@(Get-ChildItem -LiteralPath (Join-Path $StateRoot 'Games') -Filter manifest.json -File -Recurse -ErrorAction SilentlyContinue)
+ $presets=@()
+ $gameRoots=@()
+ foreach($record in $records){
+  [void](OwnedPath $StateRoot $record.FullName.Substring((FullPath $StateRoot).Length+1))
+  $manifest=Get-Content -LiteralPath $record.FullName -Raw|ConvertFrom-Json
+  $gameRoots+=FullPath $manifest.Game
+  AssertClosed $manifest.Game
+  if($IniFiles -and -not $AppFiles){
+   $folder=OwnedPath $manifest.Game 'OptiShadeData/Presets'
+   if(Test-Path -LiteralPath $folder){
+    if(Get-ChildItem -LiteralPath $folder -Recurse -Force|Where-Object {$_.Attributes -band [IO.FileAttributes]::ReparsePoint}){throw 'A linked preset was found. Cleanup stopped.'}
+    $presets+=@(Get-ChildItem -LiteralPath $folder -Filter '*.ini' -File -Recurse|ForEach-Object {OwnedPath $folder $_.FullName.Substring($folder.Length+1)})
+   }
+  }
+ }
+ $captures=if($Snapshots){@(GetSnapshotRemovalPlan -GameRoots $gameRoots)}else{@()}
+ if($AppFiles){UninstallFusion $StateRoot $Installer $ActiveSession -KeepPresets (-not $IniFiles)}
+ foreach($file in $presets){Remove-Item -LiteralPath $file -Force}
+ foreach($capture in $captures){
+  if(Test-Path -LiteralPath $capture.File){Remove-Item -LiteralPath $capture.File -Force}
+  Remove-Item -LiteralPath $capture.Receipt -Force
+  if((Test-Path -LiteralPath $capture.Folder) -and -not(Get-ChildItem -LiteralPath $capture.Folder -Force)){Remove-Item -LiteralPath $capture.Folder}
+ }
+}
 function GetFusionUpdateConflicts($Manifest){
  foreach($conflict in @(FindFusionConflicts $Manifest.Game)){
   [void](OwnedPath $Manifest.Game $conflict.Path)

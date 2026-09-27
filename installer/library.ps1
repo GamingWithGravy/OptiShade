@@ -226,7 +226,7 @@ function FindFusionExecutable([string]$Game,[string]$Launcher=''){
  if(-not $Game -or -not(Test-Path -LiteralPath $Game -PathType Container)){return @()}
  $Game=ResolveFusionInstallFolder $Game
  AssertFusionPhysicalFolder $Game
- $xp=Join-Path $Game 'X-Plane.exe';if(Test-Path -LiteralPath $xp -PathType Leaf){throw 'X-Plane support is removed from this emergency build. Existing files can be restored using Troubleshooting.'}
+ $xp=Join-Path $Game 'X-Plane.exe';if(Test-Path -LiteralPath $xp -PathType Leaf){throw 'X-Plane support is removed from this stable build. Existing files can be restored using Troubleshooting.'}
  # MSFS Xbox uses the accessible launch helper beside the protected game EXE.
  # Steam uses the game EXE directly. Both install beside the selected executable.
  foreach($folder in @($Game,(Join-Path $Game 'Content'))){

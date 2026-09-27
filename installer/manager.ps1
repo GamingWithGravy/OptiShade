@@ -40,7 +40,7 @@ $form.FindName('SupportDevelopment').Add_Click({
  ShowSupportDevelopment $form $store
  if(Test-Path -LiteralPath (Join-Path $store 'support-hidden.txt')){$form.FindName('SupportDevelopment').Visibility='Collapsed'}
 })
-$buttons=@('Browse','Install','Repair','Restore','Runtime','Retry','Uninstall','Scan','Play','LibraryGames','GamePath','Method','AddGame','HomeNav','LibraryNav','SetupNav','SettingsNav','KeybindsNav','ChangeMenuKey','ChangeHotSwapKey','ClearHotSwapKey','OpenLibrary','CheckCompatibility','TroubleshootingNav','ResetDefaults','ImportZip','RecoveryRepair','RecoveryRestore','CheckUpdates','RevertUpdate','SaveMenuKeys','DefaultMenuKeys','LoadMenuKeys','IncludeEffects','OwnIniMode','ChooseOwnIni','ApplyFxChoice','PrepareOlderRtx','PrepareMfg','OpenMsfs2020','OpenXPlane12')|ForEach-Object {$form.FindName($_)}
+$buttons=@('Browse','Install','Repair','Restore','Runtime','Retry','Uninstall','Scan','Play','LibraryGames','GamePath','Method','AddGame','HomeNav','LibraryNav','SetupNav','SettingsNav','KeybindsNav','ChangeMenuKey','ChangeHotSwapKey','ClearHotSwapKey','OpenLibrary','CheckCompatibility','TroubleshootingNav','ResetDefaults','ImportZip','RecoveryRepair','RecoveryRestore','CheckUpdates','RevertUpdate','BetaUpdates','SaveMenuKeys','DefaultMenuKeys','LoadMenuKeys','IncludeEffects','OwnIniMode','ChooseOwnIni','ApplyFxChoice','PrepareOlderRtx','PrepareMfg','OpenMsfs2020','OpenXPlane12')|ForEach-Object {$form.FindName($_)}
 $form.Icon=[Windows.Media.Imaging.BitmapFrame]::Create([uri](Join-Path $PSScriptRoot 'OptiShade-app.ico'))
 $form.FindName('BrandIcon').Source=[Windows.Media.Imaging.BitmapFrame]::Create([uri](Join-Path $PSScriptRoot 'OptiShade-icon.png'))
 $form.FindName('BrandIcon').Cursor='SizeAll'
@@ -64,10 +64,12 @@ $form.FindName('RevertUpdate').Add_Click({
 $form.FindName('UpdateAvailable').Add_Click({StartManagerUpdate $script:availableUpdate})
 function StartManagerUpdate($Update){
  if($script:busy -or -not $Update){return}
+ if($Update.Channel -and $Update.Channel -ne (GetOptiShadeUpdateChannel)){$status.Text='The download channel changed. Check for updates again.';return}
  if($env:OPTISHADE_PORTABLE -eq '1'){
   if($Update.Rollback){$status.Text='Automatic rollback of a portable installation is not supported by older managers. Download the older portable ZIP into a separate folder; keep your Data folder as a backup.';return}
   [void][Windows.MessageBox]::Show($form,'Portable update: download the new portable ZIP from the official releases page. Close OptiShade, extract it, and copy your existing Data folder into the new folder. Keep portable.txt beside the EXE. Game installations still need updating through setup.','OptiShade portable update')
-  Start-Process 'https://github.com/GamingWithGravy/OptiShade/releases/latest'
+  $releasePage=if($Update.ReleaseUrl){$Update.ReleaseUrl}else{'https://github.com/GamingWithGravy/OptiShade/releases'}
+  Start-Process $releasePage
   return
  }
  if(Get-Process FlightSimulator2024,FlightSimulator,X-Plane -ErrorAction SilentlyContinue){$status.Text='Close all simulators before changing versions.';return}
@@ -184,7 +186,12 @@ $form.FindName('PrepareOlderRtx').Add_Click({RunAction {
  $status.Text='Older RTX model prepared. Use Retry unfinished downloads if other optional packages remain pending. Start DX12 with DLSS, enter a flight, then enable Neural Rendering manually. If it fails, leave it off and export diagnostics. No native older-RTX support is claimed.'
 }})
 $form.FindName('Runtime').Add_Click({RunAction {$m=ManifestPath $store $path.Text;if(-not(Test-Path $m)){throw 'Install OptiShade first.'};$installed=Get-Content $m -Raw|ConvertFrom-Json;$plan=CheckGameCompatibility $installed.LaunchExe;if(-not $plan.DownloadNvidia){throw $plan.NeuralRendering};$d=New-Object Windows.Forms.OpenFileDialog;$d.Title='Choose '+$plan.NeuralRuntime.Expected;$d.Filter='NVIDIA NR model (not the helper)|nvngx_dlssnr.dll';if($d.ShowDialog() -eq 'OK'){ImportNrRuntime $m $d.FileName;$installed|Add-Member -NotePropertyName OptionalDlss -NotePropertyValue $true -Force;$latest=Get-Content $m -Raw|ConvertFrom-Json;$latest|Add-Member -NotePropertyName OptionalDlss -NotePropertyValue $true -Force;WriteState $latest $m;$status.Text='Model file added. It is not running yet: a supported game connection is still required.'};$d.Dispose()}})
-$form.FindName('Uninstall').Add_Click({RunAction {$choice=[Windows.MessageBox]::Show($form,'Would you like to keep your saved INI files? Yes keeps presets in each game folder for later. No removes them with OptiShade.','Keep saved presets?','YesNoCancel','Question','Yes');if($choice -eq 'Cancel'){return};UninstallFusion $store $Installer $PSScriptRoot -KeepPresets ($choice -eq 'Yes');$script:uninstallDone=$true;$status.Text='OptiShade removed. Closing setup; your original installer EXE is kept.';$script:busy=$false;$form.Close()}})
+$form.FindName('Uninstall').Add_Click({RunAction {
+ $choice=ShowUninstallOptions $form;if(-not $choice){return}
+ RemoveSelectedOptiShadeData $store $Installer $PSScriptRoot -AppFiles $choice.AppFiles -IniFiles $choice.IniFiles -Snapshots $choice.Snapshots
+ if($choice.AppFiles){$script:uninstallDone=$true;$status.Text='OptiShade removed. Your original installer EXE is kept.';$script:busy=$false;$form.Close()}
+ else{$status.Text='Selected OptiShade files removed. The app remains installed.'}
+}})
 $form.FindName('Retry').Add_Click({RunAction {$m=Get-Content (ManifestPath $store $path.Text) -Raw|ConvertFrom-Json;if($m.Status -ne 'Installed'){throw 'Install OptiShade first.'};AssertClosed $path.Text;$plan=CheckGameCompatibility $m.LaunchExe;SaveFusionCompatibility $path.Text $plan;FinishOptionalDownloads $m $plan}})
 $form.FindName('Repair').Add_Click({RunAction {
  $mp=ManifestPath $store $path.Text
@@ -377,7 +384,7 @@ $script:startupTimer.Add_Tick({
    $form.FindName('IntroStatus').Text='Your setup is ready.'
    $form.FindName('IntroProgress').IsIndeterminate=$false;$form.FindName('IntroProgress').Value=100
    $copies=@($result.Games)
-   if($result.Update -and (-not $result.Update.Prerelease -or $form.FindName('BetaUpdates').IsChecked)){$script:availableUpdate=$result.Update;$form.FindName('UpdateAvailable').Content='Update available - '+$result.Update.Version;$form.FindName('UpdateAvailable').Visibility='Visible'}
+   if($result.Update -and $result.Update.Channel -eq (GetOptiShadeUpdateChannel)){$script:availableUpdate=$result.Update;$form.FindName('UpdateAvailable').Content='Update available - '+$result.Update.Version;$form.FindName('UpdateAvailable').Visibility='Visible'}
    $form.FindName('MsfsCopies').ItemsSource=$copies
    if($copies.Count){$form.FindName('MsfsCopies').SelectedIndex=0}else{$path.Text=''}
    $status.Text='Simulator detection complete. Open Setup to install, play or restore.'
@@ -428,7 +435,7 @@ $form.FindName('CheckUpdates').Add_Click({RunAction {
  $status.Text='Checking GitHub releases...';$form.Dispatcher.Invoke([Action]{},[Windows.Threading.DispatcherPriority]::Background)
  $script:availableUpdate=GetOptiShadeUpdate -ReportErrors
  if($script:availableUpdate){$form.FindName('UpdateAvailable').Content='Update available - '+$script:availableUpdate.Version;$form.FindName('UpdateAvailable').Visibility='Visible';$status.Text='An update is available. Use the update button to install it.'}
- else{$form.FindName('UpdateAvailable').Visibility='Collapsed';$status.Text='No newer stable release is available.'}
+ else{$form.FindName('UpdateAvailable').Visibility='Collapsed';$status.Text='No newer '+(GetOptiShadeUpdateChannel)+' release is available.'}
 }})
 
 function RefreshMenuKeys {
