@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "DlssNrFeature_Vk.h"
+#include "DlssNrFeature_Dx12.h"
 
 #include "DlssNr.h"
 #include "DlssNr_ExposureScan.h"
@@ -7,6 +8,7 @@
 
 
 #include <Config.h>
+#include <Util.h>
 #include <menu/menu_common.h>
 
 #include <imgui/imgui.h>
@@ -130,11 +132,15 @@ void RenderMenu(Config* config, float menuResScale)
         if (ImGui::Checkbox("Enable Neural Rendering", &enabled))
             config->DlssNrEnabled = enabled;
         ImGui::TextDisabled("Tuning is saved; neural rendering always starts off.");
-        bool taaFallback = false;
-        ImGui::BeginDisabled();
-        ImGui::Checkbox("TAA neural rendering - Coming soon (INOP)", &taaFallback);
-        ImGui::EndDisabled();
-        HelpMarker("TAA neural rendering is not operational in this release. The option is disabled while development continues.");
+        const bool xp12 = _wcsicmp(Util::ExePath().filename().c_str(), L"X-Plane.exe") == 0;
+        if (xp12)
+            ImGui::TextWrapped("X-Plane 12 Vulkan NR (experimental): enable Image effects and the TAA neural guides technique. No DLSS option is required. SDR only, up to 3840 x 2160, full-resolution model and one pass. NR starts off each launch. Restart the game after a GPU/NR failure.");
+        bool taaFallback = config->DlssNrTaaFallback.value_or_default();
+        if (!xp12) {
+        if(ImGui::Checkbox("TAA neural rendering (experimental)", &taaFallback))config->DlssNrTaaFallback=taaFallback;
+        HelpMarker("MSFS DirectX 12 with TAA: enable Image effects and TAA neural guides. SDR up to 3840x2160, full-resolution model and one pass. Disable frame generation. This opt-in resets each launch. Visually tested in MSFS 2020 and 2024 at native 4K on an RTX 5090. Support remains experimental.");
+        if(taaFallback)ImGui::TextWrapped("%s",DlssNr::TaaFallbackStatus().c_str());
+        }
 
         HelpMarker("Enhance lighting and material appearance with the NR model. Placement selects before or after upscaling.\nRequires nvngx_dlssnr.dll plus the included nvngx.dll_dlssnr.dll helper.");
 

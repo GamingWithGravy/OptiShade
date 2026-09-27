@@ -22,6 +22,25 @@
 
 namespace MV {
 
+// OptiShade local TAA experiment: keep search/filter directions fixed across
+// frames. Preserve the original estimator and its licence; other consumers
+// retain the original cycling pattern unless they explicitly opt in.
+#if OPTISHADE_TAA_STABLE_SEARCH
+uniform bool StableSearch <
+    ui_label = "Stable motion search (TAA NR test)";
+    ui_tooltip = "Fixed sampling pattern. Turn off to compare the original 16-frame pattern; does not change NR strength.";
+> = false;
+#endif
+float SearchPattern(float2 position)
+{
+    float seed = GetBlueNoise(position).x;
+#if OPTISHADE_TAA_STABLE_SEARCH
+    return StableSearch ? seed : GetR1(seed, 16);
+#else
+    return GetR1(seed, 16);
+#endif
+}
+
 /*******************************************************************************
     Globals
 *******************************************************************************/
@@ -106,7 +125,7 @@ float4 FilterMV(VSOUT i, int mot_mip, sampler mot_samp, float cen_z)
     /* return cen_mot_info; */
 
     float cen_mot_sq_len = dot(cen_mot_info.xy, cen_mot_info.xy);
-    float rand = GetR1(GetBlueNoise(i.vpos.xy).x, 16);
+    float rand = SearchPattern(i.vpos.xy);
     float2 scale = rcp(tex2Dsize(mot_samp)) * (mot_mip > 0 ? 4.0 : 2.0);
     float4 rot = GetRotator(rand * HALF_PI);
     int max_idx = mot_mip > 0 ? 25 : 9;
@@ -203,7 +222,7 @@ float4 CalcMV(VSOUT i, int mot_mip, sampler mot_samp, sampler curr_feat_samp, sa
     }
 
     float best_sim = saturate(Min2(m_cov * rsqrt(m_local * m_search)));
-    float rand = GetR1(GetBlueNoise(i.vpos.xy).x, 16);
+    float rand = SearchPattern(i.vpos.xy);
     float2 randdir; sincos(rand * DOUBLE_PI, randdir.x, randdir.y);
 
     // the below settings have been tested to give best quality for high perf
@@ -322,7 +341,14 @@ void PS_Filter4(PS_ARGS4) { o = FilterMV(i, 4, sMotionTexA, Sample(sCurrFeatTex3
 void PS_Filter3(PS_ARGS4) { o = FilterMV(i, 3, sMotionTexA, Sample(sCurrFeatTex2, i.uv).y); }
 void PS_Filter2(PS_ARGS4) { o = FilterMV(i, 2, sMotionTexA, Sample(sCurrFeatTex1, i.uv).y); }
 
-void PS_Filter0(PS_ARGS2) { o = FilterMV(i, 0, sMotionTex1, GetDepth(i.uv)).xy; }
+void PS_Filter0(PS_ARGS2) {
+    o = FilterMV(i, 0, sMotionTex1, GetDepth(i.uv)).xy;
+#if OPTISHADE_TAA_GUIDE_DIAGNOSTICS
+    // OptiShade local diagnostic: isolate the motion delivered to NR without
+    // altering the estimator's history, colour input or scene depth.
+    o = DiagnosticZeroMotion ? float2(0.0, 0.0) : o;
+#endif
+}
 
 /*******************************************************************************
     Passes

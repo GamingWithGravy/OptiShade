@@ -1,18 +1,37 @@
 ﻿# Read launcher catalogues; never crawl entire disks or start games during discovery.
 function ResolveFusionInstallFolder([string]$Game){
- if(-not $Game){return $Game}
- $folder=[IO.Path]::GetFullPath($Game).TrimEnd('\')
+ if([string]::IsNullOrWhiteSpace($Game)){throw 'Choose the simulator installation folder using Browse.'}
+ $candidate=[Environment]::ExpandEnvironmentVariables($Game.Trim().Trim('"').Trim())
+ if($candidate -notmatch '^(?:[A-Za-z]:[\\/]|\\\\[^\\]+\\[^\\]+)' -or $candidate.IndexOfAny([IO.Path]::GetInvalidPathChars()) -ge 0 -or $candidate -match '[*?]'){
+  throw 'The installation path is invalid. Use Browse to select the simulator installation folder.'
+ }
+ try{$folder=[IO.Path]::GetFullPath($candidate).TrimEnd('\')}catch{throw 'The installation path is invalid. Use Browse to select the simulator installation folder.'}
+ if([IO.Path]::GetFileName($folder) -in @('FlightSimulator2024.exe','FlightSimulator.exe','gamelaunchhelper.exe','X-Plane.exe')){$folder=Split-Path $folder -Parent}
  foreach($candidate in @($folder,(Join-Path $folder 'Content'))){
-  foreach($exe in @('FlightSimulator2024.exe','FlightSimulator.exe')){if(Test-Path -LiteralPath (Join-Path $candidate $exe) -PathType Leaf){return $candidate}}
+  foreach($exe in @('FlightSimulator2024.exe','FlightSimulator.exe','X-Plane.exe')){if(Test-Path -LiteralPath (Join-Path $candidate $exe) -PathType Leaf){return $candidate}}
  }
  return $folder
 }
 function GetMsfsTitle([string]$Game){
  try{$folder=ResolveFusionInstallFolder $Game}catch{return ''}
  if(-not $folder){return ''}
+ if(Test-Path -LiteralPath (Join-Path $folder 'X-Plane.exe') -PathType Leaf){return 'X-Plane 12 (experimental)'}
  if(Test-Path -LiteralPath (Join-Path $folder 'FlightSimulator2024.exe') -PathType Leaf){return 'Microsoft Flight Simulator 2024'}
  if(Test-Path -LiteralPath (Join-Path $folder 'FlightSimulator.exe') -PathType Leaf){return 'Microsoft Flight Simulator 2020'}
  return ''
+}
+function StartOptiShadeXPlane([string]$Exe){
+ AssertFusionExecutable $Exe
+ $game=Split-Path $Exe
+ $layers=Join-Path $game 'OptiShadeData/Vulkan'
+ if(-not(Test-Path -LiteralPath (Join-Path $layers 'OptiShade.json'))){throw 'The X-Plane Vulkan layer is missing. Repair with the manager matching the installed version.'}
+ $start=[Diagnostics.ProcessStartInfo]::new()
+ $start.FileName=$Exe;$start.WorkingDirectory=$game;$start.UseShellExecute=$false
+ $start.EnvironmentVariables['VK_ADD_LAYER_PATH']=$layers
+ $start.EnvironmentVariables['VK_INSTANCE_LAYERS']='VK_LAYER_reshade'
+ $start.EnvironmentVariables['RESHADE_DISABLE_GRAPHICS_HOOK']='1'
+ # Only this child process receives the layer settings; no system environment or registry changes.
+ $process=[Diagnostics.Process]::Start($start);$process.Dispose()
 }
 function GetFusionInstallState([string]$Store,[string]$Game){
  $gamePath=ResolveFusionInstallFolder $Game
@@ -38,7 +57,7 @@ function FindFusionGames([string]$Store){
  $games=@{}
  function AddGame($name,$folder,$launcher){
   if(-not $folder){return}
-  $folder=ResolveFusionInstallFolder $folder
+  try{$folder=ResolveFusionInstallFolder $folder}catch{return}
   $name=GetMsfsTitle $folder
   if(-not $name){return}
   if($name -match 'Steamworks Common|SteamVR|Oasis Driver|Unreal Engine|Fab UE Plugin|Quixel Bridge|Minecraft Launcher'){return}
@@ -46,19 +65,29 @@ function FindFusionGames([string]$Store){
   $folder=[IO.Path]::GetFullPath($folder).TrimEnd('\');$key=$folder.ToLowerInvariant()
   if(-not $games.ContainsKey($key)){$games[$key]=[pscustomobject]@{Name=$name;Folder=$folder;Launcher=$launcher;State='Not installed';Label=''}}
  }
+ foreach($list in @((Join-Path $env:LOCALAPPDATA 'x-plane_install_12.txt'),(Join-Path $env:LOCALAPPDATA 'x-plane_install_12_demo.txt'))){
+  if(Test-Path -LiteralPath $list){foreach($folder in Get-Content -LiteralPath $list){AddGame 'X-Plane 12' $folder 'Laminar Research'}}
+ }
  $steam=@("${env:ProgramFiles(x86)}\Steam")
  $registered=(Get-ItemProperty 'HKCU:\Software\Valve\Steam' -ErrorAction SilentlyContinue).SteamPath
  if($registered){$steam+= $registered}
+ foreach($key in @('HKLM:\SOFTWARE\WOW6432Node\Valve\Steam','HKLM:\SOFTWARE\Valve\Steam')){
+  $registered=(Get-ItemProperty $key -ErrorAction SilentlyContinue).InstallPath
+  if($registered){$steam+=$registered}
+ }
+ $steam=@($steam|ForEach-Object {try{ResolveFusionInstallFolder $_}catch{}}|Select-Object -Unique)
  foreach($base in @($steam)){
   $vdf=Join-Path $base 'steamapps/libraryfolders.vdf'
-  if(Test-Path -LiteralPath $vdf){foreach($match in [regex]::Matches((Get-Content -LiteralPath $vdf -Raw -Encoding UTF8),'"path"\s+"([^"]+)"')){$steam+=$match.Groups[1].Value.Replace('\\','\')}}
+  try{if(Test-Path -LiteralPath $vdf){foreach($match in [regex]::Matches((Get-Content -LiteralPath $vdf -Raw -Encoding UTF8),'"path"\s+"([^"]+)"')){try{$steam+=ResolveFusionInstallFolder $match.Groups[1].Value.Replace('\\','\')}catch{}}}}catch{}
  }
  foreach($base in ($steam|Select-Object -Unique)){
   foreach($file in Get-ChildItem -LiteralPath (Join-Path $base 'steamapps') -Filter 'appmanifest_*.acf' -File -ErrorAction SilentlyContinue){
+   try{
    $data=Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8
    $name=[regex]::Match($data,'"name"\s+"([^"]+)"').Groups[1].Value
    $dir=[regex]::Match($data,'"installdir"\s+"([^"]+)"').Groups[1].Value
    if($dir){AddGame $name (Join-Path $base "steamapps/common/$dir") 'Steam'}
+   }catch{}
   }
  }
  foreach($file in Get-ChildItem "$env:ProgramData/Epic/EpicGamesLauncher/Data/Manifests" -Filter '*.item' -File -ErrorAction SilentlyContinue){
@@ -67,6 +96,13 @@ function FindFusionGames([string]$Store){
  foreach($drive in Get-PSDrive -PSProvider FileSystem){
   foreach($entry in Get-ChildItem -LiteralPath (Join-Path $drive.Root 'XboxGames') -Directory -ErrorAction SilentlyContinue){AddGame $entry.Name (Join-Path $entry.FullName 'Content') 'Xbox'}
   foreach($entry in Get-ChildItem -LiteralPath (Join-Path $drive.Root 'Xbox games') -Directory -ErrorAction SilentlyContinue){AddGame $entry.Name (Join-Path $entry.FullName 'Content') 'Xbox'}
+ }
+ # Registered Store packages may live outside the default XboxGames folders.
+ # Query only the two simulator identities, never enumerate protected disk trees.
+ if(Get-Command Get-AppxPackage -ErrorAction SilentlyContinue){
+  foreach($identity in @('Microsoft.FlightSimulator','Microsoft.Limitless')){
+   try{foreach($package in Get-AppxPackage -Name $identity -ErrorAction Stop){AddGame $package.Name $package.InstallLocation 'Xbox'}}catch{}
+  }
  }
  foreach($file in Get-ChildItem (Join-Path $Store 'Games') -Filter manifest.json -Recurse -File -ErrorAction SilentlyContinue){
   try{
@@ -121,6 +157,7 @@ function AssertFusionExecutable([string]$File){
 }
 function FindFusionExecutable([string]$Game,[string]$Launcher=''){
  if(-not $Game -or -not(Test-Path -LiteralPath $Game -PathType Container)){return @()}
+ $xp=Join-Path $Game 'X-Plane.exe';if(Test-Path -LiteralPath $xp -PathType Leaf){AssertFusionExecutable $xp;return [pscustomobject]@{Path=$xp;Score=100}}
  # MSFS Xbox uses the accessible launch helper beside the protected game EXE.
  # Steam uses the game EXE directly. Both install beside the selected executable.
  foreach($folder in @($Game,(Join-Path $Game 'Content'))){
@@ -133,7 +170,7 @@ function FindFusionExecutable([string]$Game,[string]$Launcher=''){
    return @([pscustomobject]@{Path=$target;Score=1000})
   }
  }
- throw 'Microsoft Flight Simulator 2020 or 2024 was not found in this folder. Choose its installation folder or Content folder.'
+ throw 'No supported simulator was found. Choose the MSFS 2020, MSFS 2024 or X-Plane 12 executable folder.'
 }
 function GetFusionGameArtwork($Games){
  Add-Type -AssemblyName System.Drawing
@@ -150,7 +187,7 @@ function GetFusionGameArtwork($Games){
 
 function AssertMsfsNvidiaTarget([string]$Exe,$Gpu){
  if(-not $Gpu.Known -or (-not $Gpu.Nvidia -and $Gpu.Names -notmatch '(?i)AMD|Radeon')){throw 'This patch supports detected NVIDIA or AMD graphics cards. Restore and uninstall remain available.'}
- if(-not $Exe -or (Split-Path $Exe -Leaf) -notin @('FlightSimulator2024.exe','FlightSimulator.exe','gamelaunchhelper.exe')){throw 'This edition supports Microsoft Flight Simulator 2024 and MSFS 2020.'}
+ if(-not $Exe -or (Split-Path $Exe -Leaf) -notin @('FlightSimulator2024.exe','FlightSimulator.exe','gamelaunchhelper.exe','X-Plane.exe')){throw 'This edition supports MSFS 2024, MSFS 2020 and experimental X-Plane 12.'}
  if(-not (GetMsfsTitle (Split-Path $Exe))){throw 'Choose the simulator executable folder containing FlightSimulator2024.exe or FlightSimulator.exe.'}
 }
 

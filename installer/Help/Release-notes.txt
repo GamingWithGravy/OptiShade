@@ -1,6 +1,42 @@
-OptiShade 0.20.12
+OPTISHADE 0.21 XP12
 
-- Fixed an issue where changing your menu key binding could cause aircraft controls to glitch when opening or closing the UI.
-- Updated Preset HotSwap: choose Preset 1 and Preset 2, and set your Preset hotswap key. An on-screen message now shows which preset is active after swapping.
+EXPERIMENTAL RELEASE
+X-Plane 12
+- Install, repair, restore and launch X-Plane 12 from OptiShade.
+- Launch X-Plane using Play in OptiShade to load its Vulkan layer.
 
-Updating: Close MSFS, run the 0.20.12 installer, select your simulator and click Repair OptiShade. No restore or uninstall is needed. Restart MSFS afterwards.
+EXPERIMENTAL FEATURES
+TAA support
+- Optional Neural Rendering with native TAA in MSFS DirectX 12. Enable TAA neural guides in Image effects, then enable the experimental TAA option and NR in Neural rendering.
+- SDR only, up to 3840x2160, with frame generation off. Native 4K TAA NR has been visually tested in MSFS 2020 and 2024 on an RTX 5090, with no shimmer reported in the final tests. Support remains experimental.
+VULKAN support
+- Image effects and optional Neural Rendering in X-Plane 12 without a built-in DLSS option. Enable the neural guide technique before NR. NR starts off each launch.
+- Experimental NR still requires a compatible RTX GPU and model. This does not add DLSS upscaling or frame generation to X-Plane.
+VR support
+- Experimental compatibility testing. Headset rendering, stereo NR and VR frame generation have not been validated for this release. Desktop test results do not confirm headset support; please report your headset, VR runtime and simulator settings with diagnostics.
+
+FIXES
+- Improved simulator folder detection and invalid-path handling.
+- Corrected Vulkan NR setting delivery to the model.
+- Added safeguards for unsupported Hold Frame textures and allocation failures.
+- Corrected frame-limit updates and fallback handling when using the XeLL limiter.
+- Repair now uses only the matching installed version. Updating is a separate action.
+- Preset selection checks for missing FX before loading a look.
+- FX and ZIP imports no longer require discarding unsaved preset edits.
+
+IMPROVEMENTS
+- Diagnostics export asks you to describe the issue and includes your report in the ZIP.
+- Diagnostic ZIPs save to Desktop with an Open file location confirmation.
+- Expanded crash, rendering and import-failure evidence in diagnostics.
+- Import errors include background-helper startup failures; failed downloads keep the previous look selected.
+- Optional experimental RTX 40 MFG component setup for compatible native DLSS frame-generation paths. Disabled by default; results depend on the game and hardware.
+- Portable manager download: extract it and keep its Data folder when updating.
+- Regular manager updates place the new EXE on Desktop and show its location.
+- Updated troubleshooting styling and developer information.
+
+UPDATING
+Close the simulator, open this manager, select the existing installation and choose Update OptiShade. No Restore or uninstall is normally needed. Saved presets, settings and original backups are preserved. Repair is for the same version only. For X-Plane, use Play in OptiShade after installation.
+
+SUPPORT
+Please post diagnostic ZIP files in the diagnostic zips channel in BlackBox Discord: https://discord.gg/6hjR9cSsy7
+Describe the issue in the export window and review your ZIP before sharing. Exporting does not upload anything automatically.

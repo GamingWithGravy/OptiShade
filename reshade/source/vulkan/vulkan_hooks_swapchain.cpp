@@ -12,6 +12,7 @@
 #include "addon_manager.hpp"
 #include "runtime_manager.hpp"
 #include "lockfree_linear_map.hpp"
+#include "../../../shared/VulkanOverlayBridge.h"
 #include <algorithm> // std::fill_n, std::sort, std::unique
 
 #define vk device_impl->_dispatch_table
@@ -20,6 +21,28 @@ extern thread_local bool g_in_dxgi_runtime;
 
 extern lockfree_linear_map<VkSurfaceKHR, HWND, 16> g_vulkan_surfaces;
 extern lockfree_linear_map<void *, reshade::vulkan::device_impl *, 8> g_vulkan_devices;
+
+static thread_local VkQueue optishade_overlay_queue = VK_NULL_HANDLE;
+static thread_local osvk::DrawOverlay optishade_overlay_draw = nullptr;
+
+extern "C" __declspec(dllexport) bool OptiShadeVulkanSetOverlay(uint32_t version, VkQueue queue, osvk::DrawOverlay draw)
+{
+	optishade_overlay_queue = VK_NULL_HANDLE;
+	optishade_overlay_draw = nullptr;
+	if (version != osvk::Version || !queue)
+		return false;
+	if (!draw)
+		return true;
+	const auto device = g_vulkan_devices.at(dispatch_key_from_handle(queue));
+	if (!device)
+		return false;
+	const auto queue_impl = device->get_private_data_for_object<VK_OBJECT_TYPE_QUEUE, true>(queue);
+	if (!queue_impl || queue_impl != device->_primary_graphics_queue)
+		return false;
+	optishade_overlay_queue = queue;
+	optishade_overlay_draw = draw;
+	return true;
+}
 
 #if RESHADE_ADDON
 extern void create_default_view(reshade::vulkan::device_impl *device_impl, VkImage image);
@@ -576,6 +599,17 @@ VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR *pPr
 	}
 
 	RESHADE_VULKAN_GET_DEVICE_DISPATCH_PTR(QueuePresentKHR, device_impl);
+	// Effects have been submitted and present_info contains their completion
+	// semaphore. Keep queue locks held and submit UI through the downstream driver
+	// entry point; no recursive layer/add-on submission or ImGui context sharing.
+	if (optishade_overlay_queue == queue && optishade_overlay_draw)
+	{
+		const auto draw = optishade_overlay_draw;
+		optishade_overlay_draw = nullptr;
+		optishade_overlay_queue = VK_NULL_HANDLE;
+		if (!draw(queue, &present_info, vk.QueueSubmit))
+			reshade::log::message(reshade::log::level::warning, "OptiShade Vulkan overlay submission failed.");
+	}
 	assert(!g_in_dxgi_runtime);
 	g_in_dxgi_runtime = true;
 	const VkResult result = trampoline(queue, &present_info);

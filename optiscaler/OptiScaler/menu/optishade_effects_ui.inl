@@ -137,7 +137,7 @@ static void DrawEffects(){
  LoadSwapPair();ImGui::TextUnformatted("Preset 1");ImGui::SameLine();ImGui::SetNextItemWidth(300);
  if(ImGui::BeginCombo("##Look presets",(swapMain.empty()?std::filesystem::u8path(fx.preset):swapMain).filename().string().c_str())){
   for(std::filesystem::recursive_directory_iterator i(root/L"Presets",error),end;i!=end&&!error;i.increment(error)){
-   if(i->path().extension()!=L".ini"||SameSwapPreset(i->path(),swapAlternate))continue;auto label=i->path().lexically_relative(root/L"Presets").string();if(ImGui::Selectable(label.c_str())){auto path=i->path().u8string();if(fx.dirty){strncpy_s(nextPreset,(const char*)path.c_str(),_TRUNCATE);askSwitch=true;}else{osfx::Command c{};c.kind=osfx::Preset;strncpy_s(c.path,(const char*)path.c_str(),_TRUNCATE);Send(c);}}
+   if(i->path().extension()!=L".ini"||SameSwapPreset(i->path(),swapAlternate))continue;auto label=i->path().lexically_relative(root/L"Presets").string();if(ImGui::Selectable(label.c_str())){auto path=i->path().u8string();if(fx.dirty){strncpy_s(nextPreset,(const char*)path.c_str(),_TRUNCATE);askSwitch=true;}else{RequestPresetLoad(i->path(),root);}}
   }ImGui::EndCombo();
  }
  DrawHotSwap();
@@ -145,10 +145,10 @@ static void DrawEffects(){
  if(ImGui::BeginPopupModal("Unsaved preset changes",nullptr,ImGuiWindowFlags_AlwaysAutoResize)){
   ImGui::TextColored(ImVec4(1.f,.3f,.4f,1.f),"Your current preset has unsaved changes.");
   ImGui::TextUnformatted("Save them, discard them, or keep editing.");
-  if(waitingSwitch&&fx.saveSerial>switchSaveSerial){waitingSwitch=false;if(fx.saveOK){osfx::Command c{};c.kind=osfx::Preset;strcpy_s(c.path,nextPreset);Send(c);preparing.clear();ImGui::CloseCurrentPopup();}}
+  if(waitingSwitch&&fx.saveSerial>switchSaveSerial){waitingSwitch=false;if(fx.saveOK){RequestPresetLoad(std::filesystem::u8path(nextPreset),root,true);preparing.clear();ImGui::CloseCurrentPopup();}}
   ImGui::BeginDisabled(waitingSwitch);
   if(ImGui::Button("Save and switch")){osfx::Command c{};c.kind=osfx::Save;switchSaveSerial=fx.saveSerial;waitingSwitch=Send(c);}
-  ImGui::SameLine();if(ImGui::Button("Discard and switch")){osfx::Command c{};c.kind=osfx::Preset;strcpy_s(c.path,nextPreset);Send(c);preparing.clear();ImGui::CloseCurrentPopup();}
+  ImGui::SameLine();if(ImGui::Button("Discard and switch")){RequestPresetLoad(std::filesystem::u8path(nextPreset),root,true);preparing.clear();ImGui::CloseCurrentPopup();}
   ImGui::SameLine();if(ImGui::Button("Keep editing"))ImGui::CloseCurrentPopup();ImGui::EndDisabled();
   if(feedback[0])ImGui::TextWrapped("%s",feedback);ImGui::EndPopup();
  }

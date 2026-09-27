@@ -16,8 +16,10 @@
 #include <spoofing/Vulkan_Spoofing.h>
 
 #include <vulkan/vulkan.hpp>
+#include "../../../shared/VulkanOverlayBridge.h"
 
 #include <dlssnr/DlssNr_VkExtensions.h>
+#include <dlssnr/DlssNrFeature_Vk.h>
 
 #include <detours/detours.h>
 #include <misc/IdentifyGpu.h>
@@ -30,6 +32,44 @@ static VkInstance _instance = VK_NULL_HANDLE;
 static VkPhysicalDevice _PD = VK_NULL_HANDLE;
 static HWND _hwnd = nullptr;
 
+extern "C" __declspec(dllexport) bool OptiShadeVulkanNrRequested()
+{
+    return _wcsicmp(Util::ExePath().filename().c_str(), L"X-Plane.exe") == 0 &&
+           Config::Instance()->DlssNrEnabled.value_or_default();
+}
+
+extern "C" __declspec(dllexport) void OptiShadeVulkanNrReset()
+{
+    DlssNr::ResetTaaHistoryVk();
+}
+
+extern "C" __declspec(dllexport) int OptiShadeVulkanNrSubmit(const osvtaa::Frame* frame)
+{
+    if (!OptiShadeVulkanNrRequested()) return -1;
+    if (!frame || frame->version != 1 || frame->size != sizeof(*frame) ||
+        frame->device != (uint64_t)_device || !_instance || !_PD || !frame->commands ||
+        !frame->color || !frame->colorView || !frame->depth || !frame->depthView ||
+        !frame->motion || !frame->motionView || frame->width < 64 || frame->height < 64 ||
+        frame->width > 3840 || frame->height > 2160) return -1;
+    auto* cfg = Config::Instance();
+    const auto finished = cfg->DlssNrFinishedPicture;
+    const auto deferred = cfg->DlssNrDeferredDlss;
+    const auto scale = cfg->DlssNrWorkingScale;
+    const auto passes = cfg->DlssNrPasses;
+    const auto apply = cfg->DlssNrApplyModel;
+    cfg->DlssNrFinishedPicture = false;
+    cfg->DlssNrDeferredDlss = false;
+    cfg->DlssNrWorkingScale = 1.0f;
+    cfg->DlssNrPasses = 1u;
+    cfg->DlssNrApplyModel = true;
+    const int result = DlssNr::EvaluateGuidesVk(*frame, _instance, _PD, _device);
+    cfg->DlssNrFinishedPicture = finished;
+    cfg->DlssNrDeferredDlss = deferred;
+    cfg->DlssNrWorkingScale = scale;
+    cfg->DlssNrPasses = passes;
+    cfg->DlssNrApplyModel = apply;
+    return result;
+}
 static std::mutex _vkPresentMutex;
 
 PFN_vkCreateDevice o_vkCreateDevice = nullptr;
@@ -45,6 +85,7 @@ static PFN_vkGetPhysicalDeviceFeatures2 o_vkGetPhysicalDeviceFeatures2 = nullptr
 PFN_vkCreateSemaphore VulkanHooks::o_vkCreateSemaphore = nullptr;
 PFN_vkSignalSemaphore VulkanHooks::o_vkSignalSemaphore = nullptr;
 PFN_vkAntiLagUpdateAMD VulkanHooks::o_vkAntiLagUpdateAMD = nullptr;
+
 
 // Forward declaration
 static VkResult hkvkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPresentInfo);
@@ -191,8 +232,10 @@ static VkResult hkvkCreateDevice(VkPhysicalDevice physicalDevice, const VkDevice
     // offers -- asking for an extension a driver does not have makes vkCreateDevice fail and the game
     // not start.
     DlssNr::VkExt::Merged nrExtensions;
+    bool nrExtensionsReady = true;
+    const bool nrStartupProbe = _wcsicmp(Util::ExePath().filename().c_str(), L"X-Plane.exe") == 0;
 
-    if (Config::Instance()->DlssNrEnabled.value_or_default())
+    if (Config::Instance()->DlssNrEnabled.value_or_default() || nrStartupProbe)
     {
         const auto supported = DlssNr::VkExt::SupportedDeviceExtensions(
             o_vkGetInstanceProcAddr, State::Instance().VulkanInstance, physicalDevice);
@@ -223,6 +266,7 @@ static VkResult hkvkCreateDevice(VkPhysicalDevice physicalDevice, const VkDevice
                  supported.size(), present.empty() ? "none" : present, added.empty() ? "none" : added,
                  missing.empty() ? "none" : missing);
 
+        nrExtensionsReady = missing.empty();
         if (!missing.empty())
             LOG_WARN("DLSS-NR Vulkan: the native path is not possible on this device -- the model's kernels "
                      "cannot be loaded without the extensions listed as NOT AVAILABLE");
@@ -236,9 +280,10 @@ static VkResult hkvkCreateDevice(VkPhysicalDevice physicalDevice, const VkDevice
 
     auto result = o_vkCreateDevice(physicalDevice, &localCreteInfo, pAllocator, pDevice);
 
-    if (Config::Instance()->DlssNrEnabled.value_or_default())
+    if (Config::Instance()->DlssNrEnabled.value_or_default() || nrStartupProbe)
         LOG_INFO("DLSS-NR Vulkan: vkCreateDevice returned {} with {} extensions requested", (int) result,
                  localCreteInfo.enabledExtensionCount);
+
 
     if (result == VK_SUCCESS && Config::Instance()->OverlayMenu.value_or_default())
     {
@@ -318,8 +363,14 @@ static VkResult hkvkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPres
     VkPresentInfoKHR localPresentInfo {};
     memcpy(&localPresentInfo, pPresentInfo, sizeof(VkPresentInfoKHR));
 
-    // render menu if needed
-    if (!MenuOverlayVk::QueuePresent(queue, &localPresentInfo))
+    // A matching native effects layer can draw the menu after its effects pass.
+    // Old DLLs and other presentation paths retain their existing behavior.
+    auto effectsModule = GetModuleHandleW(L"ReShade64.dll");
+    auto setOverlay = effectsModule ? reinterpret_cast<osvk::SetOverlay>(
+        GetProcAddress(effectsModule, "OptiShadeVulkanSetOverlay")) : nullptr;
+    const bool deferredOverlay = setOverlay && MenuOverlayVk::CanDrawAfterEffects(queue, pPresentInfo) &&
+        setOverlay(osvk::Version, queue, &MenuOverlayVk::QueuePresent);
+    if (!deferredOverlay && !MenuOverlayVk::QueuePresent(queue, &localPresentInfo))
     {
         LOG_ERROR("QueuePresent: false!");
         return VK_ERROR_OUT_OF_DATE_KHR;
@@ -330,6 +381,8 @@ static VkResult hkvkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPres
     // original call
     ScopedVulkanCreatingSC scopedVulkanCreatingSC {};
     auto result = o_QueuePresentKHR(queue, &localPresentInfo);
+    if (deferredOverlay)
+        setOverlay(osvk::Version, queue, nullptr);
 
     // Unsure about Vulkan Reflex fps limit and if that could be causing an issue here
     if (!State::Instance().reflexLimitsFps)

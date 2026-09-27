@@ -41,17 +41,21 @@ void Submit(const ostaa::Frame* input) {
         return r.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D && r.SampleDesc.Count == 1 &&
             r.DepthOrArraySize == 1 && r.MipLevels == 1 && r.Width == c.Width && r.Height == c.Height;
     };
-    if (!valid(c) || !valid(d) || !valid(m) || !c.Width || !c.Height ||
+    if (!valid(c) || !valid(d) || !valid(m) || !c.Width || !c.Height || c.Width > 3840 || c.Height > 2160 ||
         (c.Format != DXGI_FORMAT_R8G8B8A8_UNORM && c.Format != DXGI_FORMAT_B8G8R8A8_UNORM) ||
         d.Format != DXGI_FORMAT_R32_FLOAT || m.Format != DXGI_FORMAT_R16G16_FLOAT) {
         Say("TAA inputs have unsupported sizes or formats. SDR and full-resolution guides are required."); return;
     }
     ComPtr<ID3D12Device> current;
     if (FAILED(queue->GetDevice(IID_PPV_ARGS(&current))) || queue->GetDesc().Type != D3D12_COMMAND_LIST_TYPE_DIRECT) return;
+    const auto queueIdentity = optishade::ReShadeDeviceIdentity(current.Get());
+    if (!queueIdentity) { Say("TAA queue identity unavailable."); return; }
     for (auto* resource : {color, depth, motion}) {
         ComPtr<ID3D12Device> owner;
-        if (FAILED(resource->GetDevice(IID_PPV_ARGS(&owner))) || owner != current) { Say("TAA resources belong to different devices."); return; }
+        if (FAILED(resource->GetDevice(IID_PPV_ARGS(&owner))) || optishade::ReShadeDeviceIdentity(owner.Get()) != queueIdentity) { Say("TAA resources belong to different devices."); return; }
     }
+    // Keep ReShade's device wrapper for descriptor creation and command recording.
+    if (FAILED(color->GetDevice(IID_PPV_ARGS(&current)))) return;
     if (device && device != current) { Say("Graphics device changed. Restart MSFS before retrying TAA NR."); return; }
     device = current;
     if (!fence && FAILED(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)))) return;
@@ -84,7 +88,19 @@ void Submit(const ostaa::Frame* input) {
     Barrier(cmd, motion, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, shaderRead);
     Barrier(cmd, depth, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, shaderRead);
     if (FAILED(cmd->Close())) { poisoned = true; Say("TAA command recording failed. Restart MSFS."); return; }
-    ID3D12CommandList* lists[] = {cmd}; queue->ExecuteCommandLists(1, lists);
+    // ReShade exposes the native queue but CreateCommandList on its device returns
+    // a proxy. A native queue must never receive that proxy directly.
+    ComPtr<IUnknown> unwrapped;
+    ComPtr<ID3D12CommandList> submission;
+    if (SUCCEEDED(cmd->QueryInterface(optishade::ReShadeUnwrappedObject,
+            reinterpret_cast<void**>(unwrapped.GetAddressOf())))) {
+        if (!unwrapped || FAILED(unwrapped.As(&submission))) {
+            poisoned = true; Say("TAA native command-list hand-off failed."); return;
+        }
+    } else if (FAILED(cmd->QueryInterface(IID_PPV_ARGS(&submission)))) {
+        poisoned = true; Say("TAA command-list submission interface unavailable."); return;
+    }
+    ID3D12CommandList* lists[] = {submission.Get()}; queue->ExecuteCommandLists(1, lists);
     if (!Wait(queue)) { poisoned = true; Say("TAA GPU work did not finish. Restart MSFS."); return; }
     borrowedColor.Reset(); borrowedDepth.Reset(); borrowedMotion.Reset();
     if (g_nr.successfulDispatches > before) {

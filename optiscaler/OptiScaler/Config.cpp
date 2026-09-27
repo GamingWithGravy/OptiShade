@@ -344,7 +344,7 @@ bool Config::Reload(std::filesystem::path iniPath)
             DlssNrEnabled.set_from_config(false); // Explicit session opt-in, even for older INIs.
             DlssNrRunBeforeSr.set_from_config(readBool("DlssNr", "RunBeforeSR"));
             DlssNrFinishedPicture.set_from_config(readBool("DlssNr", "FinishedPicture"));
-            DlssNrTaaFallback.set_from_config(false); // INOP: ignore previously saved opt-ins.
+            DlssNrTaaFallback.set_from_config(false); // Experimental TAA input requires a fresh per-session opt-in.
             DlssNrDeferredDlss.set_from_config(readBool("DlssNr", "DeferredDLSS"));
             DlssNrResidualAcrossRr.set_from_config(readBool("DlssNr", "ResidualAcrossRR"));
             DlssNrResidualAcrossRrBlend.set_from_config(readFloat("DlssNr", "ResidualAcrossRRBlend"));

@@ -25,6 +25,7 @@ struct ImGui_ImplVulkanH_Frame* _ImVulkan_Frames = VK_NULL_HANDLE;
 static VkSemaphore* _ImVulkan_Semaphores = VK_NULL_HANDLE;
 static VkRenderPass _vkRenderPass = VK_NULL_HANDLE;
 static uint32_t _scImageCount;
+static VkSwapchainKHR _overlaySwapchain = VK_NULL_HANDLE;
 static ULONG64 _frameCount;
 
 static void SetVkObjectName(VkDevice device, VkInstance instance, VkObjectType objectType, uint64_t objectHandle,
@@ -496,11 +497,19 @@ void MenuOverlayVk::DestroyVulkanObjects(bool shutdown)
     }
 
     _ImVulkan_Info = {};
+    _overlaySwapchain = VK_NULL_HANDLE;
 
     _vkCleanMutex.unlock();
 }
 
-bool MenuOverlayVk::QueuePresent(VkQueue queue, VkPresentInfoKHR* pPresentInfo)
+bool MenuOverlayVk::CanDrawAfterEffects(VkQueue queue, const VkPresentInfoKHR* info)
+{
+    return _vulkanObjectsCreated && _scImageCount != 0 && queue == _ImVulkan_Info.Queue && info &&
+           info->swapchainCount == 1 && info->pSwapchains && info->pImageIndices &&
+           info->pSwapchains[0] == _overlaySwapchain && info->pImageIndices[0] < _scImageCount;
+}
+
+bool MenuOverlayVk::QueuePresent(VkQueue queue, VkPresentInfoKHR* pPresentInfo, PFN_vkQueueSubmit submit)
 {
     LOG_FUNC();
 
@@ -523,7 +532,11 @@ bool MenuOverlayVk::QueuePresent(VkQueue queue, VkPresentInfoKHR* pPresentInfo)
     _frameCount++;
 
     {
-        auto semaphoreIndex = _frameCount % _scImageCount;
+        // Reusing a semaphore by acquired image guarantees its previous present
+        // wait has completed, unlike cycling independently of the acquired image.
+        if (pPresentInfo->pImageIndices[0] >= _scImageCount)
+            return false;
+        auto semaphoreIndex = pPresentInfo->pImageIndices[0];
 
         ImGui_ImplVulkan_NewFrame();
 
@@ -572,19 +585,22 @@ bool MenuOverlayVk::QueuePresent(VkQueue queue, VkPresentInfoKHR* pPresentInfo)
 
                 // Submit queue and semaphores
                 LOG_DEBUG("waitSemaphoreCount: {0}", pPresentInfo->waitSemaphoreCount);
-                VkPipelineStageFlags waitStages[8] = { VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT };
+                std::vector<VkPipelineStageFlags> waitStages(pPresentInfo->waitSemaphoreCount,
+                                                           VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
                 VkSubmitInfo submit_info = {};
                 submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
                 submit_info.commandBufferCount = 1;
                 submit_info.pCommandBuffers = &fd->CommandBuffer;
-                submit_info.pWaitDstStageMask = waitStages;
+                submit_info.pWaitDstStageMask = waitStages.data();
                 submit_info.waitSemaphoreCount = pPresentInfo->waitSemaphoreCount;
                 submit_info.pWaitSemaphores = pPresentInfo->pWaitSemaphores;
                 submit_info.signalSemaphoreCount = 1;
                 submit_info.pSignalSemaphores = &_ImVulkan_Semaphores[semaphoreIndex];
 
-                auto qResult = vkQueueSubmit(_ImVulkan_Info.Queue, 1, &submit_info, fd->Fence);
+                // The effects layer supplies its downstream submit while holding
+                // queue synchronization, avoiding another effects/add-on flush.
+                auto qResult = (submit ? submit : vkQueueSubmit)(_ImVulkan_Info.Queue, 1, &submit_info, fd->Fence);
                 if (qResult != VK_SUCCESS)
                 {
                     LOG_ERROR("vkQueueSubmit error: {0:X}", (UINT) qResult);
@@ -630,6 +646,7 @@ void MenuOverlayVk::CreateSwapchain(VkDevice device, VkPhysicalDevice pd, VkInst
 
     if (_ImVulkan_Info.Device != VK_NULL_HANDLE)
     {
+        _overlaySwapchain = *pSwapchain;
         _isInited = true;
         MenuOverlayBase::VulkanReady();
         LOG_DEBUG("Vulkan ready");

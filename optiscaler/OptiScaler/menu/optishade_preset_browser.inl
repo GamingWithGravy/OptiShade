@@ -3,8 +3,9 @@ static std::string BrowserText(const std::filesystem::path& path){auto s=path.u8
 static bool importedShader=false;
 #include "optishade_zip_import.inl"
 static bool ImportLook(const std::filesystem::path& source,const std::filesystem::path& root,bool discardApproved=false){
- if(fx.dirty&&!discardApproved){strcpy_s(feedback,"Save or revert your current changes before importing a preset.");return false;}
+
  std::error_code ec;auto ext=source.extension().wstring();for(auto& ch:ext)ch=(wchar_t)towlower(ch);
+ if(ext==L".ini"&&fx.dirty&&!discardApproved){strcpy_s(feedback,"Confirm whether to discard unsaved changes before loading this preset.");return false;}
  if(ext==L".zip")return StartZipImport(source,root);
  if((ext!=L".ini"&&ext!=L".fx")||!std::filesystem::is_regular_file(source,ec)){strcpy_s(feedback,"Choose an INI preset, FX shader or ZIP package.");return false;}
  if(ext==L".fx"){
@@ -84,10 +85,10 @@ static void DrawPresetBrowser(const std::filesystem::path& root){
   ImGui::EndChild();
   if(!issue.empty())ImGui::TextWrapped("%s",issue.c_str());
   ImGui::TextWrapped(archives?"Extracts up to 256 MB / 5000 entries. Duplicate shader names are rejected. Download a ZIP first, then select it here.":shaders?"This installs one .fx file. Copy any supplied include files and textures with their original folder structure into OptiShadeData/Shaders/Custom and OptiShadeData/Textures. Existing FX files are not overwritten.":"Existing presets are kept; an imported duplicate gets a new name. Missing FX files trigger an offer to install matching catalogue packages.");
-  ImGui::BeginDisabled(selected.empty()||(fx.dirty&&(shaders||archives))||fx.loading||zipProcess);
+  ImGui::BeginDisabled(selected.empty()||fx.loading||zipProcess);
   if(ImGui::Button(archives?"Extract ZIP and recompile":shaders?"Copy FX and recompile":"Copy INI and load look")){if(fx.dirty&&!shaders&&!archives){pendingIni=selected;pendingRoot=root;askDiscard=true;ImGui::CloseCurrentPopup();}else if(ImportLook(selected,root))ImGui::CloseCurrentPopup();}
   ImGui::EndDisabled();ImGui::SameLine();if(ImGui::Button("Cancel"))ImGui::CloseCurrentPopup();
-  if(fx.dirty)ImGui::TextWrapped(shaders||archives?"Save or revert your unsaved changes first.":"Loading this INI will ask before discarding unsaved changes.");
+  if(fx.dirty)ImGui::TextWrapped(shaders||archives?"Installing files keeps your current preset and unsaved settings.":"Loading this INI will ask before discarding unsaved changes.");
   if(feedback[0])ImGui::TextWrapped("%s",feedback);ImGui::EndPopup();
  }
  if(askDiscard){ImGui::OpenPopup("Unsaved changes");askDiscard=false;}

@@ -55,7 +55,8 @@ function GetFusionCompatibility([string]$Game,[string]$Exe,$Gpu,[string]$Launche
  $truck=[IO.Path]::GetFileName($Exe) -in @('eurotrucks2.exe','amtrucks.exe')
  # Truck Simulator's external feed/add-on route is not implemented by this build.
  # Copied NVIDIA DLLs in its EXE folder must not turn this into a positive result.
- $possible=$msfs -or ($inputs.Count -gt 0 -and -not $truck)
+ $xp12=[IO.Path]::GetFileName($Exe) -eq 'X-Plane.exe'
+ $possible=$msfs -or $xp12 -or ($inputs.Count -gt 0 -and -not $truck)
  $addons=@()
  if($Exe){$addons=@(Get-ChildItem -LiteralPath (Split-Path $Exe) -Filter '*.addon64' -ErrorAction SilentlyContinue|Where-Object Name -match '(?i)dlss5|renodx')}
  # The selected executable is authoritative; folder names must not override a Steam copy.
@@ -63,6 +64,7 @@ function GetFusionCompatibility([string]$Game,[string]$Exe,$Gpu,[string]$Launche
  $performance=if($possible){'Possible upscaling connection found. Enable a supported upscaler in the game; this check cannot confirm it is running.'}elseif($truck){'No supported upscaler connection found. Use image effects in this game; installing DLSS files alone will not add DLSS.'}else{'No supported upscaler connection found. Image effects can be tried; upscaling is unconfirmed. Some games hide their upscaler inside the game code.'}
  if(Test-Path -LiteralPath (Join-Path (Split-Path $Exe) 'FlightSimulator.exe')){$performance+=' MSFS 2020: select DirectX 12 and DLSS in the simulator, restart, then enter a flight. Test effects and upscaling before enabling optional NR or frame generation.'}
  $neural=if(-not $Gpu.Known){'DLSS neural rendering: graphics card unknown. NVIDIA downloads are skipped.'}elseif(-not $rtx){'DLSS neural rendering is not supported by this build on the detected card. FSR/XeSS are separate options in compatible games.'}elseif(-not $possible){'DLSS neural rendering: no compatible game connection identified. NVIDIA downloads are skipped.'}else{'DLSS neural rendering needs a matching RTX model and a supported rendering path. Files alone do not enable it; it stays off by default.'}
+ if($xp12){$performance='X-Plane 12 Vulkan: image effects and experimental NR input. No DLSS upscaling or frame-generation connection is claimed. Launch through OptiShade Play.';$neural+=' XP12 NR: SDR up to 3840x2160, one full-resolution pass; enable the guide technique and NR in game.'}
  $generation=if($Gpu.Names -match '(?i)RTX\s*40\d\d'){'RTX 40'}elseif($Gpu.Names -match '(?i)RTX\s*50\d\d'){'RTX 50'}elseif($Gpu.Names -match '(?i)RTX\s*[23]0\d\d'){'RTX 20/30'}else{'Unknown'}
  if($generation -eq 'RTX 40'){$neural+=' RTX 40-series: image effects are supported; neural rendering is experimental and needs the verified 310.8 compatibility runtime. The original RTX 50 model cannot be used. No RTX 40 rendering test is claimed.'}
  if($generation -eq 'RTX 20/30'){$neural+=' RTX 20/30-series: use image effects first. Neural rendering is experimental, requires the compatibility runtime and may be too slow.'}
@@ -73,7 +75,7 @@ function FormatFusionCompatibility($Plan){
  $lines=@(('GPU: '+$Plan.Gpu),('Performance: '+$Plan.Performance),$Plan.NeuralRendering)
  if($Plan.PSObject.Properties['DriverVersions']){foreach($driver in $Plan.DriverVersions){$lines+=('Driver: '+$driver.Name+' - '+$driver.Version+' (Windows: '+$driver.WindowsVersion+')')}}
  if($Plan.PSObject.Properties['NeuralRuntime']){$nr=$Plan.NeuralRuntime;$lines+=@(('Required model: '+$nr.Expected),('Model status: '+$nr.State+' - '+$nr.Message),('Checked location: '+$nr.Path),('Model file version: '+$nr.Version),$nr.DriverAssessment)}
- if($Plan.DownloadNvidia){$lines+='Automatic downloads: DLSS 310.9.1 / Streamline 2.14.1. The separate neural-rendering model is chosen by GPU family and verified hash, not driver version alone.'}
+ if($Plan.DownloadNvidia -and [IO.Path]::GetFileName($Plan.Executable) -ne 'X-Plane.exe'){$lines+='Automatic downloads: DLSS 310.9.1 / Streamline 2.14.1. The separate neural-rendering model is chosen by GPU family and verified hash, not driver version alone.'}
  if(-not $Plan.ScanComplete){$lines+='The file check was limited or some folders could not be read.'}
  if($Plan.ExternalAddons.Count){$lines+=('Another DLSS/ReShade add-on setup was found: '+($Plan.ExternalAddons -join ', ')+'. Install will offer to back up and replace it; Restore puts it back.')}
  foreach($hit in $Plan.InputEvidence){$lines+=([IO.Path]::GetFileName($hit.File)+' - found version '+$hit.Version+' (not proof it is used)')}

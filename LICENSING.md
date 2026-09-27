@@ -75,6 +75,11 @@ of software or artwork where an existing licence permits it. See BRANDING.md.
 
 ## Separate future work
 
+The optional RTXMFG binary is distributed unchanged from dashdogy's upstream
+release under its applicable third-party terms. Original RTXMFG code is MIT;
+OptiShade proprietary designations do not cover it. Its notices and provenance
+are in installer/OptionalMFG and are packaged under Licenses/RTXMFG.
+
 Future independently developed material can carry separate terms only where
 its owners have the necessary rights and those terms are compatible with its
 dependencies and distribution. No such future restriction applies retroactively

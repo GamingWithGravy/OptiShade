@@ -1,32 +1,44 @@
 <div align="center">
   <img src="docs/images/optishade.png" width="160" alt="Optishade OS logo">
   <h1>Optishade</h1>
-  <p><strong>Microsoft Flight Simulator 2024 · Microsoft Flight Simulator 2020</strong></p>
+  <p><strong>Microsoft Flight Simulator 2024 · Microsoft Flight Simulator 2020 · X-Plane 12 (experimental)</strong></p>
   <p>Created by gravy · Powered by Fusion Engine</p>
   <p>
-    <img src="https://img.shields.io/badge/Version-0.20.12-9755E9?style=flat-square" alt="Version 0.20.12">
+    <img src="https://img.shields.io/badge/Version-0.21-9755E9?style=flat-square" alt="Version 0.21">
     <img src="https://img.shields.io/badge/Windows-x64-272133?style=flat-square" alt="Windows x64">
     <img src="https://img.shields.io/badge/Graphics-NVIDIA%20%2B%20AMD-9755E9?style=flat-square" alt="NVIDIA and AMD graphics">
   </p>
   <p><a href="https://github.com/GamingWithGravy/OptiShade/releases/latest"><strong>Download OptiShade Manager</strong></a> · <a href="docs/Tutorial.txt">Getting started</a> · <a href="docs/Features.txt">Features</a> · <a href="BUILDING.md">Build from source</a></p>
 </div>
 
+<p align="center"><a href="https://buymeacoffee.com/GamingWithGravy"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support%20OptiShade-8650C8?style=for-the-badge" alt="Buy Me a Coffee — optional support for OptiShade"></a></p>
+
 ![OptiShade Manager](docs/images/installer.png)
 
 ## Your flight. Your look.
 
-Optishade brings image effects, saved looks and optional NVIDIA neural rendering together in one custom in-game menu. This edition is built for **Microsoft Flight Simulator 2024 on NVIDIA and AMD graphics cards (AMD support is early experimental)**, with automatic Steam and Xbox detection.
+Optishade brings image effects, saved looks and optional NVIDIA neural rendering together in one custom in-game menu. This edition supports **Microsoft Flight Simulator 2024 and 2020, plus experimental X-Plane 12**, with image effects and supported performance options on NVIDIA and AMD graphics cards, with automatic Steam and Xbox detection.
+
+### New in 0.21 XP12
+
+- Experimental X-Plane 12 installation, Vulkan image effects and optional Neural Rendering.
+- Experimental native-TAA NR option for MSFS DirectX 12, with frame generation off.
+- Portable manager ZIP alongside the regular EXE.
+- Diagnostics ask for an issue description and save to Desktop with an Open file location confirmation.
+- Improved import feedback and missing-FX checks.
+- Close the simulator and choose **Update OptiShade** in the new manager. No Restore is normally required; Repair only repairs the matching installed version.
+- Share reports in the **diagnostic zips** channel in [BlackBox Discord](https://discord.gg/6hjR9cSsy7).
 
 ### New in 0.20.12
 
 - Fixed custom menu key bindings reaching the sim and triggering aircraft controls when opening or closing the UI.
 - Preset HotSwap now uses Preset 1 and Preset 2, with an on-screen notification showing the active preset after a swap.
-- Close MSFS and use Repair OptiShade to update. No restore or uninstall needed; restart MSFS afterwards.
+- Close MSFS before updating. In this manager, Repair requires the matching installed version; use the update workflow for a newer version.
 
 ### New in 0.20.11
 
 - Preset HotSwap: choose two different looks and switch between them with your own key.
-- Update existing installations with Repair OptiShade, then restart MSFS. No restore or uninstall needed.
+- Restart MSFS after updating. Repair behaviour depends on the manager version; matching-version repair does not install an update.
 
 ### New in 0.20.10
 
@@ -47,7 +59,7 @@ Search your FX shaders, switch effects on, adjust their settings and save a name
 
 Neural rendering always starts **off**, even with older saved settings. Your tuning
 values are retained; enable neural rendering manually for each game session.
-[TAA neural rendering](docs/TAA-preview.md) is Coming soon (INOP) and disabled in this release.
+[Experimental TAA neural rendering](docs/TAA-preview.md) is available for MSFS DirectX 12. X-Plane 12 uses the Vulkan guide-input path; launch it with Play in OptiShade. Both paths require compatible RTX hardware, SDR and full-resolution guides. X-Plane frame generation and DLSS upscaling are not provided.
 
 Choose **Yes or No** when setup asks about DLSS 5. Neural rendering requires compatible RTX hardware, a matching model and a supported game connection. Installing files does not automatically enable it or prove it is rendering. Extra effects and neural passes can reduce frame rate.
 

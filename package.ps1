@@ -1,5 +1,9 @@
 ﻿$ErrorActionPreference='Stop'
 $root=$PSScriptRoot;$payload=Join-Path $root 'installer/PayloadFusion'
+if((Get-FileHash "$root/installer/OptionalMFG/RTXMFG.dll").Hash -ne 'E9CA3587854EEB723E0579F7DDF6CFB1E6CF4BED79B0D75BC716003ED98FE040'){throw 'Pinned RTXMFG payload hash mismatch'}
+New-Item -ItemType Directory -Path "$payload/OptiShadeData/MFG","$payload/OptiShadeData/Licenses/RTXMFG" -Force|Out-Null
+Copy-Item "$root/installer/OptionalMFG/RTXMFG.dll" "$payload/OptiShadeData/MFG/RTXMFG.dll" -Force
+foreach($notice in @('LICENSE.txt','LICENSE-UAL.txt','LICENSE-ImGui.txt','LICENSE-MinHook.txt','UPSTREAM-README.md','UPSTREAM-BUILD.md','PROVENANCE.md')){Copy-Item -LiteralPath "$root/installer/OptionalMFG/$notice" -Destination "$payload/OptiShadeData/Licenses/RTXMFG" -Force}
 if(Test-Path "$root/installer/DefaultEffects"){New-Item -ItemType Directory -Path "$payload/OptiShadeData" -Force|Out-Null;Copy-Item "$root/installer/DefaultEffects/*" "$payload/OptiShadeData" -Recurse -Force}
 New-Item -ItemType Directory -Path $payload,(Join-Path $payload 'OptiShadeData/Presets'),(Join-Path $payload 'OptiShadeData/Shaders'),(Join-Path $payload 'OptiShadeData/Textures'),(Join-Path $payload 'OptiShadeData/Cache'),(Join-Path $payload 'OptiShadeData/Licenses'),(Join-Path $payload 'OptiShadeData/Engine/D3D12_OptiScaler') -Force|Out-Null
 Copy-Item "$root/optiscaler/x64/Release/OptiScaler.dll" "$payload/winmm.dll" -Force
@@ -69,6 +73,14 @@ Copy-Item "$root/installer/import-effects.ps1" "$payload/OptiShadeData/Tools/imp
 Copy-Item "$root/installer/EffectPackages.ini" "$payload/OptiShadeData/Tools/EffectPackages.ini" -Force
 New-Item -ItemType Directory -Path "$payload/OptiShadeData/Tools/StandardHeaders" -Force|Out-Null
 Copy-Item "$root/installer/DefaultEffects/Shaders/Packages/00/ReShade*.fxh" "$payload/OptiShadeData/Tools/StandardHeaders" -Force
+New-Item -ItemType Directory -Path "$payload/OptiShadeData/Vulkan" -Force|Out-Null
+@'
+{"file_format_version":"1.2.0","layer":{"name":"VK_LAYER_reshade","type":"GLOBAL","library_path":"../../ReShade64.dll","api_version":"1.3.268","implementation_version":"1","description":"OptiShade Vulkan image effects","device_extensions":[{"name":"VK_EXT_tooling_info","spec_version":"1","entrypoints":["vkGetPhysicalDeviceToolPropertiesEXT"]}]}}
+'@ | Set-Content -LiteralPath "$payload/OptiShadeData/Vulkan/OptiShade.json" -Encoding ASCII
+"Techniques=OptiShade_TAA_Guides@OptiShade_TAA_Guides.fx`r`nTechniqueSorting=OptiShade_TAA_Guides@OptiShade_TAA_Guides.fx" | Set-Content -LiteralPath "$payload/OptiShadeData/Presets/X-Plane neural guides.ini" -Encoding ASCII
+# Fail closed on local evidence accidentally left in the embedded payload.
+$private=@(Get-ChildItem -LiteralPath $payload -File -Recurse|Where-Object {$_.Name -match '(?i)(diagnostics-|Import-result-|\.dmp$|\.log$|Codex_|Licensing-review-|Ownership-licensing-audit|Release-.*draft|test-results|test-notes)'})
+if($private.Count){throw ('Private/debug files found in package staging: '+($private.Name -join ', '))}
 $files=@(Get-ChildItem $payload -File -Recurse|Where-Object {$_.FullName -ne (Join-Path $payload 'files.json')}|ForEach-Object {[pscustomobject]@{Path=$_.FullName.Substring($payload.Length+1);Hash=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash}})
 $files|ConvertTo-Json|Set-Content "$payload/files.json" -Encoding UTF8
 $preview=Join-Path $root 'dist'
@@ -77,7 +89,7 @@ Push-Location "$root/installer"
 try{
  & go test -count=1 -v .
  if($LASTEXITCODE){throw 'Embedded payload verification failed. Installer was not built.'}
- & go build -trimpath -ldflags '-H=windowsgui -s -w' -o "$preview/OptiShade_Version_0.20.12.exe" .
+ & go build -trimpath -ldflags '-H=windowsgui -s -w' -o "$preview/OptiShade_Version_0.21.exe" .
  if($LASTEXITCODE){throw 'Installer build failed.'}
 }finally{Pop-Location}
 Write-Output "Built: $preview"

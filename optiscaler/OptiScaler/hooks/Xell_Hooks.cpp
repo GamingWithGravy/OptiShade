@@ -69,27 +69,33 @@ bool XellHooks::canLimit() { return gamesContextCanLimitFps; }
 // only DX12
 bool XellHooks::update()
 {
+    // Present must fall back whenever this backend no longer applies a limit.
+    gamesContextCanLimitFps = false;
     if (!o_xellGetSleepMode || !o_xellSetSleepMode || blockExternal || gamesContext == nullptr)
         return false;
 
-    xell_sleep_params_t currentParams;
-    o_xellGetSleepMode(gamesContext, &currentParams);
+    xell_sleep_params_t currentParams {};
+    if (o_xellGetSleepMode(gamesContext, &currentParams) != XELL_RESULT_SUCCESS)
+        return false;
 
     if (!currentParams.bLowLatencyMode)
         return false;
 
-    gamesContextCanLimitFps = true;
-
-    static float lastFpslimit = 0.0f;
-    if (lastFpslimit == Config::Instance()->FramerateLimit.value_or_default())
+    const float fpsLimit = Config::Instance()->FramerateLimit.value_or_default();
+    const uint32_t interval = std::isfinite(fpsLimit) && fpsLimit > 0.0f
+                                  ? static_cast<uint32_t>(std::clamp(std::round(1'000'000.0 / fpsLimit),
+                                                                    1.0, double(UINT32_MAX)))
+                                  : 0u;
+    // Compare actual backend state, not a cached request: games can replace a
+    // context or overwrite its sleep parameters while the configured cap stays fixed.
+    if (currentParams.minimumIntervalUs == interval)
+    {
+        gamesContextCanLimitFps = true;
         return false;
-    lastFpslimit = Config::Instance()->FramerateLimit.value_or_default();
-    if (lastFpslimit <= 0.0f)
-        currentParams.minimumIntervalUs = 0u;
-    else
-        currentParams.minimumIntervalUs = static_cast<uint32_t>(std::round(1'000'000 / lastFpslimit));
-
-    return o_xellSetSleepMode(gamesContext, &currentParams) == XELL_RESULT_SUCCESS;
+    }
+    currentParams.minimumIntervalUs = interval;
+    gamesContextCanLimitFps = o_xellSetSleepMode(gamesContext, &currentParams) == XELL_RESULT_SUCCESS;
+    return gamesContextCanLimitFps;
 }
 
 xell_result_t XellHooks::hkxellDestroyContext(xell_context_handle_t context)

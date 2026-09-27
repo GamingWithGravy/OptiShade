@@ -2,14 +2,14 @@
   "FixedFileInfo": {
     "FileVersion": {
       "Major": 0,
-      "Minor": 20,
-      "Patch": 12,
+      "Minor": 21,
+      "Patch": 0,
       "Build": 0
     },
     "ProductVersion": {
       "Major": 0,
-      "Minor": 20,
-      "Patch": 12,
+      "Minor": 21,
+      "Patch": 0,
       "Build": 0
     }
   },
@@ -17,8 +17,8 @@
     "CompanyName": "created by gravy",
     "FileDescription": "OptiShade Manager - Your simulator. Your way.",
     "ProductName": "OptiShade Manager",
-    "FileVersion": "0.20.12.0",
-    "ProductVersion": "0.20.12.0"
+    "FileVersion": "0.21.0.0",
+    "ProductVersion": "0.21.0.0"
   },
   "IconPath": "OptiShade.ico"
 }

@@ -18,18 +18,30 @@ import (
  "unsafe"
 )
 
-//go:embed DumpSummary.cs crash-dumps.ps1 diagnostics.ps1 menu-settings.ps1 import-effects.ps1 dialog-theme.xaml release-notes.ps1 neural-download.ps1 recovery.ps1 FusionCinema/* Help/*.txt updates.ps1 update-worker.ps1 update-install.ps1 compatibility.ps1 manager.ps1 library.ps1 ownership.ps1 effects.ps1 consent.ps1 EffectPackages.ini all:PayloadFusion FusionSetup.exe manager.xaml OptiShade.ico OptiShade-app.ico OptiShade-icon.png nvidia.ps1 nvidia-files.json streamline-files.json
+//go:embed mfg.ps1 DumpSummary.cs crash-dumps.ps1 diagnostics.ps1 menu-settings.ps1 import-effects.ps1 dialog-theme.xaml support.ps1 release-notes.ps1 neural-download.ps1 recovery.ps1 FusionCinema/* Help/*.txt updates.ps1 update-worker.ps1 update-install.ps1 compatibility.ps1 manager.ps1 library.ps1 ownership.ps1 effects.ps1 consent.ps1 EffectPackages.ini all:PayloadFusion FusionSetup.exe manager.xaml OptiShade.ico OptiShade-app.ico OptiShade-icon.png nvidia.ps1 nvidia-files.json streamline-files.json
 var bundle embed.FS
+
+func managerStore(executable, localAppData string) (string, bool) {
+ if info, err := os.Stat(filepath.Join(filepath.Dir(executable), "portable.txt")); err == nil && !info.IsDir() {
+  return filepath.Join(filepath.Dir(executable), "Data"), true
+ }
+ return filepath.Join(localAppData, "OptiShade"), false
+}
 
 func main() {
  updating:=len(os.Args)>1&&(os.Args[1]=="--apply-update"||os.Args[1]=="--check-update")
+ original, err := os.Executable(); if err != nil { os.Exit(1) }
+ store, portable := managerStore(original, os.Getenv("LOCALAPPDATA"))
+ if portable {
+  os.Setenv("OPTISHADE_PORTABLE", "1")
+ } else { os.Unsetenv("OPTISHADE_PORTABLE") }
+ os.Setenv("OPTISHADE_STORE", store)
  result:="";if updating&&len(os.Args)>2{result=os.Args[2]}
  fail:=func(err error){
-  if updating{folder:=filepath.Join(os.Getenv("LOCALAPPDATA"),"OptiShade");os.MkdirAll(folder,0700);os.WriteFile(filepath.Join(folder,"Update-error.txt"),[]byte(err.Error()),0600);if result!=""{os.WriteFile(result,[]byte("ERROR: "+err.Error()),0600)}}
+  if updating{folder:=store;os.MkdirAll(folder,0700);os.WriteFile(filepath.Join(folder,"Update-error.txt"),[]byte(err.Error()),0600);if result!=""{os.WriteFile(result,[]byte("ERROR: "+err.Error()),0600)}}
   os.Exit(1)
  }
- original, err := os.Executable(); if err != nil { os.Exit(1) }
- root := filepath.Join(os.Getenv("LOCALAPPDATA"), "OptiShade", "Sessions")
+ root := filepath.Join(store, "Sessions")
  if err=os.MkdirAll(root,0700);err!=nil{fail(err)}
  var required uint64=64*1024*1024
  err=fs.WalkDir(bundle,".",func(path string,d fs.DirEntry,e error)error{if e!=nil{return e};if !d.IsDir(){info,e:=d.Info();if e!=nil{return e};required+=uint64(info.Size())};return nil});if err!=nil{fail(err)}

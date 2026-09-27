@@ -15,7 +15,8 @@ function EnsureNeuralRuntime([string]$ManifestPath,$Gpu,[scriptblock]$Progress={
  AssertClosed $manifest.Game
  $target=OwnedPath $manifest.Game 'nvngx_dlssnr.dll'
  if((HashFile $target) -eq $selection.ModelHash){if($selection.Signed){AssertNvidiaFile $target};&$Progress 'Correct neural model already installed; download skipped.';return}
- $temp=Join-Path $env:LOCALAPPDATA ('OptiShade/Downloads/NR-'+[guid]::NewGuid().ToString('N'))
+ $downloadStore=if($env:OPTISHADE_STORE){$env:OPTISHADE_STORE}else{Join-Path $env:LOCALAPPDATA 'OptiShade'}
+ $temp=Join-Path $downloadStore ('Downloads/NR-'+[guid]::NewGuid().ToString('N'))
  New-Item -ItemType Directory -Path $temp -Force|Out-Null
  $archivePath=Join-Path $temp 'model.zip';$modelPath=Join-Path $temp 'nvngx_dlssnr.dll'
  try{

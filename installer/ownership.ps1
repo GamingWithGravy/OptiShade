@@ -1,4 +1,19 @@
 ﻿$ErrorActionPreference='Stop'
+function GetBundledOptiShadeVersion { 'P0.21' }
+function TestBundledUpdateVersion($Manifest){
+ try{
+  $installed=[regex]::Match([string]$Manifest.Version,'\d+\.\d+(?:\.\d+){0,2}').Value
+  $bundled=[regex]::Match((GetBundledOptiShadeVersion),'\d+\.\d+(?:\.\d+){0,2}').Value
+  if(-not $installed -or -not $bundled){return $false}
+  return ([version]$bundled -gt [version]$installed)
+ }catch{return $false}
+}
+function AssertRepairVersion($Manifest){
+    $bundled=GetBundledOptiShadeVersion
+    if(-not $Manifest.Version -or $Manifest.Version -cne $bundled){
+        throw "Repair requires the installer matching the installed version ($($Manifest.Version)). This installer contains $bundled. Repair will not update or downgrade OptiShade."
+    }
+}
 function FullPath([string]$Path){[IO.Path]::GetFullPath($Path).TrimEnd('\','/')}
 function HashFile([string]$Path){if(Test-Path -LiteralPath $Path -PathType Leaf){(Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash}else{''}}
 function OwnedPath([string]$Root,[string]$Relative){
@@ -71,7 +86,7 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
     $files=@();$index=0;$transaction=[guid]::NewGuid().ToString('N')
     # Keep the original ownership chain across upgrades. Orphaned data is backed up
     # as pre-existing user data so Restore can recover it instead of deleting it.
-    if($old){$files=@($old.Files|ForEach-Object {@{Path=$_.Path;SourcePath='';Hash=$_.Hash;PreviousHash=$_.PreviousHash;Backup=$_.Backup;Mutable=$_.Mutable;Retained=($_.Path -match '^OptiShadeData[\\/](Presets|Shaders|Textures)[\\/]' -or ($PreserveConfiguration -and $_.Path -match '\.ini$') -or $_.Path -match 'Effects-install\.json$' -or $_.Path -eq 'nvngx_dlssnr.dll')}})}
+    if($old){$files=@($old.Files|ForEach-Object {@{Path=$_.Path;SourcePath='';Hash=$_.Hash;PreviousHash=$_.PreviousHash;Backup=$_.Backup;Mutable=$_.Mutable;Retained=($_.Path -match '^OptiShadeData[\\/](Presets|Shaders|Textures)[\\/]' -or ($PreserveConfiguration -and $_.Path -match '\.ini$') -or $_.Path -match 'Effects-install\.json$' -or $_.Path -eq 'nvngx_dlssnr.dll' -or ($old.OptionalMfg -and $_.Path -eq 'version.dll'))}})}
     elseif($ReplaceExisting -and (Test-Path -LiteralPath $data)){
         foreach($entry in Get-ChildItem -LiteralPath $data -File -Recurse -Force){
             $relative=$entry.FullName.Substring($Game.Length+1);$previous=HashFile $entry.FullName
@@ -81,7 +96,8 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
     }
     foreach($entry in $catalog){
         $bundledLook=$entry.Path -match '^OptiShadeData[\\/](Shaders[\\/]Custom[\\/]Gravy_FusionCinema\.fx|Presets[\\/](My look\.ini|Gravy - Fusion Cinema Custom v1\.ini))$'
-        if(-not $IncludeEffects -and $entry.Path -match '^OptiShadeData[\\/](Shaders|Textures|Presets)[\\/]' -and -not $bundledLook){continue}
+        $neuralGuides=$entry.Path -match '^OptiShadeData[\\/](Shaders[\\/]OptiShadeTaa[\\/]|Textures[\\/]vort_BlueNoise\.png$|Presets[\\/]X-Plane neural guides\.ini$)'
+        if(-not $IncludeEffects -and $entry.Path -match '^OptiShadeData[\\/](Shaders|Textures|Presets)[\\/]' -and -not $bundledLook -and -not $neuralGuides){continue}
         $source=OwnedPath $Payload $entry.Path;$relative=if($entry.Path -eq 'winmm.dll'){$Proxy}else{$entry.Path};$dest=OwnedPath $Game $relative
         if((HashFile $source) -ne $entry.Hash){throw "Installer payload is damaged: $($entry.Path)"}
         # Keep download receipts on repair/reinstall; bundled defaults must not erase them.
@@ -106,7 +122,7 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
         if($files.Path -contains $conflict.Path){
             $tracked=@($files|Where-Object Path -eq $conflict.Path)[0]
             if($PreserveConfiguration -and $tracked.Retained -and $conflict.Path -match '\.ini$'){continue}
-            if($tracked.Retained -and $conflict.Path -eq 'nvngx_dlssnr.dll'){continue};if($tracked.Retained){$tracked.Retained=$false;$tracked.Hash=''}
+            if($tracked.Retained -and ($conflict.Path -eq 'nvngx_dlssnr.dll' -or ($old.OptionalMfg -and $conflict.Path -eq 'version.dll'))){continue};if($tracked.Retained){$tracked.Retained=$false;$tracked.Hash=''}
             continue
         }
         $backup='Backups/'+$transaction+'-mod-'+$index;$previous=$conflict.Hash;$source=OwnedPath $Game $conflict.Path
@@ -120,7 +136,8 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
         if($hash){Copy-Item -LiteralPath $dest -Destination $copy;if((HashFile $copy) -ne $hash){throw 'Rollback snapshot verification failed.'}}
         $rollback+=@{Path=$entry.Path;Hash=$hash;Copy=$copy}
     }
-    $manifest=@{Version='P0.20.12-MSFS24';Game=$Game;Installer=(FullPath $Installer);Status='Installing';Files=$files;OwnedDirectories=@('OptiShadeData');IncludeEffects=$IncludeEffects;PreserveThirdParty=$true;Created=(Get-Date -Format o)}
+    $manifest=@{Version=(GetBundledOptiShadeVersion);Game=$Game;Installer=(FullPath $Installer);Status='Installing';Files=$files;OwnedDirectories=@('OptiShadeData');IncludeEffects=$IncludeEffects;PreserveThirdParty=$true;Created=(Get-Date -Format o)}
+    if($old -and $old.OptionalMfg){$manifest.OptionalMfg=$true;$manifest.OptionalMfgVersion=$old.OptionalMfgVersion}
     WriteState $manifest $mp
     try{
         # The entry-point proxy is copied last so an incomplete install cannot start.
@@ -132,6 +149,14 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
             if(-not $entry.SourcePath){if(Test-Path -LiteralPath $dest){Remove-Item -LiteralPath $dest -Force};continue}
             Copy-Item -LiteralPath (OwnedPath $Payload $entry.SourcePath) -Destination $dest -Force
             if((HashFile $dest) -ne $entry.Hash){throw 'Installed file verification failed.'}
+        }
+        if((Test-Path -LiteralPath (Join-Path $Game 'X-Plane.exe')) -and -not $PreserveConfiguration){
+            $config=OwnedPath $Game 'ReShade.ini'
+            if(Test-Path -LiteralPath $config){
+                $text=[IO.File]::ReadAllText($config) -replace '(?m)^PresetPath=.*$','PresetPath=.\OptiShadeData\Presets\X-Plane neural guides.ini'
+                [IO.File]::WriteAllText($config,$text,[Text.UTF8Encoding]::new($false))
+                ($manifest.Files|Where-Object Path -eq 'ReShade.ini').Hash=HashFile $config
+            }
         }
         $manifest.Status='Installed';WriteState $manifest $mp
     }catch{
@@ -277,5 +302,3 @@ function UninstallFusion([string]$StateRoot,[string]$Installer,[string]$ActiveSe
         Get-ChildItem -LiteralPath $root -Force -Recurse -Directory|Sort-Object FullName -Descending|ForEach-Object {if(-not(Get-ChildItem -LiteralPath $_.FullName -Force)){Remove-Item -LiteralPath $_.FullName}}
     }else{Remove-Item -LiteralPath $root -Recurse -Force}
 }
-
-

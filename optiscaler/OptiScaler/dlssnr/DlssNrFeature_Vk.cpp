@@ -17,6 +17,7 @@
 #include <cmath>
 #include <cstring>
 #include <memory>
+#include <limits>
 #include <mutex>
 #include <string>
 
@@ -65,6 +66,9 @@ struct VkState
     PFN_VkCreate create = nullptr;
     PFN_VkEvaluate evaluate = nullptr;
     PFN_VkRelease release = nullptr;
+    void (__cdecl* probeFloat)(void*, const char*, float, int) = nullptr;
+    void (__cdecl* setFloatSlot)(int) = nullptr;
+    int floatSlot = -1;
 
     VkInstance instance = VK_NULL_HANDLE;
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
@@ -157,6 +161,29 @@ constexpr uint32_t kTimingSlots = 4;
 
 VkState g_vk;
 std::mutex g_vkMutex;
+
+// Local XP12 probe only: nine 4x4 tiles from input/output, nine captures per process.
+// No screenshots are retained; coherent readback is read only after its GPU event signals.
+struct PixelProbe {
+    VkBuffer buffer = VK_NULL_HANDLE;
+    VkDeviceMemory memory = VK_NULL_HANDLE;
+    VkEvent ready = VK_NULL_HANDLE;
+    void* mapped = nullptr;
+    bool pending = false, disabled = false;
+    unsigned captures = 0;
+    unsigned long long frame = 0;
+};
+PixelProbe g_pixelProbe;
+constexpr VkDeviceSize kPixelProbeHalf = 9 * 4 * 4 * 4 * sizeof(uint16_t);
+
+void DestroyPixelProbe()
+{
+    if (g_pixelProbe.mapped) vkUnmapMemory(g_vk.device, g_pixelProbe.memory);
+    if (g_pixelProbe.ready) vkDestroyEvent(g_vk.device, g_pixelProbe.ready, nullptr);
+    if (g_pixelProbe.buffer) vkDestroyBuffer(g_vk.device, g_pixelProbe.buffer, nullptr);
+    if (g_pixelProbe.memory) vkFreeMemory(g_vk.device, g_pixelProbe.memory, nullptr);
+    g_pixelProbe = {};
+}
 
 void Fail(const char* why)
 {
@@ -395,6 +422,109 @@ void Transition(VkCommandBuffer cmd, OwnedImage& img, VkImageLayout to)
     img.layout = to;
 }
 
+float PixelProbeHalf(uint16_t value)
+{
+    const unsigned exponent = (value >> 10) & 31, fraction = value & 1023;
+    const float sign = value & 0x8000 ? -1.0f : 1.0f;
+    if (exponent == 31) return fraction ? std::numeric_limits<float>::quiet_NaN()
+                                       : sign * std::numeric_limits<float>::infinity();
+    return sign * (exponent ? std::ldexp(1.0f + fraction / 1024.0f, int(exponent) - 15)
+                            : std::ldexp(float(fraction), -24));
+}
+
+void ProbeTaaPixels(VkCommandBuffer cmd)
+{
+    auto& p = g_pixelProbe;
+    if (p.disabled) return;
+    if (p.pending) {
+        const auto status = vkGetEventStatus(g_vk.device, p.ready);
+        if (status == VK_EVENT_RESET) return;
+        if (status != VK_EVENT_SET) {
+            LOG_WARN("XP12 NR pixel probe: event status {}; no CPU read performed", (int)status);
+            p.disabled = true; return;
+        }
+        const auto* input = static_cast<const uint16_t*>(p.mapped);
+        const auto* output = input + kPixelProbeHalf / sizeof(uint16_t);
+        double sum = 0, maximum = 0, inputSum = 0, outputSum = 0;
+        unsigned changed = 0, finite = 0, nonfinite = 0;
+        for (unsigned pixel = 0; pixel < 144; ++pixel) {
+            for (unsigned channel = 0; channel < 3; ++channel) {
+                const auto index = pixel * 4 + channel;
+                const float a = PixelProbeHalf(input[index]), b = PixelProbeHalf(output[index]);
+                if (!std::isfinite(a) || !std::isfinite(b)) { ++nonfinite; continue; }
+                const double delta = std::abs(double(a) - b);
+                sum += delta; maximum = std::max(maximum, delta);
+                inputSum += a; outputSum += b; ++finite;
+                if (delta > 1.0 / 255.0) ++changed;
+            }
+        }
+        LOG_INFO("XP12 NR pixel probe: capture={} frame={} sampled-pixels=144 finite-channels={} nonfinite={} mean-abs-delta={} max-abs-delta={} channels-over-1/255={} input-mean={} output-mean={} (sparse raw FP16 samples; not whole-frame proof)",
+                 p.captures, p.frame, finite, nonfinite, finite ? sum / finite : 0,
+                 maximum, changed, finite ? inputSum / finite : 0, finite ? outputSum / finite : 0);
+        p.pending = false;
+        vkResetEvent(g_vk.device, p.ready);
+    }
+    if (p.captures >= 9 || g_vk.frames < 60 || (g_vk.frames - 60) % 900 != 0) return;
+    if (g_vk.proxy.format != VK_FORMAT_R16G16B16A16_SFLOAT ||
+        g_vk.output.format != VK_FORMAT_R16G16B16A16_SFLOAT ||
+        g_vk.proxy.width != g_vk.output.width || g_vk.proxy.height != g_vk.output.height ||
+        g_vk.proxy.width < 16 || g_vk.proxy.height < 16) {
+        LOG_WARN("XP12 NR pixel probe: incompatible input/output dimensions or format");
+        p.disabled = true; return;
+    }
+    if (!p.buffer) {
+        VkBufferCreateInfo info { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+        info.size = kPixelProbeHalf * 2;
+        info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        bool ok = vkCreateBuffer(g_vk.device, &info, nullptr, &p.buffer) == VK_SUCCESS;
+        if (ok) {
+            VkMemoryRequirements req {};
+            vkGetBufferMemoryRequirements(g_vk.device, p.buffer, &req);
+            VkMemoryAllocateInfo alloc { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+            alloc.allocationSize = req.size;
+            alloc.memoryTypeIndex = FindMemoryTypeIndex(req.memoryTypeBits,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            ok = alloc.memoryTypeIndex != UINT32_MAX &&
+                vkAllocateMemory(g_vk.device, &alloc, nullptr, &p.memory) == VK_SUCCESS &&
+                vkBindBufferMemory(g_vk.device, p.buffer, p.memory, 0) == VK_SUCCESS &&
+                vkMapMemory(g_vk.device, p.memory, 0, info.size, 0, &p.mapped) == VK_SUCCESS;
+        }
+        VkEventCreateInfo event { VK_STRUCTURE_TYPE_EVENT_CREATE_INFO };
+        if (!ok || vkCreateEvent(g_vk.device, &event, nullptr, &p.ready) != VK_SUCCESS) {
+            DestroyPixelProbe(); p.disabled = true;
+            LOG_WARN("XP12 NR pixel probe: allocation failed; rendering continues without readback");
+            return;
+        }
+    }
+    OwnedImage* images[] = { &g_vk.proxy, &g_vk.output };
+    for (unsigned side = 0; side < 2; ++side) {
+        auto& img = *images[side];
+        const auto prior = img.layout;
+        Transition(cmd, img, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        VkBufferImageCopy regions[9] {};
+        for (unsigned tile = 0; tile < 9; ++tile) {
+            auto& r = regions[tile];
+            r.bufferOffset = side * kPixelProbeHalf + tile * 4 * 4 * 8;
+            r.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+            r.imageOffset = { int32_t(img.width * (tile % 3 + 1) / 4 - 2),
+                              int32_t(img.height * (tile / 3 + 1) / 4 - 2), 0 };
+            r.imageExtent = { 4, 4, 1 };
+        }
+        vkCmdCopyImageToBuffer(cmd, img.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, p.buffer, 9, regions);
+        Transition(cmd, img, prior);
+    }
+    VkBufferMemoryBarrier barrier { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+    barrier.srcQueueFamilyIndex = barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.buffer = p.buffer; barrier.size = kPixelProbeHalf * 2;
+    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT,
+                         0, 0, nullptr, 1, &barrier, 0, nullptr);
+    vkCmdSetEvent(cmd, p.ready, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+    p.pending = true; p.frame = g_vk.frames; ++p.captures;
+}
+
 // A resource the game owns. Its layout is the game's business, so this records the transition and
 // puts it back exactly as it was rather than tracking it.
 void TransitionForeign(VkCommandBuffer cmd, VkImage image, VkImageSubresourceRange range, VkImageLayout from,
@@ -451,6 +581,8 @@ bool LoadForwarder()
     g_vk.create = (PFN_VkCreate) GetProcAddress(g_vk.forwarder, "dlssnr_vk_create");
     g_vk.evaluate = (PFN_VkEvaluate) GetProcAddress(g_vk.forwarder, "dlssnr_vk_evaluate_v2");
     g_vk.release = (PFN_VkRelease) GetProcAddress(g_vk.forwarder, "dlssnr_vk_release");
+    g_vk.probeFloat = reinterpret_cast<decltype(g_vk.probeFloat)>(GetProcAddress(g_vk.forwarder, "dlssnr_call_probe_float"));
+    g_vk.setFloatSlot = reinterpret_cast<decltype(g_vk.setFloatSlot)>(GetProcAddress(g_vk.forwarder, "dlssnr_call_set_float_slot"));
 
     if (g_vk.init == nullptr || g_vk.create == nullptr || g_vk.evaluate == nullptr)
     {
@@ -792,6 +924,34 @@ static void EvaluateAtSeamVk(VkCommandBuffer cmdBuffer, NVSDK_NGX_Parameter* par
         }
     }
 
+    // Match D3D12: the driver's parameter implementation does not necessarily use
+    // the header's float setter slot. Verify the forwarder's writes before creating NR.
+    if (g_vk.floatSlot < 0)
+    {
+        if (!g_vk.probeFloat || !g_vk.setFloatSlot) {
+            Fail("the forwarder lacks float-parameter verification exports");
+            return;
+        }
+        constexpr float expected = 0.375f;
+        for (int slot : { 1, 2, 5, 6, 7, 4, 3, 0 }) {
+            float actual = -1.0f;
+            g_vk.probeFloat(g_vk.capabilityParams, "DLSSNR.OptiShadeVkFloatProbe", expected, slot);
+            const auto status = g_vk.capabilityParams->Get("DLSSNR.OptiShadeVkFloatProbe", &actual);
+            LOG_INFO("DLSS-NR Vulkan float verification: slot={} status={:X} expected={} actual={}",
+                     slot, (unsigned)status, expected, actual);
+            if (status == NVSDK_NGX_Result_Success && actual == expected) {
+                g_vk.floatSlot = slot;
+                break;
+            }
+        }
+        if (g_vk.floatSlot < 0) {
+            Fail("float parameters failed round-trip verification; NR not started");
+            return;
+        }
+    }
+    // The forwarder can be shared with another API; select this block's verified slot.
+    g_vk.setFloatSlot(g_vk.floatSlot);
+
     if (g_vk.queryPool == VK_NULL_HANDLE)
     {
         VkPhysicalDeviceProperties props {};
@@ -917,6 +1077,20 @@ static void EvaluateAtSeamVk(VkCommandBuffer cmdBuffer, NVSDK_NGX_Parameter* par
         if (feature)
             continue;
         const auto tuning = Profiles::PassTuning(cfg, pass);
+        const char* keys[] = { "DLSSNR.Intensity", "DLSSNR.LocalStructureStrength",
+                               "DLSSNR.LocalToneStrength", "DLSSNR.SkinStructureStrength" };
+        const float values[] = { tuning.intensity, tuning.structure, tuning.tone, tuning.skin };
+        for (unsigned i = 0; i < 4; ++i) {
+            g_vk.probeFloat(g_vk.capabilityParams, keys[i], values[i], g_vk.floatSlot);
+            float actual = -999.0f;
+            const auto status = g_vk.capabilityParams->Get(keys[i], &actual);
+            LOG_INFO("DLSS-NR Vulkan creation parameter: {} requested={} readback={} status={:X}",
+                     keys[i], values[i], actual, (unsigned)status);
+            if (status != NVSDK_NGX_Result_Success || actual != values[i]) {
+                Fail("model tuning failed readback verification; feature not created");
+                return;
+            }
+        }
         feature = g_vk.create((void*) cmdBuffer, g_vk.capabilityParams, workWidth, workHeight,
                              (int) Profiles::PassPreset(cfg, pass), tuning.intensity,
                              (int) Profiles::PassStyle(cfg, pass), tuning.structure, tuning.tone,
@@ -1016,6 +1190,11 @@ static void EvaluateAtSeamVk(VkCommandBuffer cmdBuffer, NVSDK_NGX_Parameter* par
     encode.Passthrough = linearHdr ? 0u : 1u;
     encode.ReversibleMode = cfg.DlssNrReversibleMode.value_or_default();
     encode.ApplyModel = cfg.DlssNrApplyModel.value_or_default() ? 1u : 0u;
+    encode.DebugView = cfg.DlssNrDebugView.value_or_default();
+    encode.CompareMode = std::min(cfg.DlssNrCompare.value_or_default(), 2u);
+    encode.CompareSplit = std::clamp(cfg.DlssNrCompareSplit.value_or_default(), 0.0f, 1.0f);
+    encode.CompareZoom = std::clamp(cfg.DlssNrCompareZoom.value_or_default(), 1.0f, 2.0f);
+    encode.CompareSwap = cfg.DlssNrCompareSwap.value_or_default() ? 1u : 0u;
     encode.TransferStrength = cfg.DlssNrTransferStrength.value_or_default();
     const auto strength = [](float v) { return std::isfinite(v) ? std::clamp(v, 0.0f, 1.0f) : 1.0f; };
     encode.SkinProtection = cfg.DlssNrSkinProtection.value_or_default();
@@ -1353,6 +1532,46 @@ void EvaluateAfterUpscaleVk(VkCommandBuffer cmd, NVSDK_NGX_Parameter* params, Vk
     EvaluateAtSeamVk(cmd, params, instance, pd, device, false, rayReconstruction, applied);
 }
 
+int EvaluateGuidesVk(const osvtaa::Frame& f, VkInstance instance, VkPhysicalDevice pd, VkDevice device)
+{
+    static ULONGLONG lastSubmission = 0;
+    const auto now = GetTickCount64();
+    if (!lastSubmission || now - lastSubmission > 500) g_vk.reset = true;
+    lastSubmission = now;
+    const auto wrap = [&](uint64_t image, uint64_t view, VkFormat format, bool writable) {
+        NVSDK_NGX_Resource_VK r{};
+        r.Type = NVSDK_NGX_RESOURCE_VK_TYPE_VK_IMAGEVIEW;
+        r.Resource.ImageViewInfo.Image = (VkImage)image;
+        r.Resource.ImageViewInfo.ImageView = (VkImageView)view;
+        r.Resource.ImageViewInfo.Format = format;
+        r.Resource.ImageViewInfo.Width = f.width;
+        r.Resource.ImageViewInfo.Height = f.height;
+        r.Resource.ImageViewInfo.SubresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+        r.ReadWrite = writable;
+        return r;
+    };
+    auto color = wrap(f.color, f.colorView, VK_FORMAT_B8G8R8A8_UNORM, true);
+    auto depth = wrap(f.depth, f.depthView, VK_FORMAT_R32_SFLOAT, false);
+    auto motion = wrap(f.motion, f.motionView, VK_FORMAT_R16G16_SFLOAT, false);
+    NVNGX_Parameters params(API::Vulkan, false);
+    params.Set(NVSDK_NGX_Parameter_Output, (void*)&color);
+    params.Set(NVSDK_NGX_Parameter_Depth, (void*)&depth);
+    params.Set(NVSDK_NGX_Parameter_MotionVectors, (void*)&motion);
+    params.Set(NVSDK_NGX_Parameter_OutWidth, f.width);
+    params.Set(NVSDK_NGX_Parameter_OutHeight, f.height);
+    params.Set(NVSDK_NGX_Parameter_DLSS_Render_Subrect_Dimensions_Width, f.width);
+    params.Set(NVSDK_NGX_Parameter_DLSS_Render_Subrect_Dimensions_Height, f.height);
+    params.Set(NVSDK_NGX_Parameter_MV_Scale_X, float(f.width));
+    params.Set(NVSDK_NGX_Parameter_MV_Scale_Y, float(f.height));
+    params.Set(NVSDK_NGX_Parameter_DLSS_Feature_Create_Flags, 0u);
+    bool applied = false;
+    EvaluateAtSeamVk((VkCommandBuffer)f.commands, &params, instance, pd, device, false, false, applied);
+    // Sparse model readback belongs to diagnostics builds, not normal presentation.
+    return applied ? 1 : (g_vk.failed ? -1 : 0);
+}
+
+void ResetTaaHistoryVk() { g_vk.reset = true; }
+
 void ShutdownVk(bool deviceAlive)
 {
     if (!deviceAlive)
@@ -1366,6 +1585,7 @@ void ShutdownVk(bool deviceAlive)
         // OwnedImage/meter handles matters: the resize path gates on `.Valid()`, so a stale non-null
         // handle from the dead device would be reused on the NEW device and crash.
         g_vk.pass.release();
+        g_pixelProbe = {}; // Old device reclaimed its allocations; do not touch dead handles.
         g_vk.superUp.release();
         g_vk.superDown.release();
         g_vk.nrScaler = Scaler::Count;
@@ -1376,6 +1596,7 @@ void ShutdownVk(bool deviceAlive)
         g_vk.creationReady = VK_NULL_HANDLE;
         g_vk.creationPending = false;
         g_vk.capabilityParams = nullptr;
+        g_vk.floatSlot = -1;
         g_vk.queryPool = VK_NULL_HANDLE;
         g_vk.output = OwnedImage {};
         g_vk.scratch = OwnedImage {};
@@ -1410,6 +1631,8 @@ void ShutdownVk(bool deviceAlive)
     // destroyed under it, the same rule as the resize path.
     if (g_vk.device != VK_NULL_HANDLE)
         vkDeviceWaitIdle(g_vk.device);
+
+    if (g_vk.device != VK_NULL_HANDLE) DestroyPixelProbe();
 
     if (g_vk.feature != nullptr && g_vk.release != nullptr)
         g_vk.release(g_vk.feature);
@@ -1447,6 +1670,7 @@ void ShutdownVk(bool deviceAlive)
     {
         NVSDK_NGX_VULKAN_DestroyParameters(g_vk.capabilityParams);
         g_vk.capabilityParams = nullptr;
+        g_vk.floatSlot = -1;
     }
 
     if (g_vk.queryPool != VK_NULL_HANDLE && g_vk.device != VK_NULL_HANDLE)

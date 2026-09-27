@@ -1705,7 +1705,7 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
 
     const optishade::D3D12FrameContext inputs {cmdList, colour, depth, motion, output,
         static_cast<ID3D12Resource*>(frame.ExposureTexture), timingQueue};
-    if (const char* reason = inputs.ValidateDeviceIdentity(_device)) {
+    if (const char* reason = inputs.ValidateDeviceIdentity(_device, frame.IndependentCommands && frame.FinishedPicture)) {
         ReportSkipOnce(reason);
         return; // No state changes or GPU commands have been recorded.
     }
@@ -2440,7 +2440,20 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
     // `target` is UAV here (normalised at entry, restored by the meter block above). The held copy is
     // left in COPY_SOURCE after capture and stays there for every restore.
     {
-        const bool hold = cfg.DlssNrHoldFrame.value_or_default();
+        const D3D12_RESOURCE_DESC holdDesc = target->GetDesc();
+        // CreateScratch is one non-MSAA 2D subresource. CopyResource requires
+        // compatible dimensions, mip/array counts and sample descriptions.
+        const bool holdCompatible = holdDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D &&
+                                    holdDesc.DepthOrArraySize == 1 && holdDesc.MipLevels == 1 &&
+                                    holdDesc.SampleDesc.Count == 1 && holdDesc.SampleDesc.Quality == 0;
+        const bool hold = cfg.DlssNrHoldFrame.value_or_default() && holdCompatible;
+        if (cfg.DlssNrHoldFrame.value_or_default() && !holdCompatible)
+        {
+            LOG_WARN("Hold Frame disabled: unsupported texture shape (dimension={}, array={}, mips={}, samples={})",
+                     (int) holdDesc.Dimension, holdDesc.DepthOrArraySize, holdDesc.MipLevels,
+                     holdDesc.SampleDesc.Count);
+            Config::Instance()->DlssNrHoldFrame = false;
+        }
 
         if (hold)
         {
@@ -2456,6 +2469,7 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
                 if (g_nr.heldColor != nullptr)
                     ParkNrResource(g_nr.heldColor);
 
+                g_nr.heldActive = false;
                 g_nr.heldColor = CreateScratch(device, td.Format, (unsigned int) td.Width, td.Height);
 
                 if (g_nr.heldColor != nullptr)
@@ -2474,6 +2488,12 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
                     g_nr.heldHeight = td.Height;
                     g_nr.heldFormat = td.Format;
                     g_nr.heldWhitePoint = whitePoint;
+                }
+                else
+                {
+                    Config::Instance()->DlssNrHoldFrame = false;
+                    LOG_WARN("Hold Frame disabled: snapshot allocation failed ({}x{}, format={})",
+                             td.Width, td.Height, (int) td.Format);
                 }
             }
             else
@@ -3991,11 +4011,22 @@ void Shutdown()
 
 extern "C" __declspec(dllexport) bool OptiShadeTaaRequested()
 {
-    return false; // TAA neural rendering is INOP in this release.
+    std::lock_guard<std::recursive_mutex> guard(g_nrMutex);
+    const auto name=Util::ExePath().filename();
+    const bool msfs=_wcsicmp(name.c_str(),L"FlightSimulator2024.exe")==0 || _wcsicmp(name.c_str(),L"FlightSimulator.exe")==0;
+    return msfs && Config::Instance()->DlssNrEnabled.value_or_default() && Config::Instance()->DlssNrTaaFallback.value_or_default();
 }
 extern "C" __declspec(dllexport) void OptiShadeTaaSubmit(const ostaa::Frame* frame)
 {
-    (void)frame; // Hard gate: old shaders or settings cannot activate the INOP route.
+    if (!OptiShadeTaaRequested()) return;
+    std::lock_guard<std::recursive_mutex> guard(g_nrMutex);
+    auto* cfg=Config::Instance();
+    const auto scale=cfg->DlssNrWorkingScale;
+    const auto passes=cfg->DlssNrPasses;
+    // Full-resolution model input avoids the shadow shimmer seen in reduced-resolution tests.
+    cfg->DlssNrWorkingScale=1.0f;cfg->DlssNrPasses=1u;
+    DlssNr::Taa::Submit(frame);
+    cfg->DlssNrWorkingScale=scale;cfg->DlssNrPasses=passes;
 }
 
 // Read-only diagnostics for the OptiShade hardware test.

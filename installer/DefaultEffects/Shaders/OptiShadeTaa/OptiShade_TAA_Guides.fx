@@ -5,6 +5,7 @@
 #define V_MV_DEBUG 0
 #define V_ENABLE_MOT_BLUR 0
 #define V_ENABLE_TAA 0
+#define OPTISHADE_TAA_STABLE_SEARCH 1
 #include "Includes/vort_MotionVectors.fxh"
 
 texture2D OptiShadeTaaDepth { Width = BUFFER_WIDTH; Height = BUFFER_HEIGHT; Format = R32F; };
@@ -19,7 +20,7 @@ float PS_OptiShadeDepth(float4 position : SV_Position, float2 uv : TEXCOORD) : S
 #endif
     return saturate(depth);
 }
-technique OptiShade_TAA_Guides < ui_label = "TAA neural guides (experimental)"; ui_tooltip = "Enable TAA neural rendering in Performance. Put these guides before your look effects. Estimates motion; does not add blur or replace the game's TAA. Requires valid scene depth and SDR."; >
+technique OptiShade_TAA_Guides < ui_label = "TAA neural guides (experimental)"; ui_tooltip = "Enable Neural Rendering in the Neural rendering tab. Put these guides before your look effects. Estimates motion; does not add blur or replace the game's TAA. Requires valid scene depth and SDR."; >
 {
     PASS_MV
     pass { VertexShader = PostProcessVS; PixelShader = PS_OptiShadeDepth; RenderTarget = OptiShadeTaaDepth; }

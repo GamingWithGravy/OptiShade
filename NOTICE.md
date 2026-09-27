@@ -47,3 +47,10 @@ respective authors; its licence and attribution requirements remain intact.
 Copyright (c) 2026 gravy / GamingWithGravy for original OptiShade contributions. Ownership remains with the respective authors; licensing the software does not transfer that ownership. Preserve copyright and licence notices as required by each applicable licence.
 
 See BRANDING.md for the distinction between software permissions and use of the OptiShade name or logo to imply official endorsement. AMD Neural Rendering research tools and model weights are not included in this release.
+
+Optional RTXMFG is unchanged third-party work by Michael Robles / dashdogy,
+licensed under MIT. It is not OptiShade proprietary material. The packaged
+Licenses/RTXMFG directory preserves the upstream MIT, Ultimate ASI Loader,
+ImGui and MinHook notices, source/release references and binary provenance.
+See https://github.com/dashdogy/RTX40MFG-Unlock. Other upstream dependencies
+retain their own notices, including those embedded in the upstream binary.
