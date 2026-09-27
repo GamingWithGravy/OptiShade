@@ -1,5 +1,5 @@
 ﻿$ErrorActionPreference='Stop'
-function GetBundledOptiShadeVersion { 'P0.21' }
+function GetBundledOptiShadeVersion { 'P0.21.1' }
 function TestBundledUpdateVersion($Manifest){
  try{
   $installed=[regex]::Match([string]$Manifest.Version,'\d+\.\d+(?:\.\d+){0,2}').Value
@@ -45,7 +45,7 @@ function RemoveUnreferencedBackups($Manifest,[string]$Folder){
  if(Test-Path -LiteralPath $root){foreach($f in Get-ChildItem -LiteralPath $root -File -Recurse){$safe=OwnedPath $Folder $f.FullName.Substring($Folder.Length+1);if($safe -notin $keep){Remove-Item -LiteralPath $safe -Force}}}
 }
 function FindFusionConflicts([string]$Game){
- foreach($name in @('ReShade.ini','OptiScaler.ini','ReShade.log','OptiScaler.log','nvngx_dlssnr.dll','nvngx.dll_dlssnr.dll')){if(Test-Path -LiteralPath (Join-Path $Game $name) -PathType Leaf){[pscustomobject]@{Path=$name;Recognised=$true;Description='Graphics mod file';Hash=(HashFile (Join-Path $Game $name))}}}
+ foreach($name in @('ReShade.ini','OptiScaler.ini','nvngx_dlssnr.dll','nvngx.dll_dlssnr.dll')){if(Test-Path -LiteralPath (Join-Path $Game $name) -PathType Leaf){[pscustomobject]@{Path=$name;Recognised=$true;Description='Graphics mod file';Hash=(HashFile (Join-Path $Game $name))}}}
  foreach($addon in Get-ChildItem -LiteralPath $Game -Filter '*.addon64' -File -ErrorAction SilentlyContinue|Where-Object Name -match '(?i)dlss5|renodx'){
   [pscustomobject]@{Path=$addon.Name;Recognised=$true;Description='External neural-rendering/ReShade add-on';Hash=(HashFile $addon.FullName)}
  }
@@ -62,6 +62,7 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
     if($Proxy -notin @('winmm.dll','dxgi.dll','d3d12.dll','version.dll','dbghelp.dll','wininet.dll','winhttp.dll')){throw 'Unsupported installation method.'}
     $Game=FullPath $Game;$Payload=FullPath $Payload;AssertClosed $Game
     if(-not(Test-Path -LiteralPath $Game -PathType Container)){throw 'Choose the game folder first.'}
+    if(Test-Path -LiteralPath (Join-Path $Game 'X-Plane.exe')){throw 'X-Plane installation is removed from 0.21.1. Use the beta channel when available. Existing installations can still be restored.'}
     $mp=ManifestPath $StateRoot $Game
     $old=$null;$oldJson=$null
     if(Test-Path -LiteralPath $mp){$oldJson=Get-Content -LiteralPath $mp -Raw;$old=$oldJson|ConvertFrom-Json;if($old.Status -ne 'Restored' -and -not $ReplaceExisting){throw 'OptiShade is already recorded here. Choose Repair or approve reinstalling it.'};if($old.Status -eq 'Restored'){$old=$null}}
@@ -301,4 +302,20 @@ function UninstallFusion([string]$StateRoot,[string]$Installer,[string]$ActiveSe
         Get-ChildItem -LiteralPath $root -Force -Recurse -File|Where-Object {(FullPath $_.FullName) -ne $keep -and (-not $session -or -not $_.FullName.StartsWith($session,[StringComparison]::OrdinalIgnoreCase))}|Remove-Item -Force
         Get-ChildItem -LiteralPath $root -Force -Recurse -Directory|Sort-Object FullName -Descending|ForEach-Object {if(-not(Get-ChildItem -LiteralPath $_.FullName -Force)){Remove-Item -LiteralPath $_.FullName}}
     }else{Remove-Item -LiteralPath $root -Recurse -Force}
+}
+
+function GetFusionUpdateConflicts($Manifest){
+ foreach($conflict in @(FindFusionConflicts $Manifest.Game)){
+  [void](OwnedPath $Manifest.Game $conflict.Path)
+  # Runtime-generated logs are not executable loaders or distributed payloads.
+  # Keep them in place; do not require an installation-time hash for a log.
+  if($conflict.Path -in @('ReShade.log','OptiScaler.log')){continue}
+  $record=@($Manifest.Files|Where-Object {$_.Path -eq $conflict.Path})
+  $owned=@($record|Where-Object {$_.Hash -eq $conflict.Hash -or ($_.Mutable -and $_.Path -match '\.(ini|log)$')})
+  if(-not $owned.Count){
+   $reason=if($record.Count){'has changed since it was installed'}else{'is not recorded as an OptiShade-installed file'}
+   throw "Update paused: $($conflict.Path) $reason.`nGame folder: $($Manifest.Game)`nOpen Setup and review the conflicting file before reinstalling. No game files were changed; your presets are still there. Do not delete the file if it belongs to another graphics mod."
+  }
+  $conflict
+ }
 }

@@ -21,6 +21,16 @@ $script:cachePath=Join-Path $store 'msfs-2020-2024-cache.json'
 [xml]$xaml=Get-Content "$PSScriptRoot/manager.xaml" -Raw -Encoding UTF8
 $form=[Windows.Markup.XamlReader]::Load((New-Object Xml.XmlNodeReader $xaml))
 $path=$form.FindName('GamePath');$status=$form.FindName('Status')
+$form.FindName('BetaUpdates').IsChecked=Test-Path -LiteralPath (Join-Path $store 'beta-updates.txt')
+$form.FindName('BetaUpdates').Add_Click({
+ try{
+  $marker=Join-Path $store 'beta-updates.txt'
+  if($form.FindName('BetaUpdates').IsChecked){New-Item -ItemType Directory -Path $store -Force|Out-Null;[IO.File]::WriteAllText($marker,'Opted into prerelease update offers')}
+  elseif(Test-Path -LiteralPath $marker){Remove-Item -LiteralPath $marker -Force}
+  $script:availableUpdate=$null;$form.FindName('UpdateAvailable').Visibility='Collapsed'
+  $status.Text='Update channel saved. Select Check for updates to refresh. No version has been installed.'
+ }catch{$status.Text='Could not save the update channel. '+$_.Exception.Message}
+})
 $form.FindName('DiscordCommunity').Add_Click({
  try{Start-Process 'https://discord.gg/6hjR9cSsy7' -ErrorAction Stop}
  catch{$status.Text='Could not open your browser. Visit https://discord.gg/6hjR9cSsy7';$status.Foreground='#FFBE83'}
@@ -30,7 +40,7 @@ $form.FindName('SupportDevelopment').Add_Click({
  ShowSupportDevelopment $form $store
  if(Test-Path -LiteralPath (Join-Path $store 'support-hidden.txt')){$form.FindName('SupportDevelopment').Visibility='Collapsed'}
 })
-$buttons=@('Browse','Install','Repair','Restore','Runtime','Retry','Uninstall','Scan','Play','LibraryGames','GamePath','Method','AddGame','HomeNav','LibraryNav','SetupNav','SettingsNav','KeybindsNav','ChangeMenuKey','ChangeHotSwapKey','ClearHotSwapKey','OpenLibrary','CheckCompatibility','TroubleshootingNav','ResetDefaults','ImportZip','RecoveryRepair','RecoveryRestore','CheckUpdates','SaveMenuKeys','DefaultMenuKeys','LoadMenuKeys','IncludeEffects','OwnIniMode','ChooseOwnIni','ApplyFxChoice','PrepareOlderRtx','PrepareMfg','OpenMsfs2020','OpenXPlane12')|ForEach-Object {$form.FindName($_)}
+$buttons=@('Browse','Install','Repair','Restore','Runtime','Retry','Uninstall','Scan','Play','LibraryGames','GamePath','Method','AddGame','HomeNav','LibraryNav','SetupNav','SettingsNav','KeybindsNav','ChangeMenuKey','ChangeHotSwapKey','ClearHotSwapKey','OpenLibrary','CheckCompatibility','TroubleshootingNav','ResetDefaults','ImportZip','RecoveryRepair','RecoveryRestore','CheckUpdates','RevertUpdate','SaveMenuKeys','DefaultMenuKeys','LoadMenuKeys','IncludeEffects','OwnIniMode','ChooseOwnIni','ApplyFxChoice','PrepareOlderRtx','PrepareMfg','OpenMsfs2020','OpenXPlane12')|ForEach-Object {$form.FindName($_)}
 $form.Icon=[Windows.Media.Imaging.BitmapFrame]::Create([uri](Join-Path $PSScriptRoot 'OptiShade-app.ico'))
 $form.FindName('BrandIcon').Source=[Windows.Media.Imaging.BitmapFrame]::Create([uri](Join-Path $PSScriptRoot 'OptiShade-icon.png'))
 $form.FindName('BrandIcon').Cursor='SizeAll'
@@ -46,24 +56,37 @@ $form.Add_PreviewMouseLeftButtonDown({
 $form.FindName('Close').Add_Click({if(-not $script:busy){$form.Close()}})
 $form.FindName('Minimize').Add_Click({$form.WindowState='Minimized'})
 $script:busy=$false
-$form.FindName('UpdateAvailable').Add_Click({
- if($script:busy -or -not $script:availableUpdate){return}
+$form.FindName('RevertUpdate').Add_Click({
+ if($script:busy){return}
+ try{$selected=ShowOptiShadeRevert $form;if($selected){StartManagerUpdate $selected}}
+ catch{$status.Text=$_.Exception.Message;$status.Foreground='#FFBE83'}
+})
+$form.FindName('UpdateAvailable').Add_Click({StartManagerUpdate $script:availableUpdate})
+function StartManagerUpdate($Update){
+ if($script:busy -or -not $Update){return}
  if($env:OPTISHADE_PORTABLE -eq '1'){
+  if($Update.Rollback){$status.Text='Automatic rollback of a portable installation is not supported by older managers. Download the older portable ZIP into a separate folder; keep your Data folder as a backup.';return}
   [void][Windows.MessageBox]::Show($form,'Portable update: download the new portable ZIP from the official releases page. Close OptiShade, extract it, and copy your existing Data folder into the new folder. Keep portable.txt beside the EXE. Game installations still need updating through setup.','OptiShade portable update')
   Start-Process 'https://github.com/GamingWithGravy/OptiShade/releases/latest'
   return
  }
- if(Get-Process FlightSimulator2024,FlightSimulator -ErrorAction SilentlyContinue){$status.Text='Close Microsoft Flight Simulator before updating.';return}
+ if(Get-Process FlightSimulator2024,FlightSimulator,X-Plane -ErrorAction SilentlyContinue){$status.Text='Close all simulators before changing versions.';return}
+ if($Update.Rollback -and [version]$Update.Version -lt [version]'0.21'){
+  foreach($record in Get-ChildItem -LiteralPath (Join-Path $store 'Games') -Filter manifest.json -Recurse -File -ErrorAction SilentlyContinue){
+   $installed=Get-Content -LiteralPath $record.FullName -Raw|ConvertFrom-Json
+   if($installed.Status -eq 'Installed' -and (Test-Path -LiteralPath (Join-Path $installed.Game 'X-Plane.exe'))){$status.Text='This build does not support X-Plane 12. Restore X-Plane original files in Setup before reverting to a version below 0.21. No files were changed.';return}
+  }
+ }
  $updateDir=Join-Path $store ('Updates/'+[guid]::NewGuid().ToString('N'));New-Item -ItemType Directory -Path $updateDir -Force|Out-Null
  $worker=Join-Path $updateDir 'update-worker.ps1';Copy-Item -LiteralPath "$PSScriptRoot/update-worker.ps1" -Destination $worker
  Copy-Item -LiteralPath "$PSScriptRoot/dialog-theme.xaml" -Destination (Join-Path $updateDir 'dialog-theme.xaml')
- $config=Join-Path $updateDir 'update.json';$script:availableUpdate|Add-Member -NotePropertyName Installer -NotePropertyValue $Installer -Force
- $script:availableUpdate|Add-Member -NotePropertyName Desktop -NotePropertyValue ([Environment]::GetFolderPath('DesktopDirectory')) -Force
- $script:availableUpdate|ConvertTo-Json|Set-Content -LiteralPath $config -Encoding UTF8
+ $config=Join-Path $updateDir 'update.json';$Update|Add-Member -NotePropertyName Installer -NotePropertyValue $Installer -Force
+ $Update|Add-Member -NotePropertyName Desktop -NotePropertyValue ([Environment]::GetFolderPath('DesktopDirectory')) -Force
+ $Update|ConvertTo-Json|Set-Content -LiteralPath $config -Encoding UTF8
  $hostExe=Join-Path $updateDir 'OptiShade_updater.exe';Copy-Item -LiteralPath "$PSScriptRoot/FusionSetup.exe" -Destination $hostExe
  try{Start-Process -FilePath $hostExe -ArgumentList @('--update-worker',('"'+$config+'"')) -WindowStyle Hidden -Verb RunAs;$form.Close()}
  catch{$status.Text='The updater could not start or administrator access was cancelled. No update was applied. '+$_.Exception.Message}
-})
+}
 function RunAction([scriptblock]$action){
  if($script:startupResult -and -not $script:startupResult.IsCompleted){$status.Text='Finishing the hardware check. Please try again in a moment.';return}
  if($script:busy){return};$script:busy=$true
@@ -237,6 +260,7 @@ function RefreshHomeState{
  $title=GetMsfsTitle $path.Text
  if($title){$form.FindName('SelectedTitle').Text=$title}
  $xpDetected=($title -match 'X-Plane 12') -or @($form.FindName('MsfsCopies').ItemsSource|Where-Object {$_.Name -match 'X-Plane 12'}).Count -gt 0
+ $form.FindName('OpenXPlane12').IsEnabled=$false
  $form.FindName('HomeXP12Detection').Text=if($xpDetected){'X-Plane 12 detected'}else{'X-Plane 12 not detected'}
  foreach($entry in @(@('2024','HomeInstallState','HomeDetection'),@('2020','Home2020State','Home2020Detection'))){
   $homeState='Not installed'
@@ -353,7 +377,7 @@ $script:startupTimer.Add_Tick({
    $form.FindName('IntroStatus').Text='Your setup is ready.'
    $form.FindName('IntroProgress').IsIndeterminate=$false;$form.FindName('IntroProgress').Value=100
    $copies=@($result.Games)
-   if($result.Update){$script:availableUpdate=$result.Update;$form.FindName('UpdateAvailable').Content='Update available - '+$result.Update.Version;$form.FindName('UpdateAvailable').Visibility='Visible'}
+   if($result.Update -and (-not $result.Update.Prerelease -or $form.FindName('BetaUpdates').IsChecked)){$script:availableUpdate=$result.Update;$form.FindName('UpdateAvailable').Content='Update available - '+$result.Update.Version;$form.FindName('UpdateAvailable').Visibility='Visible'}
    $form.FindName('MsfsCopies').ItemsSource=$copies
    if($copies.Count){$form.FindName('MsfsCopies').SelectedIndex=0}else{$path.Text=''}
    $status.Text='Simulator detection complete. Open Setup to install, play or restore.'

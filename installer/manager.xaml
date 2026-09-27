@@ -37,18 +37,18 @@
   <Border CornerRadius="20,0,0,20" Background="#17121F" Padding="24,28">
    <DockPanel>
     <StackPanel DockPanel.Dock="Top">
-     <Image x:Name="BrandIcon" Width="80" Height="80" HorizontalAlignment="Center" Margin="0,0,0,14"/>
+     <Image x:Name="BrandIcon" Width="68" Height="68" HorizontalAlignment="Center" Margin="0,0,0,8"/>
      <TextBlock Text="Optishade" HorizontalAlignment="Center" FontSize="26" FontWeight="SemiBold"/>
      <TextBlock Text="NVIDIA + AMD&#10;powered by fusion engine" TextAlignment="Center" Foreground="#BD9CEC" FontSize="11" Margin="0,6,0,8"/>
      <Button Padding="18,9" x:Name="HomeNav" Content="Home" Margin="0,0,0,10"/><Button Visibility="Collapsed" x:Name="LibraryNav" Content="Library" Margin="0,0,0,10"/><Button Padding="18,9" x:Name="SetupNav" Content="Setup" Margin="0,0,0,10"/><Button Padding="18,9" x:Name="KeybindsNav" Content="Keybinds" Margin="0,0,0,10"/><Button Padding="18,9" x:Name="SettingsNav" Content="Settings" Margin="0,0,0,10"/><Button Padding="18,9" x:Name="TroubleshootingNav" Content="Troubleshooting"/>
-     <TextBlock Text="Install once.&#10;Make it yours in game." Foreground="#A499B6" Margin="16,8,0,0" FontSize="13"/><Button x:Name="CheckUpdates" Content="Check for updates" Margin="0,14,0,0"/><Button x:Name="UpdateAvailable" Content="Update available" Visibility="Collapsed" Background="#8650C8" Margin="0,20,0,0" ToolTip="Update the manager and installed game files. Close MSFS first."/>
+     <TextBlock Text="Install once.&#10;Make it yours in game." Foreground="#A499B6" Margin="16,8,0,0" FontSize="13"/><Button x:Name="CheckUpdates" Content="Check for updates" Margin="0,6,0,0"/><Button x:Name="UpdateAvailable" Content="Update available" Visibility="Collapsed" Background="#8650C8" Margin="0,8,0,0" ToolTip="Update the manager and installed game files. Close MSFS first."/><Button x:Name="RevertUpdate" Content="Revert update" Margin="0,4,0,0" Padding="18,8"/>
     </StackPanel>
     <StackPanel DockPanel.Dock="Bottom" VerticalAlignment="Bottom">
      <Button x:Name="DiscordCommunity" Content="BlackBox Discord" Margin="0,6,0,0" Padding="12,9" ToolTip="Open The BlackBox Discord community"/>
      <Button x:Name="SupportDevelopment" Content="Buy me a coffee" Margin="0,8,0,10" Padding="12,9"/>
      <TextBlock Text="OptiShade - created by gravy" Foreground="#D4B7F9" FontWeight="SemiBold" FontSize="12"/>
 
-     <TextBlock Text="VERSION  /  0.21" Foreground="#71657F" FontSize="10" Margin="0,12,0,0"/>
+     <TextBlock Text="VERSION  /  0.21.1" Foreground="#71657F" FontSize="10" Margin="0,12,0,0"/>
     </StackPanel>
     <Grid/>
    </DockPanel>
@@ -85,11 +85,11 @@
       </StackPanel></Border>
      </Grid>
      <Grid Margin="0,0,0,4">
-      <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition/></Grid.ColumnDefinitions>
+      <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition Width="0"/><ColumnDefinition Width="0"/><ColumnDefinition/></Grid.ColumnDefinitions>
       <StackPanel><Grid Height="44"><TextBlock x:Name="HomeDetection" Text="Checking for MSFS 2024..." Foreground="#C9B6DF" FontSize="12" TextAlignment="Center" VerticalAlignment="Center"/></Grid>
        <Button x:Name="OpenLibrary" Tag="MSFS2024" Background="#8650C8" Height="100" Padding="12" ToolTip="Open Microsoft Flight Simulator 2024 setup"><StackPanel Width="174"><TextBlock Text="Microsoft Flight Simulator 2024" TextAlignment="Center" FontWeight="SemiBold" FontSize="14"/><TextBlock x:Name="HomeInstallState" Text="Install OptiShade" TextAlignment="Center" FontSize="11" Foreground="#E1CEF7" Margin="0,8,0,0"/></StackPanel></Button>
       </StackPanel>
-      <StackPanel Grid.Column="2"><Grid Height="44"><TextBlock x:Name="HomeXP12Detection" Text="X-Plane 12 (experimental)" Foreground="#AA9CB9" FontSize="12" TextAlignment="Center" VerticalAlignment="Center"/></Grid>
+      <StackPanel Grid.Column="2" Visibility="Collapsed"><Grid Height="44"><TextBlock x:Name="HomeXP12Detection" Text="X-Plane 12 (experimental)" Foreground="#AA9CB9" FontSize="12" TextAlignment="Center" VerticalAlignment="Center"/></Grid>
        <Button x:Name="OpenXPlane12" Tag="XPlane12" Background="#8650C8" Height="100" Padding="12" ToolTip="Open experimental X-Plane 12 Vulkan setup"><StackPanel Width="174"><TextBlock Text="X-Plane 12" TextAlignment="Center" FontWeight="SemiBold" FontSize="14"/><TextBlock Text="Install OptiShade" TextAlignment="Center" FontSize="11" Margin="0,8,0,0"/></StackPanel></Button>
       </StackPanel>
       <StackPanel Grid.Column="4"><Grid Height="44"><TextBlock x:Name="Home2020Detection" Text="Checking for MSFS 2020..." Foreground="#C9B6DF" FontSize="12" TextAlignment="Center" VerticalAlignment="Center"/></Grid>
@@ -98,7 +98,7 @@
      </Grid>
      </StackPanel><Border x:Name="DeveloperMessagePanel" Grid.Row="1" Background="#21172F" CornerRadius="12" Padding="14,8" Margin="0,4,0,8"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
       <TextBlock Text="Developer message" Foreground="#D4B7F9" FontWeight="SemiBold" Margin="0,0,0,6"/>
-      <TextBlock Text="- X-Plane 12: Vulkan image effects and NR have passed local visual and longer-run tests. Experimental support is included in this build; please report any problems.&#10;- MSFS 2020 and 2024: native 4K TAA NR tested on an RTX 5090, with no shimmer reported in the final tests. Support remains experimental.&#10;- Work on NR for AMD continues. NO ETA.&#10;- Please post diagnostic ZIPs in the diagnostic zips channel in BlackBox Discord. Include a description of the issue - it really helps!" Foreground="#C9B6DF" TextWrapping="Wrap"/>
+      <TextBlock Text="removed xp12, taa, vulkan from this build for emergency fixes" Foreground="#C9B6DF" TextWrapping="Wrap"/>
      </StackPanel></ScrollViewer></Border>
     </Grid>
     <Grid x:Name="LibraryPage" Visibility="Collapsed"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
@@ -114,7 +114,7 @@
 <TextBlock x:Name="BackupMenuHint" Text="Recovery shortcut: Ctrl+Shift+O (no Insert or numpad needed)." Margin="0,12,0,6" Foreground="#AA9CB9"/>
 <WrapPanel Margin="0,12,0,0"><Button x:Name="LoadMenuKeys" Content="Read installed keys" Margin="0,0,8,8"/><Button x:Name="SaveMenuKeys" Content="Save shortcuts" Margin="0,0,8,8"/><Button x:Name="DefaultMenuKeys" Content="Restore default shortcuts" Margin="0,0,8,8"/></WrapPanel>
 </StackPanel></StackPanel></ScrollViewer>
-    <StackPanel x:Name="SettingsPage" Visibility="Collapsed" Margin="0,14,0,0"><TextBlock Text="Settings" FontSize="28" FontWeight="SemiBold"/><Button x:Name="GitHub" Content="GitHub releases and downloads" HorizontalAlignment="Left" Margin="0,18,0,0"/><Button x:Name="Help" Content="Tutorial, how it works and features" HorizontalAlignment="Left" Background="#8650C8" Margin="0,18,0,8"/><TextBlock Text="Remove OptiShade from all games recorded by this installer." Foreground="#AA9CB9" Margin="0,20,0,12"/><TextBlock Text="Uninstall removes OptiShade and restores files it backed up. You can keep your saved INI presets or remove them. Game settings, controls and saves stay untouched. Your original installer EXE is kept." Foreground="#AA9CB9" Margin="0,0,0,20"/><Button x:Name="Uninstall" Content="Uninstall OptiShade" Background="#30212C" Foreground="#E3B7CC" Margin="0,0,10,10"/></StackPanel>
+    <StackPanel x:Name="SettingsPage" Visibility="Collapsed" Margin="0,14,0,0"><TextBlock Text="Settings" FontSize="28" FontWeight="SemiBold"/><CheckBox x:Name="BetaUpdates" Content="Opt into beta versions for testing" Foreground="#D4B7F9" Margin="0,18,0,0"/><TextBlock Text="Beta builds are experimental. Enabling this shows prereleases in update checks; installation still requires your choice." TextWrapping="Wrap" Foreground="#AA9CB9" Margin="0,8,0,0"/><Button x:Name="GitHub" Content="GitHub releases and downloads" HorizontalAlignment="Left" Margin="0,18,0,0"/><Button x:Name="Help" Content="Tutorial, how it works and features" HorizontalAlignment="Left" Background="#8650C8" Margin="0,18,0,8"/><TextBlock Text="Remove OptiShade from all games recorded by this installer." Foreground="#AA9CB9" Margin="0,20,0,12"/><TextBlock Text="Uninstall removes OptiShade and restores files it backed up. You can keep your saved INI presets or remove them. Game settings, controls and saves stay untouched. Your original installer EXE is kept." Foreground="#AA9CB9" Margin="0,0,0,20"/><Button x:Name="Uninstall" Content="Uninstall OptiShade" Background="#30212C" Foreground="#E3B7CC" Margin="0,0,10,10"/></StackPanel>
     <ScrollViewer x:Name="TroubleshootingPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
      <ScrollViewer.Resources>
       <Style TargetType="ScrollBar">

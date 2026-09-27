@@ -1,42 +1,31 @@
-OPTISHADE 0.21 XP12
+﻿# OptiShade 0.21.1 EMERGENCY UPDATE
 
-EXPERIMENTAL RELEASE
-X-Plane 12
-- Install, repair, restore and launch X-Plane 12 from OptiShade.
-- Launch X-Plane using Play in OptiShade to load its Vulkan layer.
+**IMPORTANT**
+- Release 0.21 has been withdrawn following reports of instability.
+- XP12 installation and experimental TAA/Vulkan Neural Rendering are removed from this emergency build. MSFS 2020/2024 image effects and supported DLSS-based NR remain available.
 
-EXPERIMENTAL FEATURES
-TAA support
-- Optional Neural Rendering with native TAA in MSFS DirectX 12. Enable TAA neural guides in Image effects, then enable the experimental TAA option and NR in Neural rendering.
-- SDR only, up to 3840x2160, with frame generation off. Native 4K TAA NR has been visually tested in MSFS 2020 and 2024 on an RTX 5090, with no shimmer reported in the final tests. Support remains experimental.
-VULKAN support
-- Image effects and optional Neural Rendering in X-Plane 12 without a built-in DLSS option. Enable the neural guide technique before NR. NR starts off each launch.
-- Experimental NR still requires a compatible RTX GPU and model. This does not add DLSS upscaling or frame generation to X-Plane.
-VR support
-- Experimental compatibility testing. Headset rendering, stereo NR and VR frame generation have not been validated for this release. Desktop test results do not confirm headset support; please report your headset, VR runtime and simulator settings with diagnostics.
+**FIXES**
+- Added GPU-memory checks before and during NR. NR stops submitting work when memory headroom is too low or the graphics device has failed; restart the simulator after a failure.
+- NR tuning waits for sliders to settle and the previous model to retire before rebuilding, reducing repeated model allocations.
+- Improved Xbox/WindowsApps folder detection and guidance for selecting the actual simulator installation folder.
+- Generated graphics logs no longer block updates as untracked loaders. Changed or unknown graphics DLLs still stop installation and are identified in the message.
+- Added memory-budget details to NR logs. These are safeguards and possible fixes; the reported MSFS crashes are not yet confirmed resolved on affected systems.
 
-FIXES
-- Improved simulator folder detection and invalid-path handling.
-- Corrected Vulkan NR setting delivery to the model.
-- Added safeguards for unsupported Hold Frame textures and allocation failures.
-- Corrected frame-limit updates and fallback handling when using the XeLL limiter.
-- Repair now uses only the matching installed version. Updating is a separate action.
-- Preset selection checks for missing FX before loading a look.
-- FX and ZIP imports no longer require discarding unsaved preset edits.
+**ROLLBACK**
+- A permanent Revert update button is below the update controls. Select a supported previous build and press Install selected build to download, verify and install it automatically.
+- Presets and configuration are preserved. The selected manager EXE is saved to your Desktop.
+- Close all simulators first. Automatic rollback currently supports the regular EXE workflow and published compatible builds from 0.20.12 onward. Withdrawn releases are not listed. Portable users must use a separate older portable package. XP12 must be restored before reverting to a version that does not support it.
 
-IMPROVEMENTS
-- Diagnostics export asks you to describe the issue and includes your report in the ZIP.
-- Diagnostic ZIPs save to Desktop with an Open file location confirmation.
-- Expanded crash, rendering and import-failure evidence in diagnostics.
-- Import errors include background-helper startup failures; failed downloads keep the previous look selected.
-- Optional experimental RTX 40 MFG component setup for compatible native DLSS frame-generation paths. Disabled by default; results depend on the game and hardware.
-- Portable manager download: extract it and keep its Data folder when updating.
-- Regular manager updates place the new EXE on Desktop and show its location.
-- Updated troubleshooting styling and developer information.
+**INSTALLING THIS UPDATE**
+- Close MSFS and use the update workflow, or run this EXE and choose Update OptiShade for your installation. A restore/reinstall is normally not required. Repair only repairs the matching installed version.
+- Existing XP12 installations are not updated or automatically removed. To remove 0.21 from XP12, use Restore original files in the existing manager before moving to a future beta.
 
-UPDATING
-Close the simulator, open this manager, select the existing installation and choose Update OptiShade. No Restore or uninstall is normally needed. Saved presets, settings and original backups are preserved. Repair is for the same version only. For X-Plane, use Play in OptiShade after installation.
+**STABLE AND BETA**
+- main is the stable release branch. Experimental XP12, TAA and Vulkan work continues separately on beta.
+- The next beta patch will be published separately on GitHub Releases and marked Pre-release; no new beta download is being published with this emergency update. Settings now includes Opt into beta versions for testing, off by default. Enable it to see compatible prereleases in update checks; installation still requires your choice.
+- Keep a future beta manager in a separate folder, for example Desktop\OptiShade Beta. A separate manager folder does not isolate the game installation: do not install stable and beta over each other in the same game folder. Follow the beta release's migration instructions.
 
-SUPPORT
-Please post diagnostic ZIP files in the diagnostic zips channel in BlackBox Discord: https://discord.gg/6hjR9cSsy7
-Describe the issue in the export window and review your ZIP before sharing. Exporting does not upload anything automatically.
+**ANTIVIRUS NOTICE — SUSPECTED FALSE POSITIVES**
+OptiShade's unsigned installer extracts a helper and graphics components; its in-game features use graphics hooks. These behaviours can trigger heuristic antivirus alerts in legitimate software, but do not prove that any individual detection is a false positive. The reported 0.20.12 VirusTotal result flagged two vendors; its matching installer and helper scanned clean locally with Microsoft Defender. Vendor confirmation is still needed. Download only from the official GitHub releases. If blocked, report the exact detection and file path; do not disable antivirus or add blanket exclusions.
+
+Please send diagnostic ZIPs, with a description of the issue, to the **diagnostic zips** channel in **BlackBox Discord**: https://discord.gg/6hjR9cSsy7

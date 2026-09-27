@@ -5,7 +5,7 @@
 namespace ostaa_impl {
 static void Run(reshade::api::effect_runtime* runtime, reshade::api::command_list* cmd,
                 reshade::api::resource_view rtv, reshade::api::color_space space) {
-    osvnr_impl::Run(runtime, cmd, rtv, space);
+    return; // Emergency stable build: no TAA or Vulkan guide submissions.
     ostaa::Requested requested = nullptr;
     ostaa::Submit submit = nullptr;
     for (const auto* name : {L"winmm.dll", L"dxgi.dll", L"d3d12.dll", L"version.dll", L"dbghelp.dll", L"wininet.dll", L"winhttp.dll", L"OptiScaler.dll"}) {

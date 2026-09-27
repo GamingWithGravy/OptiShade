@@ -1,5 +1,7 @@
 ﻿$ErrorActionPreference='Stop'
 $root=$PSScriptRoot;$payload=Join-Path $root 'installer/PayloadFusion'
+Copy-Item -LiteralPath "$root/optiscaler/x64/Release/OptiScaler.dll" -Destination "$payload/winmm.dll" -Force
+Copy-Item -LiteralPath "$root/reshade/bin/x64/Release/ReShade64.dll" -Destination "$payload/ReShade64.dll" -Force
 if((Get-FileHash "$root/installer/OptionalMFG/RTXMFG.dll").Hash -ne 'E9CA3587854EEB723E0579F7DDF6CFB1E6CF4BED79B0D75BC716003ED98FE040'){throw 'Pinned RTXMFG payload hash mismatch'}
 New-Item -ItemType Directory -Path "$payload/OptiShadeData/MFG","$payload/OptiShadeData/Licenses/RTXMFG" -Force|Out-Null
 Copy-Item "$root/installer/OptionalMFG/RTXMFG.dll" "$payload/OptiShadeData/MFG/RTXMFG.dll" -Force
@@ -73,11 +75,12 @@ Copy-Item "$root/installer/import-effects.ps1" "$payload/OptiShadeData/Tools/imp
 Copy-Item "$root/installer/EffectPackages.ini" "$payload/OptiShadeData/Tools/EffectPackages.ini" -Force
 New-Item -ItemType Directory -Path "$payload/OptiShadeData/Tools/StandardHeaders" -Force|Out-Null
 Copy-Item "$root/installer/DefaultEffects/Shaders/Packages/00/ReShade*.fxh" "$payload/OptiShadeData/Tools/StandardHeaders" -Force
-New-Item -ItemType Directory -Path "$payload/OptiShadeData/Vulkan" -Force|Out-Null
-@'
-{"file_format_version":"1.2.0","layer":{"name":"VK_LAYER_reshade","type":"GLOBAL","library_path":"../../ReShade64.dll","api_version":"1.3.268","implementation_version":"1","description":"OptiShade Vulkan image effects","device_extensions":[{"name":"VK_EXT_tooling_info","spec_version":"1","entrypoints":["vkGetPhysicalDeviceToolPropertiesEXT"]}]}}
-'@ | Set-Content -LiteralPath "$payload/OptiShadeData/Vulkan/OptiShade.json" -Encoding ASCII
-"Techniques=OptiShade_TAA_Guides@OptiShade_TAA_Guides.fx`r`nTechniqueSorting=OptiShade_TAA_Guides@OptiShade_TAA_Guides.fx" | Set-Content -LiteralPath "$payload/OptiShadeData/Presets/X-Plane neural guides.ini" -Encoding ASCII
+# Remove stale experimental files from staging, including files copied by DefaultEffects.
+foreach($relative in @('OptiShadeData/Vulkan','OptiShadeData/Shaders/OptiShadeTaa','OptiShadeData/Textures/vort_BlueNoise.png','OptiShadeData/Presets/X-Plane neural guides.ini')){
+ $target=[IO.Path]::GetFullPath((Join-Path $payload $relative))
+ if(-not $target.StartsWith([IO.Path]::GetFullPath($payload)+'\',[StringComparison]::OrdinalIgnoreCase)){throw 'Invalid staging cleanup path'}
+ if(Test-Path -LiteralPath $target){Remove-Item -LiteralPath $target -Recurse -Force}
+}
 # Fail closed on local evidence accidentally left in the embedded payload.
 $private=@(Get-ChildItem -LiteralPath $payload -File -Recurse|Where-Object {$_.Name -match '(?i)(diagnostics-|Import-result-|\.dmp$|\.log$|Codex_|Licensing-review-|Ownership-licensing-audit|Release-.*draft|test-results|test-notes)'})
 if($private.Count){throw ('Private/debug files found in package staging: '+($private.Name -join ', '))}
@@ -89,7 +92,7 @@ Push-Location "$root/installer"
 try{
  & go test -count=1 -v .
  if($LASTEXITCODE){throw 'Embedded payload verification failed. Installer was not built.'}
- & go build -trimpath -ldflags '-H=windowsgui -s -w' -o "$preview/OptiShade_Version_0.21.exe" .
+ & go build -trimpath -ldflags '-H=windowsgui -s -w' -o "$preview/OptiShade_Version_0.21.1.exe" .
  if($LASTEXITCODE){throw 'Installer build failed.'}
 }finally{Pop-Location}
 Write-Output "Built: $preview"

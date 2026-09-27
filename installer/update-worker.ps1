@@ -19,9 +19,34 @@ $window.FindName('Close').Add_Click({$window.Close()})
 $window.FindName('OpenLocation').Add_Click({try{Start-Process -FilePath (Join-Path $env:WINDIR 'explorer.exe') -ArgumentList ('/select,"'+$script:target+'"')}catch{$window.FindName('Status').Text='Saved to: '+$script:target+' (Explorer could not open.)'}})
 $window.FindName('DoneClose').Add_Click({$window.Close()})
 $window.FindName('DragHeader').Add_MouseLeftButtonDown({$window.DragMove()})
-$window.FindName('Version').Text='Updating to Version '+$settings.Version
+$window.FindName('Version').Text=if($settings.Rollback){'Reverting to Version '+$settings.Version}else{'Updating to Version '+$settings.Version}
 $window.FindName('Notes').Text=$settings.Notes
 $script:started=$false;$script:updating=$true
+$script:rollbackLogs=@()
+function SuspendRollbackLogs {
+ # Older updaters mistake generated, untracked logs for foreign graphics loaders.
+ # Temporarily park only these two logs; never DLLs, INIs or tracked files.
+ $records=Join-Path $env:LOCALAPPDATA 'OptiShade/Games'
+ foreach($record in Get-ChildItem -LiteralPath $records -Filter manifest.json -Recurse -File -ErrorAction SilentlyContinue){
+  $m=Get-Content -LiteralPath $record.FullName -Raw|ConvertFrom-Json
+  if($m.Status -ne 'Installed'){continue}
+  if([version]$settings.Version -lt [version]'0.21' -and (Test-Path -LiteralPath (Join-Path $m.Game 'X-Plane.exe'))){throw 'Restore X-Plane original files before installing a version below 0.21.'}
+  $game=[IO.Path]::GetFullPath($m.Game);$check=$game
+  while($check){
+   if((Get-Item -LiteralPath $check -Force -ErrorAction Stop).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Rollback stopped: select the physical game installation folder in Setup first.'}
+   $parent=Split-Path $check -Parent;if($parent -eq $check){break};$check=$parent
+  }
+  foreach($name in @('ReShade.log','OptiScaler.log')){
+   if(@($m.Files|Where-Object Path -eq $name).Count){continue}
+   $file=Join-Path $game $name
+   if(-not(Test-Path -LiteralPath $file -PathType Leaf)){continue}
+   if((Get-Item -LiteralPath $file -Force).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Rollback stopped: a graphics log is linked.'}
+   $backup=$file+'.rollback-'+[guid]::NewGuid().ToString('N')
+   [IO.File]::Move($file,$backup)
+   $script:rollbackLogs+=@{Path=$file;Backup=$backup}
+  }
+ }
+}
 function RunUpdateStage([string]$Executable,[string]$Mode){
  $receipt=Join-Path (Split-Path $Config) ([guid]::NewGuid().ToString('N')+'.result')
  $job=Start-Process -FilePath $Executable -ArgumentList @($Mode,('"'+$receipt+'"')) -WindowStyle Hidden -PassThru
@@ -56,8 +81,9 @@ $window.Add_ContentRendered({
   $web.Headers['User-Agent']='OptiShade-updater';$task=$web.DownloadFileTaskAsync($uri,$download);$clock=[Diagnostics.Stopwatch]::StartNew()
   while(-not $task.IsCompleted){if($clock.Elapsed.TotalMinutes -gt 15){$web.CancelAsync();throw 'Download timed out. Your existing manager is unchanged.'};$window.Dispatcher.Invoke([Action]{},[Windows.Threading.DispatcherPriority]::Background);Start-Sleep -Milliseconds 100}
   $task.GetAwaiter().GetResult()
-  if(Get-Process FlightSimulator2024,FlightSimulator -ErrorAction SilentlyContinue){throw 'Close Microsoft Flight Simulator, then retry the update. No installed files were changed.'}
+  if(Get-Process FlightSimulator2024,FlightSimulator,X-Plane -ErrorAction SilentlyContinue){throw 'Close all simulators, then retry. No installed files were changed.'}
   if((Get-FileHash -LiteralPath $download -Algorithm SHA256).Hash -ne $settings.SHA256){throw 'Update verification failed. Your existing manager is unchanged.'}
+  if($settings.Rollback){SuspendRollbackLogs}
   $window.FindName('Status').Text='Checking staged files and installation requirements...'
   $window.FindName('Progress').IsIndeterminate=$false;$window.FindName('Progress').Value=35
   RunUpdateStage $download '--check-update'
@@ -72,18 +98,28 @@ $window.Add_ContentRendered({
   $window.FindName('Progress').Value=70
   RunUpdateStage $script:target '--apply-update'
   $window.FindName('Progress').IsIndeterminate=$false;$window.FindName('Progress').Value=100
-  $window.FindName('Status').Text="Update complete. The new OptiShade EXE is on your Desktop:`n$script:target`nUse this EXE from now on. Your previous copy remains in its original location."
+  $action=if($settings.Rollback){'Rollback'}else{'Update'}
+  $window.FindName('Status').Text="$action complete. The selected OptiShade EXE is on your Desktop:`n$script:target`nUse this EXE from now on. Your previous copy remains in its original location."
   $window.FindName('OpenLocation').Visibility='Visible'
   Remove-Item -LiteralPath $download -Force
   $script:updating=$false;$window.FindName('Launch').Visibility='Visible';$window.FindName('DoneClose').Visibility='Visible'
  }catch{
   $window.FindName('Progress').IsIndeterminate=$false
-  $window.FindName('Status').Text='Update stopped. '+$_.Exception.Message
+  $detail=$_.Exception.Message
+  $friendly=$detail
+  if($detail -match '(?s)System\.Management\.Automation\.RuntimeException: (.*?)(?: --->|\r?\n\s+at |$)'){$friendly=$Matches[1].Trim()}
+  $window.FindName('Status').Text='Update stopped. '+$friendly
   if(Test-Path -LiteralPath $destination){$window.FindName('Status').Text+="`nThe verified EXE is saved at: $destination. Game updates may be incomplete.";$window.FindName('OpenLocation').Visibility='Visible'}
   if($staged -and (Test-Path -LiteralPath $staged)){Remove-Item -LiteralPath $staged -Force -ErrorAction SilentlyContinue}
   $script:updating=$false;$window.FindName('Launch').Content='Open manager';$window.FindName('Launch').Visibility='Visible';$window.FindName('DoneClose').Visibility='Visible'
   $_|Out-String|Set-Content -LiteralPath (Join-Path (Split-Path $Config) 'Update-error.txt') -Encoding UTF8
  }
- finally{$web.Dispose()}
+ finally{
+  foreach($log in $script:rollbackLogs){
+   try{if(Test-Path -LiteralPath $log.Backup){[IO.File]::Move($log.Backup,$log.Path)}}
+   catch{$window.FindName('Status').Text+="`nPrevious log preserved at: $($log.Backup)"}
+  }
+  $web.Dispose()
+ }
 })
 [void]$window.ShowDialog()

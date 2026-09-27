@@ -14,13 +14,13 @@ $payloadBytes=0L;foreach($entry in $catalog){$payloadBytes+=(Get-Item -LiteralPa
 foreach($record in $records){
  $m=Get-Content -LiteralPath $record.FullName -Raw|ConvertFrom-Json
  if($m.Status -ne 'Installed'){continue}
- if(-not(Test-Path -LiteralPath (Join-Path $m.Game 'X-Plane.exe')) -and -not(Test-Path -LiteralPath (Join-Path $m.Game 'FlightSimulator2024.exe')) -and -not(Test-Path -LiteralPath (Join-Path $m.Game 'FlightSimulator.exe'))){continue}
+ if(Test-Path -LiteralPath (Join-Path $m.Game 'X-Plane.exe')){continue} # Leave existing XP12 installs untouched; stable no longer installs it.
+ if( -not(Test-Path -LiteralPath (Join-Path $m.Game 'FlightSimulator2024.exe')) -and -not(Test-Path -LiteralPath (Join-Path $m.Game 'FlightSimulator.exe'))){continue}
  AssertClosed $m.Game
  $drive=[IO.Path]::GetPathRoot([IO.Path]::GetFullPath($m.Game));$diskNeeded[$drive]+=2*$payloadBytes+64MB
  $proxy=@($m.Files|Where-Object SourcePath -eq 'winmm.dll'|Select-Object -First 1).Path
  if(-not $proxy){throw 'An installation has no recorded loader. Automatic update stopped.'}
- $conflicts=@(FindFusionConflicts $m.Game)
- foreach($c in $conflicts){$owned=@($m.Files|Where-Object {$_.Path -eq $c.Path -and ($_.Hash -eq $c.Hash -or ($_.Mutable -and $_.Path -match '\.(ini|log)$'))});if(-not $owned.Count){throw "An untracked or modified graphics loader was found in $($m.Game). Use setup to review conflicts."}}
+ $conflicts=@(GetFusionUpdateConflicts $m)
  CleanModBackupReferences $m (Split-Path $record.FullName)
  foreach($f in $m.Files){if($f.Backup -and (HashFile (OwnedPath (Split-Path $record.FullName) $f.Backup)) -ne $f.PreviousHash){throw 'An original backup is missing. Automatic update stopped.'}}
  $targets+=@{Manifest=$m;Proxy=$proxy;Conflicts=$conflicts}

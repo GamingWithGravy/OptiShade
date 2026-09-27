@@ -34,8 +34,7 @@ static HWND _hwnd = nullptr;
 
 extern "C" __declspec(dllexport) bool OptiShadeVulkanNrRequested()
 {
-    return _wcsicmp(Util::ExePath().filename().c_str(), L"X-Plane.exe") == 0 &&
-           Config::Instance()->DlssNrEnabled.value_or_default();
+    return false; // Emergency stable build: Vulkan NR is beta-only.
 }
 
 extern "C" __declspec(dllexport) void OptiShadeVulkanNrReset()
