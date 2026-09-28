@@ -1,7 +1,9 @@
 ﻿. "$PSScriptRoot/update-lifecycle.ps1"
 function GetOptiShadeReleaseAsset($Release,[string]$Version){
  $channel=if($Release.prerelease){'beta'}else{'stable'}
- foreach($name in @((GetOptiShadeManagerName $Version $channel),"OptiShade_Version_$Version.exe")){
+ $readable=GetOptiShadeManagerName $Version $channel
+ # GitHub normalises spaces in uploaded asset filenames to periods.
+ foreach($name in @($readable,$readable.Replace(' ','.'),"OptiShade_Version_$Version.exe")){
   $assets=@($Release.assets|Where-Object {$_.name -ceq $name -and $_.digest -match '^sha256:[a-fA-F0-9]{64}$'})
   if($assets.Count -ne 1){continue}
   $url=[uri]$assets[0].browser_download_url
