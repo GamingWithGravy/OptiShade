@@ -45,7 +45,8 @@ This experimental installer is built from the beta branch and published as a Git
 - Updates started from this manager save the new EXE to your Desktop and remove the unchanged previous EXE after success. Updates started from 0.21.2 still use its older naming and retain the previous copy for this first update.
 - Portable version changes use a separate extraction and preserve the Data folder.
 
-**ANTIVIRUS NOTICE**
-Bitdefender has confirmed that the submitted sample is clean and is no longer detected by its engines. Further reports and affected builds are still being investigated.
+**ANTIVIRUS UPDATE**
+- Bitdefender reviewed the submitted OptiShade sample and confirmed it is clean and no longer detected by its engines.
+- Other antivirus reports remain under investigation. If you still see a warning, include the app version, affected filename and detection name with your diagnostic ZIP.
 
 Please send diagnostic ZIPs, with a description of the issue, to the **diagnostic zips** channel in **BlackBox Discord**: https://discord.gg/6hjR9cSsy7
