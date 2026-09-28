@@ -69,8 +69,10 @@ function ImportEffectsArchive([string]$Archive,[string]$Game,[string[]]$OnlyShad
 function GetPresetShaderNames([string]$Preset){
  if((Get-Item -LiteralPath $Preset).Length -gt 4MB){throw 'Preset exceeds the 4 MB limit.'}
  $text=[IO.File]::ReadAllText($Preset)
- # Qualified techniques identify the shader reliably; legacy unqualified names do not.
- @([regex]::Matches($text,'(?im)(?:@|^\[)([^@,;\[\]\r\n/\\]+\.fx)(?=,|\]|\s*$)')|ForEach-Object {$_.Groups[1].Value.Trim()}|Select-Object -Unique)
+ # TechniqueSorting and saved parameter sections also contain disabled effects.
+ # Only the enabled Techniques list defines dependencies of this look.
+ $active=[regex]::Match($text,'(?im)^\s*Techniques\s*=([^\r\n]*)').Groups[1].Value
+ @([regex]::Matches($active,'(?i)@([^@,;\[\]\r\n/\\]+\.fx)(?=,|\s*$)')|ForEach-Object {$_.Groups[1].Value.Trim()}|Select-Object -Unique)
 }
 function GetMissingPresetShaders([string]$Preset,[string]$Game){
  $installed=@(Get-ChildItem -LiteralPath (Join-Path $Game 'OptiShadeData/Shaders') -Filter '*.fx' -Recurse -File -ErrorAction SilentlyContinue|ForEach-Object Name)

@@ -1,4 +1,4 @@
-// OptiShade additions, GPL-3.0-or-later. Two saved looks; no automatic preset overwrite.
+﻿// OptiShade additions, GPL-3.0-or-later. Two saved looks; no automatic preset overwrite.
 static void DrawHotSwapKeybind();
 static std::filesystem::path swapMain,swapAlternate;
 static bool swapLoaded=false;
@@ -69,7 +69,7 @@ static void DrawHotSwap(){
   std::error_code ec;auto root=Util::DllPath().parent_path()/L"OptiShadeData"/L"Presets";
   for(std::filesystem::recursive_directory_iterator i(root,ec),end;i!=end&&!ec;i.increment(ec)){
    if(_wcsicmp(i->path().extension().c_str(),L".ini")||!i->is_regular_file(ec)||SameSwapPreset(i->path(),swapMain))continue;
-   auto name=i->path().lexically_relative(root).string();if(ImGui::Selectable(name.c_str(),SameSwapPreset(i->path(),swapAlternate))){swapAlternate=i->path();SaveSwapPair();}
+   auto name=i->path().filename().string()+"##"+i->path().string();if(ImGui::Selectable(name.c_str(),SameSwapPreset(i->path(),swapAlternate))){swapAlternate=i->path();SaveSwapPair();}
   }ImGui::EndCombo();
  }
  ImGui::Text("Active look: %s",std::filesystem::u8path(fx.preset).filename().string().c_str());
