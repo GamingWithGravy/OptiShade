@@ -1,36 +1,46 @@
 ﻿$ErrorActionPreference='Stop'
 . "$PSScriptRoot/../installer/updates.ps1"
 $env:OPTISHADE_STORE=Join-Path $env:TEMP ('OptiShade-channel-'+[guid]::NewGuid().ToString('N'))
+function Release([string]$version,[bool]$beta=$false){[pscustomobject]@{draft=$false;prerelease=$beta;tag_name="v$version";body='fixture';assets=@([pscustomobject]@{name="OptiShade_Version_$version.exe";browser_download_url="https://github.com/GamingWithGravy/OptiShade/releases/download/v$version/OptiShade_Version_$version.exe";digest=('sha256:'+('a'*64))})}}
+$script:releases=@((Release '0.21.2'),(Release '0.21.4'),(Release '0.22-beta.1' $true))
+$script:manifest=[pscustomobject]@{schema=1;channel='beta';version='0.21.3-beta.3';bytes=4;sha256=('a'*64);notes='fixture';parts=@([pscustomobject]@{name='OptiShade-beta.part01';bytes=4;sha256=('b'*64)})}
+$script:calls=[Collections.Generic.List[string]]::new()
+function Invoke-RestMethod {param([string]$Uri,$Headers,$TimeoutSec)
+ $script:calls.Add($Uri)
+ if($Uri -match '/releases\?') {return $script:releases}
+ if($Uri -eq 'https://api.github.com/repos/GamingWithGravy/OptiShade/commits/beta'){return [pscustomobject]@{sha=('c'*40)}}
+ if($Uri -eq ('https://raw.githubusercontent.com/GamingWithGravy/OptiShade/'+('c'*40)+'/downloads/beta/manifest.json')){return $script:manifest}
+ throw 'Unexpected download source'
+}
 if((GetOptiShadeUpdateChannel) -ne 'stable'){throw 'Must default to stable'}
-SetOptiShadeUpdateChannel $true
-if((GetOptiShadeUpdateChannel) -ne 'beta'){throw 'Opt in did not persist'}
-function Release([string]$version,[bool]$beta=$true){[pscustomobject]@{draft=$false;prerelease=$beta;tag_name="v$version";body='fixture';assets=@([pscustomobject]@{name="OptiShade_Version_$version.exe";browser_download_url="https://github.com/GamingWithGravy/OptiShade/releases/download/v$version/OptiShade_Version_$version.exe";digest=('sha256:'+('a'*64))})}}
-function Invoke-RestMethod { $script:releases }
-$script:releases=@((Release '0.21.1' $false))
-if(GetOptiShadeUpdate -ReportErrors){throw 'Stable offered to beta'}
-$script:releases=@((Release '0.22-beta2'),(Release '0.22-beta10'),(Release '0.23' $false))
-if((GetOptiShadeUpdate -Current '0.22-beta2' -ReportErrors).Version -ne '0.22-beta10'){throw 'Beta numeric ordering failed'}
-if(GetOptiShadeUpdate -Current '0.22-beta10' -ReportErrors){throw 'Same build offered again'}
-$invalid=Release '0.24-beta1';$invalid.assets[0].browser_download_url='https://github.com/another/repo/test.exe'
-$script:releases+=@($invalid)
-if((GetOptiShadeUpdate -Current '0.22-beta2' -ReportErrors).Version -ne '0.22-beta10'){throw 'Invalid newer asset hides valid update'}
+$offer=GetOptiShadeUpdate -Current '0.21.2' -InstalledChannel stable -ReportErrors
+if($offer.Version -ne '0.21.4' -or $script:calls.Count -ne 1 -or $script:calls[0] -notmatch '/releases\?'){throw 'Stable queried beta or selected wrong source'}
+$null=GetOptiShadeBetaCandidate '0.21.2'
+if($script:calls.Count -ne 1){throw 'Beta source queried without opt-in'}
+SetOptiShadeUpdateChannel $true;$script:calls.Clear()
+$offer=GetOptiShadeUpdate -Current '0.21.3' -InstalledChannel stable -ReportErrors
+if($offer.Version -ne '0.21.3-beta.3' -or $offer.Source -ne 'beta-branch' -or @($script:calls|Where-Object {$_ -match '/releases\?'}).Count){throw 'Beta channel did not exclusively use branch'}
+if(GetOptiShadeUpdate -Current '0.21.3-beta.3' -InstalledChannel beta -ReportErrors){throw 'Same beta offered again'}
+if((GetOptiShadeUpdate -Current '0.21.3-beta.2' -InstalledChannel beta -ReportErrors).Version -ne '0.21.3-beta.3'){throw 'New beta revision not offered'}
+$script:manifest.parts[0].name='../unsafe.part'
+$rejected=$false;try{GetOptiShadeUpdate -Current '0.21.2' -ReportErrors}catch{$rejected=$true}
+if(-not $rejected){throw 'Invalid branch manifest did not fail closed'}
+$script:manifest.parts[0].name='OptiShade-beta.part01'
 SetOptiShadeUpdateChannel $false
-$script:releases=@((Release '0.21.1' $false),(Release '0.22-beta10'))
-$return=GetOptiShadeUpdate -Current '0.22-beta10' -ReportErrors
-if($return.Version -ne '0.21.1' -or -not $return.Rollback -or $return.Channel -ne 'stable'){throw 'Opt out did not offer stable return'}
-if(GetOptiShadeUpdate -Current '0.21.1' -InstalledChannel stable -ReportErrors){throw 'Stable same build offered again'}
-if($return.ReleaseUrl -ne 'https://github.com/GamingWithGravy/OptiShade/releases/tag/v0.21.1'){throw 'Portable stable link points to wrong release'}
-if(Test-Path (Join-Path $env:OPTISHADE_STORE 'beta-updates.txt')){throw 'Opt out did not persist'}
-'PASS: opt in/out persisted, correct channels and URLs, beta ordering, stable return and same-version rejection'
-SetOptiShadeUpdateChannel $true
-$modern=Release '0.21.3-beta.2'
-$modern.assets[0].name='Optishade 0.21.3-beta.2 beta.exe'
-$modern.assets[0].browser_download_url='https://github.com/GamingWithGravy/OptiShade/releases/download/v0.21.3-beta.2/Optishade%200.21.3-beta.2%20beta.exe'
-$script:releases=@($modern)
-if((GetOptiShadeUpdate -Current '0.21.3' -InstalledChannel stable -ReportErrors).Version -ne '0.21.3-beta.2'){throw 'Stable-to-beta switch at same base version failed'}
-if(GetOptiShadeUpdate -Current '0.21.3-beta.2' -InstalledChannel beta -ReportErrors){throw 'Beta same version offered again'}
-SetOptiShadeUpdateChannel $false
-'PASS: readable EXE name and same-base channel switch'
+$return=GetOptiShadeUpdate -Current '0.21.3-beta.3' -InstalledChannel beta -ReportErrors
+if($return.Version -ne '0.21.4' -or -not $return.Rollback -or $return.Channel -ne 'stable'){throw 'Latest stable return failed'}
+$script:releases=@((Release '0.21.2'),(Release '0.22-beta.1' $true))
+$return=GetOptiShadeUpdate -Current '0.21.3-beta.3' -InstalledChannel beta -ReportErrors
+if($return.Version -ne '0.21.2' -or -not $return.Rollback){throw 'Return to older stable failed'}
+$destination=Join-Path $env:OPTISHADE_STORE 'blocked.exe';$rejected=$false
+try{SaveOptiShadeBetaDownload $offer $destination $env:OPTISHADE_STORE {}}catch{$rejected=$true}
+if(-not $rejected -or (Test-Path $destination)){throw 'Beta download started after opt-out'}
+$script:releases=@((Release '0.21.2'),(Release '0.21.4'),(Release '0.22-beta.1' $true))
+$latest=@(GetOptiShadePreviousReleases | Sort-Object {[version]$_.Version} -Descending)
+if($latest[0].Version -ne '0.21.4' -or @($latest|Where-Object Version -match 'beta').Count){throw 'Stable picker is pinned or includes beta'}
+$modern=Release '0.21.4';$modern.assets[0].name='Optishade.0.21.4.stable.exe';$modern.assets[0].browser_download_url='https://github.com/GamingWithGravy/OptiShade/releases/download/v0.21.4/Optishade.0.21.4.stable.exe'
+if(-not(GetOptiShadeReleaseAsset $modern '0.21.4')){throw 'Normalised stable filename rejected'}
+'PASS: isolated sources, explicit opt-in, immutable beta commit, invalid manifest rejection, no fallback and dynamic stable return'
 . "$PSScriptRoot/../installer/ownership.ps1"
 function AssertClosed($Game){}
 $fixture=Join-Path $env:TEMP ('OptiShade-beta-update-'+[guid]::NewGuid().ToString('N'))
@@ -49,13 +59,3 @@ Set-Content (Join-Path $game 'dxgi.dll') 'unknown graphics loader'
 $blocked=$false;try{GetFusionUpdateConflicts (Get-Content $mp -Raw|ConvertFrom-Json)|Out-Null}catch{$blocked=$true}
 if(-not $blocked){throw 'Unknown graphics loader was accepted'}
 'PASS: generated log survives installation; unknown DLL still blocks update'
-
-SetOptiShadeUpdateChannel $true
-$modern.assets[0].name='Optishade.0.21.3-beta.2.beta.exe'
-$modern.assets[0].browser_download_url='https://github.com/GamingWithGravy/OptiShade/releases/download/v0.21.3-beta.2/Optishade.0.21.3-beta.2.beta.exe'
-$script:releases=@($modern)
-if((GetOptiShadeUpdate -Current '0.21.2' -InstalledChannel stable -ReportErrors).Version -ne '0.21.3-beta.2'){throw 'GitHub-normalised filename not detected'}
-$script:releases=@((Release '0.21.2' $false),(Release '0.21.4' $false),(Release '0.22-beta.1'))
-$latest=@(GetOptiShadePreviousReleases | Sort-Object {[version]$_.Version} -Descending)
-if($latest[0].Version -ne '0.21.4' -or @($latest|Where-Object Version -match 'beta').Count){throw 'Stable return is pinned or includes beta'}
-'PASS: normalised asset filename and dynamically newest stable return'

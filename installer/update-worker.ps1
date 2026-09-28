@@ -2,6 +2,7 @@
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName PresentationFramework
 . "$PSScriptRoot/update-lifecycle.ps1"
+. "$PSScriptRoot/beta-download.ps1"
 $settings=Get-Content -LiteralPath $Config -Raw -Encoding UTF8|ConvertFrom-Json
 $script:target=[IO.Path]::GetFullPath($settings.Installer)
 $desktop=if($settings.Desktop){[string]$settings.Desktop}else{[Environment]::GetFolderPath('DesktopDirectory')}
@@ -12,7 +13,12 @@ $channel=if($safeVersion -match '-(?:alpha|beta|rc)'){'beta'}else{'stable'}
 $destination=Join-Path $desktop (GetOptiShadeManagerName $safeVersion $channel)
 $previous=$script:target
 $uri=[uri]$settings.Url
-if($uri.Scheme -ne 'https' -or $uri.Host -ne 'github.com' -or $uri.AbsolutePath -cnotmatch '^/GamingWithGravy/(OptiShade|OptiShade_V0[.]19[.]17)/releases/download/' -or $settings.SHA256 -notmatch '^[a-fA-F0-9]{64}$' -or [IO.Path]::GetExtension($script:target) -ne '.exe'){throw 'Invalid update information.'}
+if($settings.SHA256 -notmatch '^[a-fA-F0-9]{64}$' -or [IO.Path]::GetExtension($script:target) -ne '.exe'){throw 'Invalid update information.'}
+if($channel -eq 'beta'){
+ if($settings.Source -cne 'beta-branch'){throw 'Beta downloads must come from the opted-in beta branch.'}
+}else{
+ if($settings.Source -eq 'beta-branch' -or $uri.Scheme -ne 'https' -or $uri.Host -ne 'github.com' -or $uri.AbsolutePath -cnotmatch '^/GamingWithGravy/(OptiShade|OptiShade_V0[.]19[.]17)/releases/download/'){throw 'Stable downloads must come from official releases.'}
+}
 [xml]$markup=@'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="OptiShade update" Width="700" Height="500" ResizeMode="NoResize" WindowStyle="None" AllowsTransparency="True" WindowStartupLocation="CenterScreen" Background="Transparent" Foreground="#F3EFFB" FontFamily="Segoe UI"><Border Background="#171020" BorderBrush="#40314F" BorderThickness="1" CornerRadius="20"><Grid><Border Name="DragHeader" Height="48" VerticalAlignment="Top" Background="Transparent" Cursor="SizeAll"/><Button Name="Close" Content="&#x2715;" HorizontalAlignment="Right" VerticalAlignment="Top" Background="Transparent" Margin="0,8,12,0" Padding="12,8" ToolTip="Close"/><StackPanel Margin="36" VerticalAlignment="Center"><TextBlock Text="Optishade" FontSize="48" FontWeight="SemiBold" HorizontalAlignment="Center"/><TextBlock Text="Your simulator. Your way." FontSize="22" Foreground="#BD9CEC" HorizontalAlignment="Center" Margin="0,8,0,24"/><TextBlock Name="Version" HorizontalAlignment="Center" Margin="0,0,0,16"/><TextBox Name="Notes" Visibility="Collapsed"/><TextBox Name="Status" Text="Updating..." IsReadOnly="True" TextWrapping="Wrap" TextAlignment="Center" Foreground="#C9B6DF" Background="Transparent" BorderThickness="0" MaxHeight="140" VerticalScrollBarVisibility="Auto"/><ProgressBar Name="Progress" Width="360" Height="7" Margin="0,24,0,0" Foreground="#9755E9" Background="#332246" Maximum="100" BorderThickness="0"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,22,0,0"><Button Name="Launch" Content="Open manager" Visibility="Collapsed" Padding="26,10" Background="#8650C8" Foreground="White"/><Button Name="OpenLocation" Content="Open file location" Visibility="Collapsed" Padding="16,10" Margin="12,0,0,0" Background="#282238"/><Button Name="DoneClose" Content="Close" Visibility="Collapsed" Padding="26,10" Margin="12,0,0,0" Background="#282238"/></StackPanel><TextBlock Text="created by gravy" HorizontalAlignment="Center" Foreground="#8E829E" Margin="0,26,0,0"/></StackPanel></Grid></Border></Window>
 '@
@@ -81,9 +87,18 @@ $window.Add_ContentRendered({
   foreach($drive in $space.Keys){if(([IO.DriveInfo]::new($drive)).AvailableFreeSpace -lt $space[$drive]){throw "Not enough disk space on $drive. Free at least $([math]::Ceiling($space[$drive]/1MB)) MB for downloading and staging the update, then retry. No installed files were changed."}}
   [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
   $window.FindName('Status').Text='Downloading OptiShade Manager...';$window.FindName('Progress').IsIndeterminate=$true
+  if($channel -eq 'beta'){
+   $downloadStore=if($settings.Store){[string]$settings.Store}else{Join-Path $env:LOCALAPPDATA 'OptiShade'}
+   SaveOptiShadeBetaDownload $settings $download $downloadStore {
+    param($part,$count)
+    $window.FindName('Status').Text="Downloading beta from the beta branch ($part of $count)..."
+    $window.Dispatcher.Invoke([Action]{},[Windows.Threading.DispatcherPriority]::Background)
+   }
+  }else{
   $web.Headers['User-Agent']='OptiShade-updater';$task=$web.DownloadFileTaskAsync($uri,$download);$clock=[Diagnostics.Stopwatch]::StartNew()
   while(-not $task.IsCompleted){if($clock.Elapsed.TotalMinutes -gt 15){$web.CancelAsync();throw 'Download timed out. Your existing manager is unchanged.'};$window.Dispatcher.Invoke([Action]{},[Windows.Threading.DispatcherPriority]::Background);Start-Sleep -Milliseconds 100}
   $task.GetAwaiter().GetResult()
+  }
   if(Get-Process FlightSimulator2024,FlightSimulator,X-Plane -ErrorAction SilentlyContinue){throw 'Close all simulators, then retry. No installed files were changed.'}
   if((Get-FileHash -LiteralPath $download -Algorithm SHA256).Hash -ne $settings.SHA256){throw 'Update verification failed. Your existing manager is unchanged.'}
   if($settings.Rollback){SuspendRollbackLogs}
