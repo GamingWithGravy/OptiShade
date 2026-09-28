@@ -78,20 +78,24 @@ function GetMissingPresetShaders([string]$Preset,[string]$Game){
  $installed=@(Get-ChildItem -LiteralPath (Join-Path $Game 'OptiShadeData/Shaders') -Filter '*.fx' -Recurse -File -ErrorAction SilentlyContinue|ForEach-Object Name)
  @(GetPresetShaderNames $Preset|Where-Object {$_ -notin $installed})
 }
-function GetPresetPackages([string[]]$Missing,[string]$Catalogue){
+function GetPresetPackages([string[]]$Missing,[string]$Catalogue,[switch]$AllowMissing){
  $packages=@();$current=$null
  foreach($line in Get-Content -LiteralPath $Catalogue){if($line -match '^\[(.+)\]$'){$current=@{Id=$Matches[1]};$packages+=,$current}elseif($current -and $line -match '^([^=]+)=(.*)$'){$current[$Matches[1]]=$Matches[2]}}
  $selected=@{}
  foreach($shader in $Missing){
   $sources=@($packages|Where-Object {$shader -in ($_.EffectFiles -split ',') -and $shader -notin ($_.DenyEffectFiles -split ',')})
-  if($sources.Count -ne 1){throw "No unique catalogue source for $shader. Import the author's ZIP instead; no download was started."}
+  if($sources.Count -ne 1){if($AllowMissing){continue};throw "Unable to find a verified download for $shader in the catalogue. Please check the ZIP for custom FX files and follow the preset author's installation instructions."}
   $pkg=$sources[0];if(-not $selected.ContainsKey($pkg.Id)){$selected[$pkg.Id]=@{Package=$pkg;Shaders=@()}};$selected[$pkg.Id].Shaders+=,$shader
  }
  return $selected
 }
 function InstallPresetDependencies([string]$Preset,[string]$Game,[string]$Catalogue){
- $missing=@(GetMissingPresetShaders $Preset $Game);if(-not $missing.Count){return}
- $selected=GetPresetPackages $missing $Catalogue
+ $missing=@(GetMissingPresetShaders $Preset $Game)
+ if(-not $missing.Count){
+  if([IO.File]::ReadAllText($Preset) -match '(?im)^\s*Techniques\s*=\s*[^\s@,]+\s*$'){return "The preset has been installed, but please check for possible missing FX files. This preset does not identify its shader filenames. Please check the ZIP for custom FX files and follow the preset author's installation instructions."}
+  return
+ }
+ $selected=GetPresetPackages $missing $Catalogue -AllowMissing
  [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
  $downloads=ImportSafePath (Join-Path $Game 'OptiShadeData') ('Downloads/Import-'+[guid]::NewGuid().ToString('N'))
  New-Item -ItemType Directory -Path $downloads -Force|Out-Null
@@ -112,6 +116,7 @@ function InstallPresetDependencies([string]$Preset,[string]$Game,[string]$Catalo
    $null=ImportEffectsArchive $zip $Game -OnlyShaders $selection.Shaders
   }
   foreach($header in @('ReShade.fxh','ReShadeUI.fxh')){
+   if(-not $selected.Count){break}
    $target=ImportSafePath (Join-Path $Game 'OptiShadeData') ('Shaders/'+$header)
    if(-not(Test-Path -LiteralPath $target)){
     $source=Join-Path $PSScriptRoot ('StandardHeaders/'+$header)
@@ -119,7 +124,8 @@ function InstallPresetDependencies([string]$Preset,[string]$Game,[string]$Catalo
     [IO.File]::Copy($source,$target,$false)
    }
   }
-  $remaining=@(GetMissingPresetShaders $Preset $Game);if($remaining.Count){throw ('Still missing: '+($remaining -join ', '))}
+  $remaining=@(GetMissingPresetShaders $Preset $Game)
+  if($remaining.Count){return ("The preset has been installed, but please check for possible missing FX files. Unable to find a verified download for: "+($remaining -join ', ')+". Please check the ZIP for custom FX files and follow the preset author's installation instructions. The look may differ until these files are installed.")}
  }finally{
   # Only delete transport files created inside this invocation's verified folder.
   foreach($file in Get-ChildItem -LiteralPath $downloads -File){Remove-Item -LiteralPath (ImportSafePath $downloads $file.Name) -Force}
@@ -130,7 +136,7 @@ if($ImportResult){
  # The in-game caller supplies only a result leaf inside the managed folder.
  $resultPath=ImportSafePath (Join-Path $ImportGame 'OptiShadeData') $ImportResult
  try{
-  if($ImportPreset){InstallPresetDependencies $ImportPreset $ImportGame (Join-Path $PSScriptRoot 'EffectPackages.ini');$message='OK: Missing shaders installed. Loading the imported look; check shader compilation status.'}
+  if($ImportPreset){$warning=InstallPresetDependencies $ImportPreset $ImportGame (Join-Path $PSScriptRoot 'EffectPackages.ini');$message=if($warning){'OK: WARNING: '+$warning}else{'OK: Missing shaders installed. Loading the imported look; check shader compilation status.'}}
   else{$count=ImportEffectsArchive $ImportArchive $ImportGame;$message="OK: Imported $count files into OptiShadeData. Choose an imported INI under Saved look; required shaders must compile. Your current look is unchanged."}
  }
  catch{$message='ERROR: '+$_.Exception.Message}

@@ -94,7 +94,7 @@ static void DrawDependencyPrompt(){
   ImGui::BeginChild("Missing shader list",ImVec2(0,100),true);
   for(const auto& name:missingShaders)ImGui::BulletText("%s",name.c_str());
   ImGui::EndChild();
-  ImGui::TextWrapped("OptiShade will download matching packages from its catalogue, install the required FX with includes and textures, then load this look. Existing files are kept. Unknown or ambiguous shaders need the author's ZIP. Compilation and depth-dependent effects can still require adjustment.");
+  ImGui::TextWrapped("OptiShade will download matching packages from its catalogue, install the required FX with includes and textures, then load this look. Existing files are kept. The preset will still load if some FX are not in the catalogue. Check the author's ZIP for custom FX and follow their installation instructions; missing FX can change the look. Compilation and depth-dependent effects can still require adjustment.");
   if(ImGui::Button("Install missing FX and load INI")){if(StartZipImport(dependencyPreset,dependencyRoot,true,dependencyDiscardApproved))ImGui::CloseCurrentPopup();}
   if(ImGui::Button("Keep current look"))ImGui::CloseCurrentPopup();
   if(feedback[0])ImGui::TextWrapped("%s",feedback);

@@ -32,10 +32,13 @@ Check ((HashFile $ini) -eq (HashFile (OwnedPath $game $relative))) 'Imported pre
 Check (-not(Test-Path "$game/OptiShadeData/Shaders/Unneeded.fx")) 'Existing dependency satisfies preset without full FX download'
 Set-Content $ini 'Techniques=LegacyUnqualified'
 $rejected=$false;try{TestOwnPreset $ini $game $catalogue}catch{$rejected=$true}
-Check $rejected 'Ambiguous legacy preset fails rather than silently downloading everything'
+Check (-not $rejected) 'Legacy preset can be saved without guessing shader downloads'
 Set-Content $ini "Techniques=Private@Unavailable.fx"
 $rejected=$false;try{TestOwnPreset $ini $game $catalogue}catch{$rejected=$true}
-Check $rejected 'Unknown dependency fails before download'
+Check (-not $rejected) 'Custom FX do not block saving the preset'
+$customRelative=SaveOwnPreset $ini $game $catalogue
+$warning=InstallPresetDependencies (OwnedPath $game $customRelative) $game $catalogue
+Check ($warning -like '*preset has been installed*Unavailable.fx*author*') 'Unavailable FX produce an actionable warning while keeping the preset'
 $mp=InstallFusion $game $payload $store "$fixture/Manager.exe" -ReplaceMods @(FindFusionConflicts $game) -ReplaceExisting $true -PreserveConfiguration $true
 Check (-not(Test-Path "$game/OptiShadeData/Shaders/Unneeded.fx") -and (Test-Path (OwnedPath $game $relative))) 'Repair retains preset-only choice and imported look'
 
@@ -48,3 +51,7 @@ Check (@(GetPresetShaderNames $ini).Count -eq 1 -and (GetPresetShaderNames $ini)
 TestOwnPreset $ini $game $catalogue
 Set-Content $ini "Techniques=`nTechniqueSorting=Old@Unavailable.fx`n[Unavailable.fx]"
 Check (@(GetPresetShaderNames $ini).Count -eq 0) 'Empty look does not require any disabled effects'
+
+Add-Content $catalogue "`n[duplicate]`nEffectFiles=Unneeded.fx"
+$known=GetPresetPackages @('Needed.fx','Unneeded.fx','Private.fx') $catalogue -AllowMissing
+Check ($known.Count -eq 1 -and $known['test'].Shaders.Count -eq 1) 'Unknown and ambiguous FX do not block uniquely identified downloads'
