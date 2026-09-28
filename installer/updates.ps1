@@ -1,5 +1,4 @@
 ﻿. "$PSScriptRoot/update-lifecycle.ps1"
-. "$PSScriptRoot/beta-download.ps1"
 function GetOptiShadeReleaseAsset($Release,[string]$Version){
  $channel=if($Release.prerelease){'beta'}else{'stable'}
  $readable=GetOptiShadeManagerName $Version $channel
@@ -27,17 +26,16 @@ function GetBetaVersionKey([string]$Value){
  $revision=if($Matches[3]){[int]$Matches[3]}else{0}
  [pscustomobject]@{Numeric=[version]$Matches[1];Stage=$stage;Revision=$revision}
 }
-# Stable reads published releases; beta reads only its branch manifest after explicit opt-in.
-function GetOptiShadeUpdate([string]$Current='0.21.3-beta.3',[switch]$ReportErrors,[ValidateSet('stable','beta')][string]$InstalledChannel='beta'){
+# The persisted setting selects release assets, never source-code branch archives.
+function GetOptiShadeUpdate([string]$Current='0.21.3-beta.2',[switch]$ReportErrors,[ValidateSet('stable','beta')][string]$InstalledChannel='beta'){
  [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
  try{
   $channel=GetOptiShadeUpdateChannel
   $currentKey=GetBetaVersionKey $Current
   if(-not $currentKey){throw 'Invalid current version'}
-  if($channel -eq 'beta'){return GetOptiShadeBetaCandidate $Current}
   $releases=@(Invoke-RestMethod 'https://api.github.com/repos/GamingWithGravy/OptiShade/releases?per_page=100' -Headers @{'User-Agent'='OptiShade-beta-update-check'} -TimeoutSec 12)
   $candidates=@(foreach($release in $releases){
-   if($release.draft -or $release.prerelease){continue}
+   if($release.draft -or ([bool]$release.prerelease -ne ($channel -eq 'beta'))){continue}
    $version=([string]$release.tag_name) -replace '^v','';$key=GetBetaVersionKey $version
    if(-not $key -or ($channel -eq 'beta' -and $key.Stage -eq 3) -or ($channel -eq 'stable' -and $key.Stage -ne 3)){continue}
    if(-not (($channel -ne $InstalledChannel -and (($currentKey.Stage -eq 3) -eq ($InstalledChannel -eq 'stable'))) -or ($channel -eq 'stable' -and $currentKey.Stage -ne 3)) -and ($key.Numeric -lt $currentKey.Numeric -or ($key.Numeric -eq $currentKey.Numeric -and ($key.Stage -lt $currentKey.Stage -or ($key.Stage -eq $currentKey.Stage -and $key.Revision -le $currentKey.Revision))))){continue}
@@ -49,7 +47,7 @@ function GetOptiShadeUpdate([string]$Current='0.21.3-beta.3',[switch]$ReportErro
   $candidates|Sort-Object Numeric,Stage,Revision -Descending|Select-Object -First 1
  }catch{if($ReportErrors){throw 'Could not check the selected update channel on GitHub. Check your connection and try again.'};return $null}
 }
-function GetOptiShadePreviousReleases([string]$Current='0.21.3-beta.3'){
+function GetOptiShadePreviousReleases([string]$Current='0.21.3-beta.2'){
  [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
  $releases=Invoke-RestMethod 'https://api.github.com/repos/GamingWithGravy/OptiShade/releases?per_page=100' -Headers @{'User-Agent'='OptiShade-revert'} -TimeoutSec 12
  foreach($release in $releases){
@@ -62,7 +60,7 @@ function GetOptiShadePreviousReleases([string]$Current='0.21.3-beta.3'){
   [pscustomobject]@{Version=$version;Url=$url.AbsoluteUri;SHA256=$assets[0].digest.Substring(7);Notes=[string]$release.body;Rollback=$true;ReleaseUrl="https://github.com/GamingWithGravy/OptiShade/releases/tag/$($release.tag_name)"}
  }
 }
-function ShowOptiShadeRevert($Owner,[string]$Current='0.21.3-beta.3'){
+function ShowOptiShadeRevert($Owner,[string]$Current='0.21.3-beta.2'){
  [xml]$markup=@'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="Return to stable" Width="650" Height="520" WindowStartupLocation="CenterOwner" WindowStyle="None" AllowsTransparency="True" Background="Transparent" Foreground="#F3EFFB" FontFamily="Segoe UI" ResizeMode="NoResize">
  <Border CornerRadius="20" Background="#171020" BorderBrush="#40314F" BorderThickness="1" Padding="28"><Grid>

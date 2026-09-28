@@ -76,7 +76,7 @@
      <Button x:Name="SupportDevelopment" Content="Buy me a coffee" Margin="0,8,0,10" Padding="12,9"/>
      <TextBlock Text="OptiShade - created by gravy" Foreground="#D4B7F9" FontWeight="SemiBold" FontSize="12"/>
 
-     <TextBlock Text="VERSION  /  0.21.3-beta.3" Foreground="#71657F" FontSize="10" Margin="0,12,0,0"/>
+     <TextBlock Text="VERSION  /  0.21.3-beta.2" Foreground="#71657F" FontSize="10" Margin="0,12,0,0"/>
     </StackPanel>
     <Grid/>
    </DockPanel>
@@ -126,7 +126,7 @@
      </Grid>
      </StackPanel><Border x:Name="DeveloperMessagePanel" Grid.Row="1" Background="#21172F" CornerRadius="12" Padding="14,8" Margin="0,4,0,8"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
       <TextBlock Text="Developer message" Foreground="#D4B7F9" FontWeight="SemiBold" Margin="0,0,0,6"/>
-      <TextBlock Text="Beta branch build: XP12/Vulkan and MSFS TAA NR remain experimental. Beta updates download only from the beta branch after opt-in. Turn beta off in Settings and check for updates to return to stable. Please send diagnostic ZIPs to diagnostic zips in BlackBox Discord." Foreground="#C9B6DF" TextWrapping="Wrap"/>
+      <TextBlock Text="Beta branch build: XP12/Vulkan and MSFS TAA NR remain experimental. This build is not published for updater downloads. Turn beta off in Settings and check for updates to return to stable. Please send diagnostic ZIPs to diagnostic zips in BlackBox Discord." Foreground="#C9B6DF" TextWrapping="Wrap"/>
      </StackPanel></ScrollViewer></Border>
     </Grid>
     <Grid x:Name="LibraryPage" Visibility="Collapsed"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
