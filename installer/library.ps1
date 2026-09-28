@@ -1,4 +1,5 @@
-﻿# Read launcher catalogues; never crawl entire disks or start games during discovery.
+﻿. "$PSScriptRoot/store-paths.ps1"
+# Read launcher catalogues; never crawl entire disks or start games during discovery.
 function ResolveFusionStoreFolder([string]$Folder){
  # Appx InstallLocation can be a protected package path or an Xbox junction.
  # Never install through WindowsApps or relax OwnedPath's link protection.
@@ -7,14 +8,7 @@ function ResolveFusionStoreFolder([string]$Folder){
  if($Folder -notmatch '(?i)[\\/]WindowsApps[\\/]Microsoft\.(FlightSimulator|Limitless)_[^\\/]+$'){throw $help}
  $edition=$Matches[1]
  try{
-  $item=Get-Item -LiteralPath $Folder -Force -ErrorAction Stop
-  if(-not($item.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw $help}
-  $targets=@($item.Target|Where-Object {-not [string]::IsNullOrWhiteSpace($_)})
-  if($targets.Count -ne 1){throw $help}
-  $target=[string]$targets[0]
-  if($target.StartsWith('\??\')){$target=$target.Substring(4)}
-  if($target -notmatch '^[A-Za-z]:[\\/]' -or $target -match '(?i)[\\/]WindowsApps(?:[\\/]|$)'){throw $help}
-  $target=[IO.Path]::GetFullPath($target).TrimEnd('\')
+  $target=ResolveSimulatorStoreTarget $Folder
   $exe=if($edition -eq 'Limitless'){'FlightSimulator2024.exe'}else{'FlightSimulator.exe'}
   foreach($root in @($target,(Join-Path $target 'Content'))){
    if(-not(Test-Path -LiteralPath (Join-Path $root $exe) -PathType Leaf)){continue}
