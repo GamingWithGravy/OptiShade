@@ -5,8 +5,8 @@ function TestOwnPreset([string]$Preset,[string]$Game,[string]$Catalogue){
  $names=@(GetPresetShaderNames $Preset)
  $text=[IO.File]::ReadAllText($Preset)
  if($text -notmatch '(?im)^Techniques='){throw 'This INI is not a ReShade look preset (Techniques is missing).'}
- if(-not $names.Count -and $text -match '(?im)^Techniques=\S'){throw 'This preset does not identify its FX files. Import the author''s shader ZIP first or use the full FX package.'}
- $null=GetPresetPackages @(GetMissingPresetShaders $Preset $Game) $Catalogue
+ # Missing/custom shaders must not prevent saving a valid preset.
+ # Dependency installation reports unavailable files after installing known FX.
 }
 function SaveOwnPreset([string]$Preset,[string]$Game,[string]$Catalogue){
  AssertClosed $Game;TestOwnPreset $Preset $Game $Catalogue

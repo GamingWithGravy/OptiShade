@@ -219,18 +219,20 @@ $form.FindName('Repair').Add_Click({RunAction {
 }})
 function WriteInstallerLog([string]$Message){try{New-Item -ItemType Directory -Path $store -Force|Out-Null;((Get-Date -Format o)+' '+$Message)|Add-Content -LiteralPath (Join-Path $store 'Installer.log') -Encoding UTF8}catch{}}
 function FinishOptionalDownloads($Manifest,$Plan){
+ $presetWarning=''
  $issues=New-Object 'System.Collections.Generic.List[string]'
  if(UseOptionalDlss $Manifest $Plan){try{EnsureNeuralRuntime (ManifestPath $store $path.Text) (GetFusionGpu) $progress}catch{$issues.Add('Neural model: '+$_.Exception.Message)};try{if(-not(Test-Path -LiteralPath (Join-Path $path.Text 'X-Plane.exe'))){InstallNvidia $path.Text $progress}}catch{$issues.Add('NVIDIA files: '+$_.Exception.Message)}}
  if(-not $Manifest.PSObject.Properties['IncludeEffects'] -or $Manifest.IncludeEffects){try{$null=InstallAllEffects $path.Text (Join-Path $PSScriptRoot 'EffectPackages.ini') $progress}catch{$issues.Add('Additional FX: '+$_.Exception.Message)}}
- elseif($Manifest.PSObject.Properties['FxPresetRelative'] -and $Manifest.FxPresetRelative){try{$progress.Invoke('Installing the selected INI shader dependencies...');InstallPresetDependencies (OwnedPath $path.Text $Manifest.FxPresetRelative) $path.Text (Join-Path $PSScriptRoot 'EffectPackages.ini')}catch{$issues.Add('Preset FX: '+$_.Exception.Message)}}
+ elseif($Manifest.PSObject.Properties['FxPresetRelative'] -and $Manifest.FxPresetRelative){try{$progress.Invoke('Installing the selected INI shader dependencies...');$presetWarning=InstallPresetDependencies (OwnedPath $path.Text $Manifest.FxPresetRelative) $path.Text (Join-Path $PSScriptRoot 'EffectPackages.ini')}catch{$issues.Add('Preset FX: '+$_.Exception.Message)}}
  if($issues.Count){
   $mp=ManifestPath $store $path.Text;$m=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json
   $m|Add-Member -NotePropertyName Downloads -NotePropertyValue 'Pending' -Force;WriteState $m $mp
   foreach($issue in $issues){WriteInstallerLog $issue}
   $status.Text='OptiShade is installed. Some optional downloads are unfinished; installed effects can still be used. Choose Retry unfinished downloads. Details: %LOCALAPPDATA%\OptiShade\Installer.log'
- }else{CompleteDownloads;if($Manifest.PSObject.Properties['FxPresetRelative'] -and $Manifest.FxPresetRelative){$status.Text='Preset and required FX installed. Select '+[IO.Path]::GetFileName($Manifest.FxPresetRelative)+' in game under Image effects > Saved look.'}}
+ }else{CompleteDownloads;if($Manifest.PSObject.Properties['FxPresetRelative'] -and $Manifest.FxPresetRelative){$status.Text='Preset installed. Select '+[IO.Path]::GetFileName($Manifest.FxPresetRelative)+' in game under Image effects > Saved look.'}}
  WriteInstallerLog $status.Text
  try{$updated=CheckGameCompatibility $Manifest.LaunchExe;SaveFusionCompatibility $path.Text $updated;if((UseOptionalDlss $Manifest $Plan) -and $updated.NeuralRuntime.State -ne 'Verified file'){$status.Text='OptiShade image effects are installed. Neural rendering is NOT ready: '+$updated.NeuralRuntime.Message+' Choose Retry unfinished downloads to retry the GPU-matched model download.';if($issues.Count){$status.Text+=' Some optional downloads also failed; use Retry unfinished downloads.'}}}catch{WriteInstallerLog ('Post-install diagnostics: '+$_.Exception.Message)}
+ if($presetWarning){$status.Text+=' '+$presetWarning;WriteInstallerLog $presetWarning}
 }
 
 function CheckGameCompatibility([string]$exe){
