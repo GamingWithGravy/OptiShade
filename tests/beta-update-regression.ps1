@@ -49,3 +49,13 @@ Set-Content (Join-Path $game 'dxgi.dll') 'unknown graphics loader'
 $blocked=$false;try{GetFusionUpdateConflicts (Get-Content $mp -Raw|ConvertFrom-Json)|Out-Null}catch{$blocked=$true}
 if(-not $blocked){throw 'Unknown graphics loader was accepted'}
 'PASS: generated log survives installation; unknown DLL still blocks update'
+
+SetOptiShadeUpdateChannel $true
+$modern.assets[0].name='Optishade.0.21.3-beta.2.beta.exe'
+$modern.assets[0].browser_download_url='https://github.com/GamingWithGravy/OptiShade/releases/download/v0.21.3-beta.2/Optishade.0.21.3-beta.2.beta.exe'
+$script:releases=@($modern)
+if((GetOptiShadeUpdate -Current '0.21.2' -InstalledChannel stable -ReportErrors).Version -ne '0.21.3-beta.2'){throw 'GitHub-normalised filename not detected'}
+$script:releases=@((Release '0.21.2' $false),(Release '0.21.4' $false),(Release '0.22-beta.1'))
+$latest=@(GetOptiShadePreviousReleases | Sort-Object {[version]$_.Version} -Descending)
+if($latest[0].Version -ne '0.21.4' -or @($latest|Where-Object Version -match 'beta').Count){throw 'Stable return is pinned or includes beta'}
+'PASS: normalised asset filename and dynamically newest stable return'
