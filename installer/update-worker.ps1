@@ -75,6 +75,8 @@ $window.Add_ContentRendered({
  $download=Join-Path (Split-Path $Config) 'download.exe';$web=New-Object Net.WebClient
  try{
   $space=@{}
+  $downloadStore=if($settings.Store){[string]$settings.Store}else{Join-Path $env:LOCALAPPDATA 'OptiShade'}
+  AssertOptiShadeDownloadChannel $channel $downloadStore
   foreach($requirement in @(@{Path=(Split-Path $Config);Bytes=1GB},@{Path=$desktop;Bytes=512MB})){
    $drive=[IO.Path]::GetPathRoot([IO.Path]::GetFullPath($requirement.Path));$space[$drive]+=$requirement.Bytes
   }
