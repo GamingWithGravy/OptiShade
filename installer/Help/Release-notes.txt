@@ -26,6 +26,8 @@ NEW FEATURES AND FIXES
 - Improved the missing/damaged installer-file message with recovery steps. Damaged or missing DLLs still fail verification.
 
 **IMPROVEMENTS**
+- FPS overlay controls are now visible in Settings & status, with matching OptiShade switches: visibility, position, detail, text size, opacity and theme colours.
+- In-game Settings & status now includes UI size: Auto or 100–200%. Text and controls scale together; Auto uses 200% at native 4K. Save settings keeps the choice per game.
 - Retry NR after a memory-pressure pause without restarting the simulator.
 - Added a memory-pressure override beside Apply the model. It is off by default and lasts only for the current game session. Low VRAM can still cause stutters or crashes; device-loss checks remain active.
 - Compatible RTX 40 installations automatically receive the bundled MFG component. Native DLSS Frame Generation must still be enabled in game; Backspace opens its menu. Supported multipliers vary. Existing conflicting loaders are not overwritten by automatic MFG setup.
