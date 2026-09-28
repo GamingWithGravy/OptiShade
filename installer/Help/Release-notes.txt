@@ -1,6 +1,6 @@
-# OptiShade 0.21.3-beta.2 Beta
+# OptiShade 0.21.3-beta.3 Beta
 
-This is an experimental branch build, not a published GitHub release. It is not currently available through the stable launcher updater.
+This experimental installer is built from the beta branch and published as a GitHub prerelease. It is offered only when beta versions are enabled in Settings.
 
 EXPERIMENTAL FEATURES
 - X-Plane 12 Vulkan image effects and Neural Rendering. Launch XP12 using Play in this manager. Frame generation is not provided for XP12.
@@ -38,8 +38,8 @@ NEW FEATURES AND FIXES
 - Successful updates place the new manager on the Desktop and remove the unchanged previous EXE. Returning to stable resets beta opt-in. Presets and configuration are preserved.
 
 **SWITCHING VERSIONS**
-- This beta is supplied for local testing or built from the beta source branch. There is no published updater download for it. The beta preference is retained for future published builds.
-- To return to stable, turn beta off and Check for updates, or choose a stable build with Revert update. Successful return clears beta opt-in.
+- Enable beta versions in Settings and check for updates to download the beta prerelease. Stable users only receive stable releases; no beta is downloaded without opt-in and choosing to install it.
+- To return to stable, turn beta off and Check for updates, or choose a stable build with Return to stable. Successful return clears beta opt-in.
 - Close all simulators first. Presets, keybinds and configuration are preserved. Experimental TAA NR must be enabled again each session and is disabled in stable.
 - Restore XP12 before returning to stable if you want to remove its experimental installation. Stable leaves existing XP12 installations untouched and does not offer XP12 installation.
 - Updates started from this manager save the new EXE to your Desktop and remove the unchanged previous EXE after success. Updates started from 0.21.2 still use its older naming and retain the previous copy for this first update.

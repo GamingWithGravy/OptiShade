@@ -1,5 +1,5 @@
 ﻿$ErrorActionPreference='Stop'
-function GetBundledOptiShadeVersion { 'P0.21.3-beta.2' }
+function GetBundledOptiShadeVersion { 'P0.21.3-beta.3' }
 function TestBundledUpdateVersion($Manifest){
  try{
   $parse={param($text)

@@ -1,4 +1,4 @@
-**Beta source branch — OptiShade 0.21.3-beta.2.** This branch is for testing and is not published in GitHub Releases. The current stable launcher cannot download a branch-only build. Stable remains 0.21.2.
+**Beta branch — OptiShade 0.21.3-beta.3.** The beta installer is built from this branch and published as a GitHub prerelease. Enable beta versions in Settings to receive it. Stable users are offered stable releases only.
 
 <div align="center">
   <img src="docs/images/optishade.png" width="160" alt="Optishade OS logo">
@@ -6,7 +6,7 @@
   <p><strong>Microsoft Flight Simulator 2024 · Microsoft Flight Simulator 2020 · X-Plane 12 (experimental)</strong></p>
   <p>Created by gravy · Powered by Fusion Engine</p>
   <p>
-    <img src="https://img.shields.io/badge/Version-0.21.3--beta.2-9755E9?style=flat-square" alt="Version 0.21.3-beta.2">
+    <img src="https://img.shields.io/badge/Version-0.21.3--beta.3-9755E9?style=flat-square" alt="Version 0.21.3-beta.3">
     <img src="https://img.shields.io/badge/Windows-x64-272133?style=flat-square" alt="Windows x64">
     <img src="https://img.shields.io/badge/Graphics-NVIDIA%20%2B%20AMD-9755E9?style=flat-square" alt="NVIDIA and AMD graphics">
   </p>
