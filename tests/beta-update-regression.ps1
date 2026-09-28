@@ -22,6 +22,15 @@ if(GetOptiShadeUpdate -Current '0.21.1' -InstalledChannel stable -ReportErrors){
 if($return.ReleaseUrl -ne 'https://github.com/GamingWithGravy/OptiShade/releases/tag/v0.21.1'){throw 'Portable stable link points to wrong release'}
 if(Test-Path (Join-Path $env:OPTISHADE_STORE 'beta-updates.txt')){throw 'Opt out did not persist'}
 'PASS: opt in/out persisted, correct channels and URLs, beta ordering, stable return and same-version rejection'
+SetOptiShadeUpdateChannel $true
+$modern=Release '0.21.3-beta.2'
+$modern.assets[0].name='Optishade 0.21.3-beta.2 beta.exe'
+$modern.assets[0].browser_download_url='https://github.com/GamingWithGravy/OptiShade/releases/download/v0.21.3-beta.2/Optishade%200.21.3-beta.2%20beta.exe'
+$script:releases=@($modern)
+if((GetOptiShadeUpdate -Current '0.21.3' -InstalledChannel stable -ReportErrors).Version -ne '0.21.3-beta.2'){throw 'Stable-to-beta switch at same base version failed'}
+if(GetOptiShadeUpdate -Current '0.21.3-beta.2' -InstalledChannel beta -ReportErrors){throw 'Beta same version offered again'}
+SetOptiShadeUpdateChannel $false
+'PASS: readable EXE name and same-base channel switch'
 . "$PSScriptRoot/../installer/ownership.ps1"
 function AssertClosed($Game){}
 $fixture=Join-Path $env:TEMP ('OptiShade-beta-update-'+[guid]::NewGuid().ToString('N'))

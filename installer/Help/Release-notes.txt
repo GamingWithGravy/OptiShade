@@ -19,16 +19,19 @@
 - Compatible RTX 40 installations automatically receive the bundled MFG component. Native DLSS Frame Generation must still be enabled in game; Backspace opens its menu. Supported multipliers vary. Existing conflicting loaders are not overwritten by automatic MFG setup.
 - Other GPU families retain their supported options; this build does not install an unvalidated RTX 40 component on RTX 20/30/50, AMD or Intel.
 - Beta opt-in and uninstall choices now use purple toggle switches.
+- SnapShot and preset hotswap use the same keybind controls as the other actions.
+- Missing custom FX warn without blocking preset installation; known catalogue dependencies still download. Long import instructions are no longer truncated.
+- Successful updates place the new manager on the Desktop and remove the unchanged previous EXE. Returning to stable resets beta opt-in. Presets and configuration are preserved.
 
 **STABLE AND BETA**
 - This stable build supports MSFS 2020 and 2024. XP12, TAA NR and Vulkan NR remain beta-only.
-- Shared fixes are included in the local beta. Public beta downloads remain disabled pending testing.
+- Shared fixes are also included in beta. Opt into beta versions in Settings to receive experimental builds; turn it off and check for updates to return to stable.
 
 **INSTALLING**
 - Close your simulators and update normally; a restore/reinstall is normally unnecessary. Repair continues to use files from the matching manager version.
 - If installer verification reports a missing or damaged file, download a fresh official EXE and check antivirus protection history. Do not replace individual DLLs from unrelated websites.
 
 **ANTIVIRUS NOTICE**
-Some antivirus providers are flagging OptiShade. I've submitted a sample to Bitdefender for review and I'm investigating what's triggering the warnings. Thanks for your patience.
+Some antivirus providers have flagged OptiShade. Bitdefender has confirmed that the submitted sample is clean and is no longer detected by its engines. I am continuing to investigate reports and submit affected samples. Thanks for your patience.
 
 Please send diagnostic ZIPs, with a description of the issue, to the **diagnostic zips** channel in **BlackBox Discord**: https://discord.gg/6hjR9cSsy7

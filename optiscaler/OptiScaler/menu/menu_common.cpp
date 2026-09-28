@@ -7162,7 +7162,7 @@ void MenuCommon::RenderApiAndTextureSettings(RenderMenuContext& ctx)
 
 void OptiShadeUI::DrawSnapshotKeybind(){
  auto c=Config::Instance();auto& value=c->SnapshotKey;auto code=value.value_or_default();
- ImGui::Text("SnapShot: %s",code<=0?"Not set":Keybind::KeyNameFromVirtualKeyCode(code).c_str());ImGui::SameLine();static auto key=Keybind("Change",16);key.Render(value,false);
+ static auto key=Keybind("SnapShot",16);key.Render(value,false);
  if(SnapshotConflict(code))ImGui::TextColored(ImVec4(1,.4f,.3f,1),"Choose a key that is not assigned to another OptiShade action.");
  auto folder=Util::DllPath().parent_path()/L"Optishade Snapshots";
  if(ImGui::Button("Browse screenshots")){
@@ -7171,7 +7171,7 @@ void OptiShadeUI::DrawSnapshotKeybind(){
  }
  ImGui::TextWrapped("Saved as PNG inside Optishade Snapshots in this game's installation folder. Save settings to keep your keybind.");
 }
-void OptiShadeUI::DrawHotSwapKeybind(){auto& value=Config::Instance()->PresetHotSwapKey;auto code=value.value_or_default();ImGui::Text("Preset hotswap: %s",code<=0?"Not set":Keybind::KeyNameFromVirtualKeyCode(code).c_str());ImGui::SameLine();static auto key=Keybind("Change",15);key.Render(value,false);ImGui::TextDisabled("Save settings to keep this key. Escape cancels; Backspace clears it.");}
+void OptiShadeUI::DrawHotSwapKeybind(){auto& value=Config::Instance()->PresetHotSwapKey;static auto key=Keybind("Preset hotswap",15);key.Render(value,false);ImGui::TextDisabled("Save settings to keep this key. Escape cancels; Backspace clears it.");}
 
 void MenuCommon::RenderKeybindSettings(RenderMenuContext& ctx)
 {

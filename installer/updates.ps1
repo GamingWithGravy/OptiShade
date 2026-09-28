@@ -1,4 +1,14 @@
-﻿function GetOptiShadeUpdateChannel {
+﻿. "$PSScriptRoot/update-lifecycle.ps1"
+function GetOptiShadeReleaseAsset($Release,[string]$Version){
+ $channel=if($Release.prerelease){'beta'}else{'stable'}
+ foreach($name in @((GetOptiShadeManagerName $Version $channel),"OptiShade_Version_$Version.exe")){
+  $assets=@($Release.assets|Where-Object {$_.name -ceq $name -and $_.digest -match '^sha256:[a-fA-F0-9]{64}$'})
+  if($assets.Count -ne 1){continue}
+  $url=[uri]$assets[0].browser_download_url
+  if($url.Scheme -eq 'https' -and $url.Host -eq 'github.com' -and [uri]::UnescapeDataString($url.AbsolutePath) -ceq "/GamingWithGravy/OptiShade/releases/download/$($Release.tag_name)/$name"){return $assets[0]}
+ }
+}
+function GetOptiShadeUpdateChannel {
  $root=if($env:OPTISHADE_STORE){$env:OPTISHADE_STORE}else{Join-Path $env:LOCALAPPDATA 'OptiShade'}
  if(Test-Path -LiteralPath (Join-Path $root 'beta-updates.txt')){'beta'}else{'stable'}
 }
@@ -26,11 +36,10 @@ function GetOptiShadeUpdate([string]$Current='0.21.3',[switch]$ReportErrors,[Val
    if($release.draft -or ([bool]$release.prerelease -ne ($channel -eq 'beta'))){continue}
    $version=([string]$release.tag_name) -replace '^v','';$key=GetBetaVersionKey $version
    if(-not $key -or ($channel -eq 'beta' -and $key.Stage -eq 3) -or ($channel -eq 'stable' -and $key.Stage -ne 3)){continue}
-   if(-not ($channel -eq 'stable' -and ($InstalledChannel -eq 'beta' -or $currentKey.Stage -ne 3)) -and ($key.Numeric -lt $currentKey.Numeric -or ($key.Numeric -eq $currentKey.Numeric -and ($key.Stage -lt $currentKey.Stage -or ($key.Stage -eq $currentKey.Stage -and $key.Revision -le $currentKey.Revision))))){continue}
-   $assets=@($release.assets|Where-Object {$_.name -eq "OptiShade_Version_$version.exe" -and $_.digest -match '^sha256:[a-fA-F0-9]{64}$'})
+   if(-not (($channel -ne $InstalledChannel -and (($currentKey.Stage -eq 3) -eq ($InstalledChannel -eq 'stable'))) -or ($channel -eq 'stable' -and $currentKey.Stage -ne 3)) -and ($key.Numeric -lt $currentKey.Numeric -or ($key.Numeric -eq $currentKey.Numeric -and ($key.Stage -lt $currentKey.Stage -or ($key.Stage -eq $currentKey.Stage -and $key.Revision -le $currentKey.Revision))))){continue}
+   $assets=@(GetOptiShadeReleaseAsset $release $version)
    if($assets.Count -ne 1){continue}
    $url=[uri]$assets[0].browser_download_url
-   if($url.Scheme -ne 'https' -or $url.Host -ne 'github.com' -or $url.AbsolutePath -cne "/GamingWithGravy/OptiShade/releases/download/$($release.tag_name)/OptiShade_Version_$version.exe"){continue}
    [pscustomobject]@{Version=$version;Url=$url.AbsoluteUri;SHA256=$assets[0].digest.Substring(7);Notes=[string]$release.body;Prerelease=[bool]$release.prerelease;Channel=$channel;ReleaseUrl="https://github.com/GamingWithGravy/OptiShade/releases/tag/$($release.tag_name)";Rollback=($channel -eq 'stable' -and ($InstalledChannel -eq 'beta' -or $currentKey.Stage -ne 3));Numeric=$key.Numeric;Stage=$key.Stage;Revision=$key.Revision}
   })
   $candidates|Sort-Object Numeric,Stage,Revision -Descending|Select-Object -First 1
@@ -42,7 +51,7 @@ function GetOptiShadePreviousReleases([string]$Current='0.21.3'){
  foreach($release in $releases){
   if($release.draft -or $release.prerelease -or $release.tag_name -notmatch '^v?(\d+\.\d+(?:\.\d+){0,2})$'){continue}
   $version=$Matches[1];if([version]$version -lt [version]'0.20.12'){continue}
-  $assets=@($release.assets|Where-Object {$_.name -eq "OptiShade_Version_$version.exe" -and $_.digest -match '^sha256:[a-fA-F0-9]{64}$'})
+  $assets=@(GetOptiShadeReleaseAsset $release $version)
   if($assets.Count -ne 1){continue}
   $url=[uri]$assets[0].browser_download_url
   if($url.Scheme -ne 'https' -or $url.Host -ne 'github.com' -or $url.AbsolutePath -cnotmatch '^/GamingWithGravy/OptiShade/releases/download/'){continue}

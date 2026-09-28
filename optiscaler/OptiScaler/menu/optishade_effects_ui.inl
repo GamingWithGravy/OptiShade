@@ -13,7 +13,7 @@ static std::string MenuKeyLabel(int vk){
  if(GetKeyNameTextA((LONG)(scan<<16),name,sizeof(name)))return name;return std::to_string(vk);
 }
 static osfx::Snapshot fx{};
-static char feedback[256]="";
+static char feedback[8192]="";
 static uint64_t seenSave=0;
 static std::map<std::string,uint64_t> preparing;
 static bool EffectSwitch(const char* id,bool on){
