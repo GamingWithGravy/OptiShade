@@ -1,4 +1,4 @@
-# OptiShade 0.21.3-beta.3 Beta
+﻿# OptiShade 0.21.3-beta.3 Beta
 
 This experimental installer is built from the beta branch and published as a GitHub prerelease. It is offered only when beta versions are enabled in Settings.
 
@@ -38,6 +38,7 @@ This experimental installer is built from the beta branch and published as a Git
 - Successful updates place the new manager on the Desktop and remove the unchanged previous EXE. Returning to stable resets beta opt-in. Presets and configuration are preserved.
 
 **SWITCHING VERSIONS**
+- Download this update manually from GitHub if 0.21.2 reports no update. Its release-list parsing issue is fixed in this version; subsequent update checks and channel switches use the corrected code.
 - Enable beta versions in Settings and check for updates to download the beta prerelease. Stable users only receive stable releases; no beta is downloaded without opt-in and choosing to install it.
 - To return to stable, turn beta off and Check for updates, or choose a stable build with Return to stable. Successful return clears beta opt-in.
 - Close all simulators first. Presets, keybinds and configuration are preserved. Experimental TAA NR must be enabled again each session and is disabled in stable.

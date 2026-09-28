@@ -27,13 +27,13 @@ function GetBetaVersionKey([string]$Value){
  [pscustomobject]@{Numeric=[version]$Matches[1];Stage=$stage;Revision=$revision}
 }
 # The persisted setting selects release assets, never source-code branch archives.
-function GetOptiShadeUpdate([string]$Current='0.21.3-beta.3',[switch]$ReportErrors,[ValidateSet('stable','beta')][string]$InstalledChannel='beta'){
+function GetOptiShadeUpdate([string]$Current='0.21.3-beta.3',[switch]$ReportErrors,[ValidateSet('stable','beta')][string]$InstalledChannel='stable'){
  [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
  try{
   $channel=GetOptiShadeUpdateChannel
   $currentKey=GetBetaVersionKey $Current
   if(-not $currentKey){throw 'Invalid current version'}
-  $releases=@(Invoke-RestMethod 'https://api.github.com/repos/GamingWithGravy/OptiShade/releases?per_page=100' -Headers @{'User-Agent'='OptiShade-beta-update-check'} -TimeoutSec 12)
+  $releases=@(Invoke-RestMethod 'https://api.github.com/repos/GamingWithGravy/OptiShade/releases?per_page=100' -Headers @{'User-Agent'='OptiShade-beta-update-check'} -TimeoutSec 12 | ForEach-Object { $_ })
   $candidates=@(foreach($release in $releases){
    if($release.draft -or ([bool]$release.prerelease -ne ($channel -eq 'beta'))){continue}
    $version=([string]$release.tag_name) -replace '^v','';$key=GetBetaVersionKey $version
@@ -77,7 +77,7 @@ function ShowOptiShadeRevert($Owner,[string]$Current='0.21.3-beta.3'){
  $dialog.Resources.MergedDictionaries.Add([Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($theme)))
  $dialog.Resources.Add([Windows.Controls.ComboBox],$Owner.FindResource([Windows.Controls.ComboBox]))
  $dialog.Resources.Add([Windows.Controls.ComboBoxItem],$Owner.FindResource([Windows.Controls.ComboBoxItem]))
- $dialog.FindName('Instructions').Text="Choose a stable build, then press Install selected build. This leaves the beta channel.`n`nOptiShade will download the official installer, verify its SHA-256, check your installations and run the installation automatically. Presets and configuration are kept. The selected stable manager will replace this beta on your Desktop after success, and beta opt-in will be turned off.`n`nClose all simulators first. This changes all supported, recorded game installations. Modified graphics loaders will stop the operation.`n`nOnly builds supporting the automatic installation workflow are listed (0.20.12 onward). Restore X-Plane original files before returning to a stable build. Older features and fixes will be lost."
+ $dialog.FindName('Instructions').Text="Choose a stable build, then press Install selected build. This leaves the beta channel.`n`nOptiShade will download the official installer, verify its SHA-256, check your installations and run the installation automatically. Presets and configuration are kept. The selected manager will be saved to your Desktop.`n`nClose all simulators first. This changes all supported, recorded game installations. Modified graphics loaders will stop the operation.`n`nOnly builds supporting the automatic installation workflow are listed (0.20.12 onward). Versions before 0.21 cannot be installed while X-Plane remains installed in OptiShade. Older features and fixes will be lost."
  $dialog.FindName('Close').Add_Click({$dialog.Close()})
  $dialog.FindName('Continue').Add_Click({
   $selected=$dialog.FindName('Versions').SelectedItem
