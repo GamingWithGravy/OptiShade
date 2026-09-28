@@ -1,4 +1,4 @@
-# OptiShade 0.21.3 Stable
+﻿# OptiShade 0.21.3 Stable
 
 **NEW FEATURE - SNAPSHOT**
 - Set a SnapShot key in the manager's Keybinds page or the in-game Keybinds page.
@@ -31,6 +31,7 @@
 - Return to stable always checks the current published releases and defaults to the latest stable build. Successful return turns beta opt-in off.
 
 **INSTALLING**
+- Download this update manually from GitHub if 0.21.2 reports no update. Its release-list parsing issue is fixed in this version; subsequent update checks and channel switches use the corrected code.
 - Updates started by this manager save the new EXE to Desktop and remove the unchanged old EXE after success. The first update started by 0.21.2 still uses that older updater and may retain its previous EXE.
 - Close your simulators and update normally; a restore/reinstall is normally unnecessary. Repair continues to use files from the matching manager version.
 - If installer verification reports a missing or damaged file, download a fresh official EXE and check antivirus protection history. Do not replace individual DLLs from unrelated websites.

@@ -33,7 +33,7 @@ function GetOptiShadeUpdate([string]$Current='0.21.3',[switch]$ReportErrors,[Val
   $channel=GetOptiShadeUpdateChannel
   $currentKey=GetBetaVersionKey $Current
   if(-not $currentKey){throw 'Invalid current version'}
-  $releases=@(Invoke-RestMethod 'https://api.github.com/repos/GamingWithGravy/OptiShade/releases?per_page=100' -Headers @{'User-Agent'='OptiShade-beta-update-check'} -TimeoutSec 12)
+  $releases=@(Invoke-RestMethod 'https://api.github.com/repos/GamingWithGravy/OptiShade/releases?per_page=100' -Headers @{'User-Agent'='OptiShade-beta-update-check'} -TimeoutSec 12 | ForEach-Object { $_ })
   $candidates=@(foreach($release in $releases){
    if($release.draft -or ([bool]$release.prerelease -ne ($channel -eq 'beta'))){continue}
    $version=([string]$release.tag_name) -replace '^v','';$key=GetBetaVersionKey $version

@@ -5,7 +5,7 @@ if((GetOptiShadeUpdateChannel) -ne 'stable'){throw 'Must default to stable'}
 SetOptiShadeUpdateChannel $true
 if((GetOptiShadeUpdateChannel) -ne 'beta'){throw 'Opt in did not persist'}
 function Release([string]$version,[bool]$beta=$true){[pscustomobject]@{draft=$false;prerelease=$beta;tag_name="v$version";body='fixture';assets=@([pscustomobject]@{name="OptiShade_Version_$version.exe";browser_download_url="https://github.com/GamingWithGravy/OptiShade/releases/download/v$version/OptiShade_Version_$version.exe";digest=('sha256:'+('a'*64))})}}
-function Invoke-RestMethod { $script:releases }
+function Invoke-RestMethod { ,$script:releases }
 $script:releases=@((Release '0.21.1' $false))
 if(GetOptiShadeUpdate -ReportErrors){throw 'Stable offered to beta'}
 $script:releases=@((Release '0.22-beta2'),(Release '0.22-beta10'),(Release '0.23' $false))
