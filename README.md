@@ -4,7 +4,7 @@
   <p><strong>Microsoft Flight Simulator 2024 · Microsoft Flight Simulator 2020</strong></p>
   <p>Created by gravy · Powered by Fusion Engine</p>
   <p>
-    <img src="https://img.shields.io/badge/Version-0.21.2-9755E9?style=flat-square" alt="Version 0.21.2">
+    <img src="https://img.shields.io/badge/Version-0.21.3-9755E9?style=flat-square" alt="Version 0.21.3">
     <img src="https://img.shields.io/badge/Windows-x64-272133?style=flat-square" alt="Windows x64">
     <img src="https://img.shields.io/badge/Graphics-NVIDIA%20%2B%20AMD-9755E9?style=flat-square" alt="NVIDIA and AMD graphics">
   </p>
@@ -18,15 +18,21 @@
 
 Optishade brings image effects, saved looks and optional NVIDIA neural rendering together in one custom in-game menu. This edition supports **Microsoft Flight Simulator 2024 and 2020**, with image effects and supported performance options on NVIDIA and AMD graphics cards, with automatic Steam and Xbox detection.
 
-### OptiShade 0.21.2 Stable
+### OptiShade 0.21.3 Stable
 
-0.21.2 replaces the withdrawn 0.21 and 0.21.1 downloads. It retains NR memory-pressure safeguards, less frequent model rebuilding during tuning and Xbox installation-path fixes, and adds selective uninstall and clearer stable/beta update channels. XP12 installation and experimental TAA/Vulkan NR remain excluded from stable.
+- SnapShot saves one PNG in the game's **Optishade Snapshots** folder, with a notification after saving and a Browse screenshots button.
+- In-game **Settings & status** exposes UI sizing up to 200% for 4K displays and matching FPS overlay controls.
+- Improved WindowsApps INI/ZIP imports, preset names and missing-FX downloads. Custom FX generate instructions without blocking the preset.
+- Selective uninstall preserves edited shader files in a recovery folder. Compatible RTX 40 installations automatically receive the verified MFG component; native DLSS FG must still be enabled in game.
+- NR memory-pressure retry and a session-only override are available. Reported crashes remain under investigation.
 
-**Revert update** is permanently available below the update controls. Select a compatible build and install it automatically. Regular EXE rollback preserves presets and settings; portable downgrades require a separate package. Restore XP12 before downgrading to a version without XP12 support.
+**Stable and beta:** stable users receive stable releases only. Enable **Opt into beta versions for testing** in Settings to be offered prereleases built from the [beta branch](https://github.com/GamingWithGravy/OptiShade/tree/beta). No beta installs automatically. XP12 and TAA/Vulkan NR remain beta-only.
 
-In Settings, **Opt into beta versions for testing** is off by default. Enable it to check beta prereleases; turn it off to check stable releases. It does not install them automatically. Experimental work continues on [beta](https://github.com/GamingWithGravy/OptiShade/tree/beta); future beta downloads will be marked Pre-release on GitHub Releases. No new beta binary is published with 0.21.2. Keep a future beta manager in a separate folder such as `Desktop\OptiShade Beta`; this does not isolate the game files. Follow its migration instructions rather than installing both builds into one game folder.
+**Return to stable** in the beta manager checks current published releases and defaults to the latest stable build. Successful return clears beta opt-in. Presets, settings and keybinds are preserved. Existing XP12 installations remain separate from the stable manager's supported MSFS installation options.
 
-Close MSFS and use Update OptiShade; a restore/reinstall is normally unnecessary. Existing XP12 installations are left untouched and can be restored using the existing manager. Share diagnostic ZIPs in the **diagnostic zips** channel in [BlackBox Discord](https://discord.gg/6hjR9cSsy7). The MSFS crash reports remain under investigation; the safeguards are not a confirmed fix for every crash.
+Close the simulator before updating. The new updater saves the selected manager on your Desktop and removes the unchanged previous EXE after success. Updates started from 0.21.2 retain that older updater's naming and previous-copy behaviour for the first update. Repair only repairs the matching installed version.
+
+Bitdefender reviewed the submitted OptiShade sample and confirmed it is clean and no longer detected by its engines. Send continuing antivirus warnings and diagnostic ZIPs, including the version and issue description, to **diagnostic zips** in [BlackBox Discord](https://discord.gg/6hjR9cSsy7).
 
 ### New in 0.20.12
 

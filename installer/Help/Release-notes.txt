@@ -27,13 +27,16 @@
 
 **STABLE AND BETA**
 - This stable build supports MSFS 2020 and 2024. XP12, TAA NR and Vulkan NR remain beta-only.
-- Shared fixes are also included in beta. Opt into beta versions in Settings to receive experimental builds; turn it off and check for updates to return to stable.
+- Beta installers are built from the beta branch and published as prereleases. They are only offered after enabling beta in Settings. Stable users are offered stable releases only; nothing installs until you choose it.
+- Return to stable always checks the current published releases and defaults to the latest stable build. Successful return turns beta opt-in off.
 
 **INSTALLING**
+- Updates started by this manager save the new EXE to Desktop and remove the unchanged old EXE after success. The first update started by 0.21.2 still uses that older updater and may retain its previous EXE.
 - Close your simulators and update normally; a restore/reinstall is normally unnecessary. Repair continues to use files from the matching manager version.
 - If installer verification reports a missing or damaged file, download a fresh official EXE and check antivirus protection history. Do not replace individual DLLs from unrelated websites.
 
-**ANTIVIRUS NOTICE**
-Some antivirus providers have flagged OptiShade. Bitdefender has confirmed that the submitted sample is clean and is no longer detected by its engines. I am continuing to investigate reports and submit affected samples. Thanks for your patience.
+**ANTIVIRUS UPDATE**
+- Bitdefender reviewed the submitted OptiShade sample and confirmed it is clean and no longer detected by its engines.
+- Other antivirus reports remain under investigation. If you still see a warning, include the app version, affected filename and detection name with your diagnostic ZIP.
 
 Please send diagnostic ZIPs, with a description of the issue, to the **diagnostic zips** channel in **BlackBox Discord**: https://discord.gg/6hjR9cSsy7
