@@ -1,4 +1,4 @@
-**Beta branch — OptiShade 0.21.3-beta.2.** Experimental builds are available through Settings → Opt into beta versions → Check for updates. [Beta download](https://github.com/GamingWithGravy/OptiShade/releases/tag/v0.21.3-beta.2). Stable remains 0.21.2.
+**Beta source branch — OptiShade 0.21.3-beta.2.** This branch is for testing and is not published in GitHub Releases. The current stable launcher cannot download a branch-only build. Stable remains 0.21.2.
 
 <div align="center">
   <img src="docs/images/optishade.png" width="160" alt="Optishade OS logo">
