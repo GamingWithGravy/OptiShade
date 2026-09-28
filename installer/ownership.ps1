@@ -1,11 +1,18 @@
 ﻿$ErrorActionPreference='Stop'
-function GetBundledOptiShadeVersion { 'P0.21' }
+function GetBundledOptiShadeVersion { 'P0.21.3-beta.1' }
 function TestBundledUpdateVersion($Manifest){
  try{
-  $installed=[regex]::Match([string]$Manifest.Version,'\d+\.\d+(?:\.\d+){0,2}').Value
-  $bundled=[regex]::Match((GetBundledOptiShadeVersion),'\d+\.\d+(?:\.\d+){0,2}').Value
+  $parse={param($text)
+   if($text -notmatch '^P?(\d+\.\d+(?:\.\d+){0,2})(?:-(alpha|beta|rc)[.-]?(\d+))?(?:-MSFS24)?$'){return $null}
+   $rank=if($Matches[2]){@{alpha=0;beta=1;rc=2}[$Matches[2]]}else{3}
+   $revision=if($Matches[3]){[int]$Matches[3]}else{0}
+   [pscustomobject]@{Core=[version]$Matches[1];Rank=$rank;Revision=$revision}
+  }
+  $installed=&$parse ([string]$Manifest.Version);$bundled=&$parse (GetBundledOptiShadeVersion)
   if(-not $installed -or -not $bundled){return $false}
-  return ([version]$bundled -gt [version]$installed)
+  if($bundled.Core -ne $installed.Core){return $bundled.Core -gt $installed.Core}
+  if($bundled.Rank -ne $installed.Rank){return $bundled.Rank -gt $installed.Rank}
+  return $bundled.Revision -gt $installed.Revision
  }catch{return $false}
 }
 function AssertRepairVersion($Manifest){
@@ -39,6 +46,17 @@ function IsGraphicsMod([string]$Relative,[string]$File){
 }
 function CleanModBackupReferences($Manifest,[string]$Folder){
  # Preserve verified backup references, including third-party graphics mods.
+ # Older optional-MFG installs appended a second version.dll record. Merge only
+ # that exact known shape; retain the displaced original and verify it normally.
+ $records=@($Manifest.Files|Where-Object Path -eq 'version.dll')
+ if($Manifest.OptionalMfg -and $records.Count -eq 2){
+  $mfg=@($records|Where-Object {$_.Hash -eq 'E9CA3587854EEB723E0579F7DDF6CFB1E6CF4BED79B0D75BC716003ED98FE040' -and -not $_.SourcePath -and -not $_.Backup -and -not $_.PreviousHash})
+  $original=@($records|Where-Object {-not $_.Hash -and -not $_.SourcePath -and $_.Backup -and $_.PreviousHash})
+  if($mfg.Count -eq 1 -and $original.Count -eq 1){
+   $mfg[0].Backup=$original[0].Backup;$mfg[0].PreviousHash=$original[0].PreviousHash
+   $Manifest.Files=@($Manifest.Files|Where-Object Path -ne 'version.dll')+@($mfg[0])
+  }
+ }
 }
 function RemoveUnreferencedBackups($Manifest,[string]$Folder){
  $root=OwnedPath $Folder 'Backups';$keep=@($Manifest.Files|Where-Object Backup|ForEach-Object {OwnedPath $Folder $_.Backup})
@@ -305,7 +323,7 @@ function UninstallFusion([string]$StateRoot,[string]$Installer,[string]$ActiveSe
     }else{Remove-Item -LiteralPath $root -Recurse -Force}
 }
 
-function GetSnapshotRemovalPlan([string]$ReceiptRoot='') {
+function GetSnapshotRemovalPlan([string]$ReceiptRoot='',[string[]]$GameRoots) {
  $root=if($ReceiptRoot){FullPath $ReceiptRoot}else{Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'OptiShade-SnapShot'}
  if((Split-Path $root -Leaf) -ne 'OptiShade-SnapShot'){throw 'Invalid snapshot record folder.'}
  if(-not(Test-Path -LiteralPath $root)){return}
@@ -315,6 +333,7 @@ function GetSnapshotRemovalPlan([string]$ReceiptRoot='') {
   $lines=[IO.File]::ReadAllLines($safe,[Text.Encoding]::UTF8)
   if($lines.Count -ne 3 -or $lines[2] -notmatch '^[a-fA-F0-9]{64}$'){throw "Invalid SnapShot record: $safe. No snapshot cleanup was performed."}
   $file=FullPath $lines[0];$folder=Split-Path $file -Parent;$name=Split-Path $file -Leaf
+  if($PSBoundParameters.ContainsKey('GameRoots') -and (FullPath (Split-Path $folder -Parent)) -notin $GameRoots){continue}
   if((Split-Path $folder -Leaf) -cne 'Optishade Snapshots' -or $name -notmatch '^OptiShade-\d{8}-\d{6}-\{[a-fA-F0-9-]{36}\}\.png$' -or [IO.Path]::GetFileNameWithoutExtension($name) -cne $receipt.BaseName){throw 'Invalid SnapShot ownership record. Cleanup stopped.'}
   [void](OwnedPath $folder $name)
   if(Test-Path -LiteralPath $file){
@@ -327,9 +346,11 @@ function RemoveSelectedOptiShadeData([string]$StateRoot,[string]$Installer,[stri
  if(-not($AppFiles -or $IniFiles -or $Snapshots)){throw 'Choose at least one item to remove.'}
  $records=@(Get-ChildItem -LiteralPath (Join-Path $StateRoot 'Games') -Filter manifest.json -File -Recurse -ErrorAction SilentlyContinue)
  $presets=@()
+ $gameRoots=@()
  foreach($record in $records){
   [void](OwnedPath $StateRoot $record.FullName.Substring((FullPath $StateRoot).Length+1))
   $manifest=Get-Content -LiteralPath $record.FullName -Raw|ConvertFrom-Json
+  $gameRoots+=FullPath $manifest.Game
   AssertClosed $manifest.Game
   if($IniFiles -and -not $AppFiles){
    $folder=OwnedPath $manifest.Game 'OptiShadeData/Presets'
@@ -339,7 +360,7 @@ function RemoveSelectedOptiShadeData([string]$StateRoot,[string]$Installer,[stri
    }
   }
  }
- $captures=if($Snapshots){@(GetSnapshotRemovalPlan)}else{@()}
+ $captures=if($Snapshots){@(GetSnapshotRemovalPlan -GameRoots $gameRoots)}else{@()}
  if($AppFiles){UninstallFusion $StateRoot $Installer $ActiveSession -KeepPresets (-not $IniFiles)}
  foreach($file in $presets){Remove-Item -LiteralPath $file -Force}
  foreach($capture in $captures){

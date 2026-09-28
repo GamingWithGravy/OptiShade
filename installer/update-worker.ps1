@@ -30,7 +30,7 @@ function SuspendRollbackLogs {
  foreach($record in Get-ChildItem -LiteralPath $records -Filter manifest.json -Recurse -File -ErrorAction SilentlyContinue){
   $m=Get-Content -LiteralPath $record.FullName -Raw|ConvertFrom-Json
   if($m.Status -ne 'Installed'){continue}
-  if([version](([string]$settings.Version -split '-')[0]) -lt [version]'0.21' -and (Test-Path -LiteralPath (Join-Path $m.Game 'X-Plane.exe'))){throw 'Restore X-Plane original files before installing a version below 0.21.'}
+  if(Test-Path -LiteralPath (Join-Path $m.Game 'X-Plane.exe')){throw 'Restore X-Plane original files before returning to a stable build.'}
   $game=[IO.Path]::GetFullPath($m.Game);$check=$game
   while($check){
    if((Get-Item -LiteralPath $check -Force -ErrorAction Stop).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Rollback stopped: select the physical game installation folder in Setup first.'}

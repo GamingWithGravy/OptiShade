@@ -14,7 +14,7 @@ static uint64_t serial=0;
 static std::string snapshotRequest;
 static bool snapshotBusy=false;
 static void SnapshotComplete(bool ok,const std::string& path){std::lock_guard guard(lock);snapshotBusy=false;++snapshot.snapshotSerial;snapshot.snapshotOK=ok;strncpy_s(snapshot.snapshotPath,path.c_str(),_TRUNCATE);}
-static std::string TakeSnapshotRequest(){std::lock_guard guard(lock);auto path=std::move(snapshotRequest);snapshotRequest.clear();return path;}
+static std::string TakeSnapshotRequest(reshade::api::effect_runtime* runtime){std::lock_guard guard(lock);if(owner!=runtime)return {};auto path=std::move(snapshotRequest);snapshotRequest.clear();return path;}
 static bool requested=true;
 static char inspected[128]="";
 static void Remember(const osfx::Command& c){

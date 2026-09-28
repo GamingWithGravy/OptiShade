@@ -82,10 +82,10 @@ function StartManagerUpdate($Update){
   return
  }
  if(Get-Process FlightSimulator2024,FlightSimulator,X-Plane -ErrorAction SilentlyContinue){$status.Text='Close all simulators before changing versions.';return}
- if($Update.Rollback -and [version]$Update.Version -lt [version]'0.21'){
+ if($Update.Rollback){
   foreach($record in Get-ChildItem -LiteralPath (Join-Path $store 'Games') -Filter manifest.json -Recurse -File -ErrorAction SilentlyContinue){
    $installed=Get-Content -LiteralPath $record.FullName -Raw|ConvertFrom-Json
-   if($installed.Status -eq 'Installed' -and (Test-Path -LiteralPath (Join-Path $installed.Game 'X-Plane.exe'))){$status.Text='This build does not support X-Plane 12. Restore X-Plane original files in Setup before reverting to a version below 0.21. No files were changed.';return}
+   if($installed.Status -eq 'Installed' -and (Test-Path -LiteralPath (Join-Path $installed.Game 'X-Plane.exe'))){$status.Text='Restore X-Plane original files in Setup before returning to a stable build. Stable does not support XP12; no files were changed.';return}
   }
  }
  $updateDir=Join-Path $store ('Updates/'+[guid]::NewGuid().ToString('N'));New-Item -ItemType Directory -Path $updateDir -Force|Out-Null

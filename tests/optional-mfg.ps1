@@ -29,3 +29,27 @@ $m=Get-Content $mp -Raw|ConvertFrom-Json
 Assert ($m.OptionalMfg -and (Test-Path "$game/version.dll") -and (Get-Content "$game/OptiScaler.ini" -Raw) -match 'External=true') 'Repair/update retains optional loader and FG configuration'
 RestoreFusion $mp
 Assert (-not(Test-Path "$game/version.dll")) 'Restore removes owned optional MFG loader'
+
+# A replaced third-party loader must be restored after installing optional MFG.
+Set-Content "$game/version.dll" 'original third-party loader'
+$originalHash=HashFile "$game/version.dll"
+$mp=InstallFusion $game $payload $store "$root/Manager.exe" 'winmm.dll' @(FindFusionConflicts $game)
+InstallOptionalMfg $mp $payload @('RTX 4060')
+$m=Get-Content $mp -Raw|ConvertFrom-Json
+Assert (@($m.Files|Where-Object Path -eq 'version.dll').Count -eq 1) 'MFG reuses displaced-loader ownership record'
+RestoreFusion $mp
+Assert ((HashFile "$game/version.dll") -eq $originalHash) 'Restore preserves original third-party loader'
+
+# Simulate the duplicate ledger emitted by previously released installers.
+$mp=InstallFusion $game $payload $store "$root/Manager.exe" 'winmm.dll' @(FindFusionConflicts $game)
+$m=Get-Content $mp -Raw|ConvertFrom-Json
+$m.Files=@($m.Files)+[pscustomobject]@{Path='version.dll';SourcePath='';Hash=(HashFile "$payload/OptiShadeData/MFG/RTXMFG.dll");PreviousHash='';Backup='';Mutable=$false;Retained=$true}
+$m|Add-Member OptionalMfg $true -Force
+Copy-Item "$payload/OptiShadeData/MFG/RTXMFG.dll" "$game/version.dll"
+WriteState $m $mp
+Set-Content "$game/version.dll" 'unrecognised changed loader'
+try{RestoreFusion $mp;throw 'accepted changed loader'}catch{if($_ -like '*accepted changed loader*'){throw}}
+Assert ((Get-Content "$game/version.dll") -eq 'unrecognised changed loader') 'Legacy recovery still refuses a changed loader'
+Copy-Item "$payload/OptiShadeData/MFG/RTXMFG.dll" "$game/version.dll" -Force
+RestoreFusion $mp
+Assert ((HashFile "$game/version.dll") -eq $originalHash) 'Legacy duplicate MFG records recover original loader'

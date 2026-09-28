@@ -1,69 +1,31 @@
-﻿BETA DEVELOPMENT BUILD
+# OptiShade 0.21.3-beta.1 — Local test candidate
 
-NEW FEATURES
-- Beta builds are marked in the manager and splash screen. Settings lets you opt into beta downloads or return to stable; changing the setting does not install a build.
-- Permanent Revert update button: choose a supported older build and install it automatically, keeping presets and settings. Incompatible X-Plane downgrades are blocked.
-- SnapShot: assign a key in the manager or in-game Keybinds. Saves one PNG with your rendered effects to Optishade Snapshots in the game folder, then shows a notification.
-- Browse screenshots from the manager or in-game UI.
-- Choose what to keep when uninstalling: app files, INI presets and snapshots. Remove everything requires confirmation.
-
-FIXES
-- SnapShot resolves physical game folders behind Xbox aliases and verifies cleanup records before reporting success.
-- Beta updates and portable download links follow the selected release channel.
-- TAA GPU completion uses event waits instead of millisecond polling. Timing logs are included; in-game performance validation is still required.
-- Added NR GPU-memory checks at startup and during use, plus device-failure protection and memory details in logs. These safeguards may help with NR-related failures; the reported MSFS crashes remain under investigation.
-- NR tuning waits for sliders to settle and the previous model to retire before rebuilding, reducing repeated allocations while adjusting settings.
-- X-Plane Play now supplies its required ReShade launch argument.
-- Generated graphics logs no longer block automatic updates as untracked loaders. Conflicting DLLs still stop the update and are now named in the message.
-
-ANTIVIRUS NOTICE - SUSPECTED FALSE POSITIVES
-Some antivirus products may flag OptiShade. The installer extracts a helper and graphics components, and the in-game features use graphics hooks. These behaviours, together with an unsigned executable, can trigger heuristic detections in legitimate software; they do not prove the cause of any particular alert.
-
-The reported 0.20.12 VirusTotal result shows detections from Bkav Pro and Trapmine. The matching official installer and its FusionSetup.exe helper had no detections in our local Microsoft Defender checks on 27 September 2026. Vendor confirmation is still needed, and a clean scan is not a guarantee.
-
-Download only from the official GamingWithGravy/OptiShade GitHub releases. If a file is blocked, leave it blocked and report the antivirus name, detection name, affected file path and OptiShade version in BlackBox Discord. Do not disable your antivirus or add blanket exclusions.
-
---- PREVIOUS RELEASE ---
-
-OPTISHADE 0.21 XP12
-
-EXPERIMENTAL RELEASE
-X-Plane 12
-- Install, repair, restore and launch X-Plane 12 from OptiShade.
-- Launch X-Plane using Play in OptiShade to load its Vulkan layer.
+This build is experimental and has not been published. Keep 0.21.2 Stable available. Do not use this candidate for an important flight.
 
 EXPERIMENTAL FEATURES
-TAA support
-- Optional Neural Rendering with native TAA in MSFS DirectX 12. Enable TAA neural guides in Image effects, then enable the experimental TAA option and NR in Neural rendering.
-- SDR only, up to 3840x2160, with frame generation off. Native 4K TAA NR has been visually tested in MSFS 2020 and 2024 on an RTX 5090, with no shimmer reported in the final tests. Support remains experimental.
-VULKAN support
-- Image effects and optional Neural Rendering in X-Plane 12 without a built-in DLSS option. Enable the neural guide technique before NR. NR starts off each launch.
-- Experimental NR still requires a compatible RTX GPU and model. This does not add DLSS upscaling or frame generation to X-Plane.
-VR support
-- Experimental compatibility testing. Headset rendering, stereo NR and VR frame generation have not been validated for this release. Desktop test results do not confirm headset support; please report your headset, VR runtime and simulator settings with diagnostics.
+- X-Plane 12 Vulkan image effects and Neural Rendering. Launch XP12 using Play in this manager. Frame generation is not provided for XP12.
+- MSFS 2020/2024 TAA Neural Rendering using estimated guides. Use SDR with frame generation disabled. NR and TAA fallback require a fresh opt-in each game session.
+- These paths passed earlier local visual checks, but this final candidate still needs a fresh cockpit check. Performance and compatibility vary.
 
-FIXES
-- Improved simulator folder detection and invalid-path handling.
-- Corrected Vulkan NR setting delivery to the model.
-- Added safeguards for unsupported Hold Frame textures and allocation failures.
-- Corrected frame-limit updates and fallback handling when using the XeLL limiter.
-- Repair now uses only the matching installed version. Updating is a separate action.
-- Preset selection checks for missing FX before loading a look.
-- FX and ZIP imports no longer require discarding unsaved preset edits.
+NEW FEATURES AND FIXES
+- SnapShot: assign a key in the manager or in-game Keybinds. One PNG is saved in the game's Optishade Snapshots folder, followed by a completion notification. Browse screenshots opens that folder.
+- Snapshot storage resolves Xbox installation aliases. Cleanup records are verified before success is reported; unrelated pictures are not removed.
+- Capture requests stay with the active effects runtime instead of a different game window.
+- Selective uninstall lets you remove app files, saved INI presets or recorded snapshots. Remove everything requires confirmation. Snapshot cleanup is restricted to games recorded by this manager.
+- Beta build labels, saved update-channel preference and channel-correct download links. Beta revision numbers are compared numerically for upgrades and same-version repair.
+- Generated graphics logs no longer block updates. Changed or untracked graphics DLLs still require review.
+- NR memory-budget checks and tuning debounce are retained. TAA waits use completion events and log synchronous frame cost; the GPU safety barriers remain in place.
+- XP12 launch includes its ReShade compatibility argument.
 
-IMPROVEMENTS
-- Diagnostics export asks you to describe the issue and includes your report in the ZIP.
-- Diagnostic ZIPs save to Desktop with an Open file location confirmation.
-- Expanded crash, rendering and import-failure evidence in diagnostics.
-- Import errors include background-helper startup failures; failed downloads keep the previous look selected.
-- Optional experimental RTX 40 MFG component setup for compatible native DLSS frame-generation paths. Disabled by default; results depend on the game and hardware.
-- Portable manager download: extract it and keep its Data folder when updating.
-- Regular manager updates place the new EXE on Desktop and show its location.
-- Updated troubleshooting styling and developer information.
+SWITCHING VERSIONS
+- Enabling beta in Settings changes eligible downloads, not installed files. No public prerelease is available for this candidate.
+- Restore XP12 original files before returning to stable. Stable does not support the XP12 installation.
+- Use Revert update for available stable releases. Close all simulators first. Portable version changes use a separate downloaded package.
+- Keep preset and manager-data backups. Separate manager folders do not isolate files installed into the same game.
 
-UPDATING
-Close the simulator, open this manager, select the existing installation and choose Update OptiShade. No Restore or uninstall is normally needed. Saved presets, settings and original backups are preserved. Repair is for the same version only. For X-Plane, use Play in OptiShade after installation.
+KNOWN LIMITATIONS
+- TAA and Vulkan NR use estimated guides and synchronous GPU work. Low FPS, stalls or image artefacts remain possible; live testing is required.
+- No promise of AMD NR, universal game support, VR compatibility or a particular MFG multiplier is made by this beta.
+- Windows security software may flag unsigned graphics-hook software. Report the exact detection; do not disable antivirus or use blanket exclusions.
 
-SUPPORT
-Please post diagnostic ZIP files in the diagnostic zips channel in BlackBox Discord: https://discord.gg/6hjR9cSsy7
-Describe the issue in the export window and review your ZIP before sharing. Exporting does not upload anything automatically.
+Please post diagnostic ZIPs with the issue description in the diagnostic zips channel in BlackBox Discord: https://discord.gg/6hjR9cSsy7

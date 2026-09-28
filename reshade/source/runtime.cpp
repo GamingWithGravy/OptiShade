@@ -757,7 +757,7 @@ void reshade::runtime::on_present()
 		}
 	}
 
-	if (auto request = osfx_impl::TakeSnapshotRequest(); !request.empty()) {
+	if (auto request = osfx_impl::TakeSnapshotRequest(this); !request.empty()) {
 		try {
 			_screenshot_path = optishade::snapshot::folder(g_target_executable_path.parent_path().u8string());
 			_screenshot_name = std::filesystem::path(optishade::snapshot::unique_name()).stem().u8string();

@@ -106,6 +106,7 @@ function ShowUninstallOptions($Owner){
 </Window>
 '@
  $dialog=[Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($markup));$dialog.Owner=$Owner
+ $dialog.Resources.Add([Windows.Controls.CheckBox],$Owner.FindResource('ImageEffectsToggle'))
  [xml]$theme=Get-Content "$PSScriptRoot/dialog-theme.xaml" -Raw;$dialog.Resources.MergedDictionaries.Add([Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($theme)))
  $refresh={
   $all=[bool]$dialog.FindName('Everything').IsChecked

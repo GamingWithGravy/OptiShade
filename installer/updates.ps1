@@ -15,7 +15,7 @@ function GetBetaVersionKey([string]$Value){
  [pscustomobject]@{Numeric=[version]$Matches[1];Stage=$stage;Revision=$revision}
 }
 # The persisted setting selects release assets, never source-code branch archives.
-function GetOptiShadeUpdate([string]$Current='0.21',[switch]$ReportErrors,[ValidateSet('stable','beta')][string]$InstalledChannel='beta'){
+function GetOptiShadeUpdate([string]$Current='0.21.3-beta.1',[switch]$ReportErrors,[ValidateSet('stable','beta')][string]$InstalledChannel='beta'){
  [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
  try{
   $channel=GetOptiShadeUpdateChannel
@@ -36,7 +36,7 @@ function GetOptiShadeUpdate([string]$Current='0.21',[switch]$ReportErrors,[Valid
   $candidates|Sort-Object Numeric,Stage,Revision -Descending|Select-Object -First 1
  }catch{if($ReportErrors){throw 'Could not check the selected update channel on GitHub. Check your connection and try again.'};return $null}
 }
-function GetOptiShadePreviousReleases([string]$Current='0.21'){
+function GetOptiShadePreviousReleases([string]$Current='0.21.3-beta.1'){
  [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
  $releases=Invoke-RestMethod 'https://api.github.com/repos/GamingWithGravy/OptiShade/releases?per_page=100' -Headers @{'User-Agent'='OptiShade-revert'} -TimeoutSec 12
  foreach($release in $releases){
@@ -49,7 +49,7 @@ function GetOptiShadePreviousReleases([string]$Current='0.21'){
   [pscustomobject]@{Version=$version;Url=$url.AbsoluteUri;SHA256=$assets[0].digest.Substring(7);Notes=[string]$release.body;Rollback=$true;ReleaseUrl="https://github.com/GamingWithGravy/OptiShade/releases/tag/$($release.tag_name)"}
  }
 }
-function ShowOptiShadeRevert($Owner,[string]$Current='0.21'){
+function ShowOptiShadeRevert($Owner,[string]$Current='0.21.3-beta.1'){
  [xml]$markup=@'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="Revert update" Width="650" Height="520" WindowStartupLocation="CenterOwner" WindowStyle="None" AllowsTransparency="True" Background="Transparent" Foreground="#F3EFFB" FontFamily="Segoe UI" ResizeMode="NoResize">
  <Border CornerRadius="20" Background="#171020" BorderBrush="#40314F" BorderThickness="1" Padding="28"><Grid>
@@ -66,7 +66,7 @@ function ShowOptiShadeRevert($Owner,[string]$Current='0.21'){
  $dialog.Resources.MergedDictionaries.Add([Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($theme)))
  $dialog.Resources.Add([Windows.Controls.ComboBox],$Owner.FindResource([Windows.Controls.ComboBox]))
  $dialog.Resources.Add([Windows.Controls.ComboBoxItem],$Owner.FindResource([Windows.Controls.ComboBoxItem]))
- $dialog.FindName('Instructions').Text="Choose a stable build, then press Install selected build. This leaves the beta channel.`n`nOptiShade will download the official installer, verify its SHA-256, check your installations and run the installation automatically. Presets and configuration are kept. The selected manager will be saved to your Desktop.`n`nClose all simulators first. This changes all supported, recorded game installations. Modified graphics loaders will stop the operation.`n`nOnly builds supporting the automatic installation workflow are listed (0.20.12 onward). Versions before 0.21 cannot be installed while X-Plane remains installed in OptiShade. Older features and fixes will be lost."
+ $dialog.FindName('Instructions').Text="Choose a stable build, then press Install selected build. This leaves the beta channel.`n`nOptiShade will download the official installer, verify its SHA-256, check your installations and run the installation automatically. Presets and configuration are kept. The selected manager will be saved to your Desktop.`n`nClose all simulators first. This changes all supported, recorded game installations. Modified graphics loaders will stop the operation.`n`nOnly builds supporting the automatic installation workflow are listed (0.20.12 onward). Restore X-Plane original files before returning to a stable build. Older features and fixes will be lost."
  $dialog.FindName('Close').Add_Click({$dialog.Close()})
  $dialog.FindName('Continue').Add_Click({
   $selected=$dialog.FindName('Versions').SelectedItem

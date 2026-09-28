@@ -1,3 +1,5 @@
+**Beta branch — local 0.21.3-beta.1 candidate. Not published for launcher downloads. Fresh cockpit validation is pending; use 0.21.2 Stable for normal use.**
+
 <div align="center">
   <img src="docs/images/optishade.png" width="160" alt="Optishade OS logo">
   <h1>Optishade</h1>

@@ -40,7 +40,12 @@ function InstallOptionalMfg([string]$ManifestPath,[string]$Payload,[string[]]$Gp
   if((HashFile $temp) -ne $expected){throw 'MFG copy verification failed.'}
   [IO.File]::Move($temp,$dest);$installed=$true
   [IO.File]::WriteAllText($ini,$text,[Text.UTF8Encoding]::new($false))
-  $m.Files=@($m.Files)+[pscustomobject]@{Path='version.dll';SourcePath='';Hash=$expected;PreviousHash='';Backup='';Mutable=$false;Retained=$true}
+  # Reuse a displaced loader's ownership record so its original backup survives.
+  $previous=@($m.Files|Where-Object Path -eq 'version.dll')
+  if($previous.Count -gt 1){throw 'Conflicting version.dll ownership records require recovery before enabling MFG.'}
+  $backup='';$previousHash=''
+  if($previous.Count){$backup=$previous[0].Backup;$previousHash=$previous[0].PreviousHash}
+  $m.Files=@($m.Files|Where-Object Path -ne 'version.dll')+[pscustomobject]@{Path='version.dll';SourcePath='';Hash=$expected;PreviousHash=$previousHash;Backup=$backup;Mutable=$false;Retained=$true}
   $m|Add-Member OptionalMfg $true -Force
   $m|Add-Member OptionalMfgVersion 'v1.3.3-hotfix.2' -Force
   WriteState $m $ManifestPath
