@@ -2,6 +2,10 @@
  if($Version -notmatch '^\d+\.\d+(?:\.\d+){0,2}(?:-(?:alpha|beta|rc)[.-]?\d+)?$' -or $Channel -notin @('stable','beta')){throw 'Invalid manager version or channel.'}
  return "Optishade $Version $Channel.exe"
 }
+function AssertOptiShadeDownloadChannel([string]$Channel,[string]$Store){
+ if($Channel -notin @('stable','beta')){throw 'Invalid download channel.'}
+ if($Channel -eq 'beta' -and -not(Test-Path -LiteralPath (Join-Path $Store 'beta-updates.txt'))){throw 'Beta opt-in is off. No beta download was started.'}
+}
 function CompleteOptiShadeManagerUpdate([string]$Previous,[string]$PreviousHash,[string]$Destination,[string]$ExpectedHash,[string]$Store,[string]$Channel){
  if($Channel -notin @('stable','beta')){throw 'Invalid update channel.'}
  $dest=[IO.Path]::GetFullPath($Destination)

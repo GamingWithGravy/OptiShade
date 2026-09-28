@@ -13,3 +13,9 @@ if(-not(Test-Path $old) -or -not $notice -or (Test-Path "$store/beta-updates.txt
 $failed=$false;try{CompleteOptiShadeManagerUpdate $old $oldHash $new ('0'*64) $store 'beta'}catch{$failed=$true}
 if(-not $failed -or (Test-Path "$store/beta-updates.txt") -or -not(Test-Path $old)){throw 'Failed verification changed channel or removed old manager'}
 'PASS: successful replacement, stable opt-out, changed-file protection and failed verification'
+$blocked=$false;try{AssertOptiShadeDownloadChannel 'beta' $store}catch{$blocked=$true}
+if(-not $blocked){throw 'Beta download allowed without opt-in'}
+AssertOptiShadeDownloadChannel 'stable' $store
+[IO.File]::WriteAllText((Join-Path $store 'beta-updates.txt'),'opted in')
+AssertOptiShadeDownloadChannel 'beta' $store
+'PASS: beta download requires explicit opt-in; stable remains available'
