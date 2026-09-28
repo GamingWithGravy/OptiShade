@@ -53,20 +53,83 @@ function AssertFusionPhysicalFolder([string]$Folder){
   $parent=Split-Path $check -Parent;if($parent -eq $check){break};$check=$parent
  }
 }
-function StartOptiShadeXPlane([string]$Exe){
+function TestOptiShadeElevated {
+ $identity=[Security.Principal.WindowsIdentity]::GetCurrent()
+ try{return ([Security.Principal.WindowsPrincipal]::new($identity)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)}finally{$identity.Dispose()}
+}
+function JoinOptiShadeLayerPaths([string[]]$Values){
+ $paths=[Collections.Generic.List[string]]::new()
+ foreach($value in $Values){foreach($part in ($value -split ';')){
+  $part=$part.Trim().Trim('"');if(-not $part){continue}
+  if(-not [IO.Path]::IsPathRooted($part) -or $part -match '[\r\n*?%]'){throw 'A Vulkan layer search path is malformed. Review VK_LAYER_PATH / VK_ADD_LAYER_PATH before launching.'}
+  try{$part=[IO.Path]::GetFullPath($part)}catch{throw 'A Vulkan layer search path is invalid.'}
+  if(-not @($paths|Where-Object {$_.TrimEnd('\','/') -ieq $part.TrimEnd('\','/')}).Count){$paths.Add($part)}
+ }}
+ return $paths -join ';'
+}
+function NewOptiShadeXPlaneStartInfo([string]$Exe,[string]$Store){
  AssertFusionExecutable $Exe
- $game=Split-Path $Exe
- $layers=Join-Path $game 'OptiShadeData/Vulkan'
- if(-not(Test-Path -LiteralPath (Join-Path $layers 'OptiShade.json'))){throw 'The X-Plane Vulkan layer is missing. Repair with the manager matching the installed version.'}
+ if([IO.Path]::GetFileName($Exe) -ine 'X-Plane.exe'){throw 'This Vulkan launch path is only for X-Plane.'}
+ if(TestOptiShadeElevated){throw 'Close OptiShade and reopen it normally (not Run as administrator) before Play. Vulkan ignores local layer paths in elevated processes. No game was launched.'}
+ $game=Split-Path $Exe;$layers=OwnedPath $game 'OptiShadeData/Vulkan';$json=OwnedPath $game 'OptiShadeData/Vulkan/OptiShade.json'
+ if(-not(Test-Path -LiteralPath $json -PathType Leaf)){throw 'OptiShade.json is missing. Repair using the matching beta manager.'}
+ try{$layer=Get-Content -LiteralPath $json -Raw -ErrorAction Stop|ConvertFrom-Json -ErrorAction Stop}catch{throw 'OptiShade.json is unreadable or invalid JSON. Repair using the matching beta manager.'}
+ if($layer.layer.name -cne 'VK_LAYER_reshade' -or $layer.layer.type -cne 'GLOBAL' -or -not $layer.layer.library_path){throw 'OptiShade.json has an invalid layer definition. Repair using the matching beta manager.'}
+ if($layer.layer.library_path -cne '..\..\ReShade64.dll'){throw 'OptiShade.json uses an unsupported Windows library path. Update to the latest beta, then use its matching Repair if needed.'}
+ try{$resolved=[IO.Path]::GetFullPath((Join-Path $layers $layer.layer.library_path))}catch{throw 'OptiShade.json has an invalid library_path. Repair using the matching beta manager.'}
+ if($resolved -ine (OwnedPath $game 'ReShade64.dll')){throw 'OptiShade.json does not resolve to the game ReShade64.dll. Repair using the matching beta manager.'}
+ $mp=ManifestPath $Store $game
+ try{$manifest=Get-Content -LiteralPath $mp -Raw -ErrorAction Stop|ConvertFrom-Json -ErrorAction Stop}catch{throw 'The recorded X-Plane installation is missing or unreadable. Install using this beta manager.'}
+ if($manifest.Status -ne 'Installed' -or (FullPath $manifest.Game) -ine (FullPath $game)){throw 'The X-Plane installation is incomplete. Repair using the matching beta manager.'}
+ foreach($name in @('OptiShadeData/Vulkan/OptiShade.json','ReShade64.dll','dxgi.dll')){
+  $file=OwnedPath $game $name
+  $entry=@($manifest.Files|Where-Object {$_.Path.Replace('\','/') -ieq $name})
+  if($entry.Count -ne 1 -or -not $entry[0].Hash -or (HashFile $file) -ne $entry[0].Hash){throw "$name is missing, changed or unrecorded. Repair using the matching beta manager before Play."}
+  if($name -eq 'dxgi.dll' -and $entry[0].SourcePath -ne 'winmm.dll'){throw 'The X-Plane NR bridge loader is not owned by OptiShade. Review installation conflicts in Setup.'}
+ }
  $start=[Diagnostics.ProcessStartInfo]::new()
  $start.FileName=$Exe;$start.WorkingDirectory=$game;$start.UseShellExecute=$false
- # X-Plane otherwise disables the explicitly requested ReShade Vulkan layer.
  $start.Arguments='--allow_reshade'
- $start.EnvironmentVariables['VK_ADD_LAYER_PATH']=$layers
- $start.EnvironmentVariables['VK_INSTANCE_LAYERS']='VK_LAYER_reshade'
- $start.EnvironmentVariables['RESHADE_DISABLE_GRAPHICS_HOOK']='1'
- # Only this child process receives the layer settings; no system environment or registry changes.
- $process=[Diagnostics.Process]::Start($start);$process.Dispose()
+ $inherited=$start.EnvironmentVariables
+ # Preserve system discovery if no explicit override existed. If one did, ADD is ignored
+ # by Vulkan, so merge all local/inherited paths into that effective override instead.
+ if(-not [string]::IsNullOrWhiteSpace($inherited['VK_LAYER_PATH'])){
+  $inherited['VK_LAYER_PATH']=JoinOptiShadeLayerPaths @($layers,$inherited['VK_LAYER_PATH'],$inherited['VK_ADD_LAYER_PATH'])
+  $inherited.Remove('VK_ADD_LAYER_PATH')
+ }else{
+  $inherited.Remove('VK_LAYER_PATH')
+  $inherited['VK_ADD_LAYER_PATH']=JoinOptiShadeLayerPaths @($layers,$inherited['VK_ADD_LAYER_PATH'])
+ }
+ $names=[Collections.Generic.List[string]]::new()
+ foreach($name in (@('VK_LAYER_reshade')+@($inherited['VK_INSTANCE_LAYERS'] -split ';'))){
+  $name=$name.Trim();if(-not $name){continue}
+  if($name -notmatch '^VK_LAYER_[A-Za-z0-9_]+$'){throw 'VK_INSTANCE_LAYERS contains a malformed layer name. Review the existing Vulkan environment before Play.'}
+  if(-not $names.Contains($name)){$names.Add($name)}
+ }
+ $inherited['VK_INSTANCE_LAYERS']=$names -join ';'
+ $inherited['RESHADE_DISABLE_GRAPHICS_HOOK']='1'
+ return $start
+}
+function StartOptiShadeXPlane([string]$Exe,[string]$Store){
+ if(-not $Store){$Store=if($env:OPTISHADE_STORE){$env:OPTISHADE_STORE}else{Join-Path $env:LOCALAPPDATA 'OptiShade'}}
+ $game=Split-Path $Exe
+ $record=[ordered]@{Captured=(Get-Date -Format o);ExecutablePresent=(Test-Path -LiteralPath $Exe -PathType Leaf);JsonPresent=(Test-Path -LiteralPath (Join-Path $game 'OptiShadeData/Vulkan/OptiShade.json'));DxgiPresent=(Test-Path -LiteralPath (Join-Path $game 'dxgi.dll'));Loader='dxgi.dll (OptiScaler NR/menu bridge)';Validation='Not completed';LaunchRequested=$false;Inherited=@{};Effective=@{};Binaries=@()}
+ foreach($key in @('VK_LAYER_PATH','VK_ADD_LAYER_PATH','VK_INSTANCE_LAYERS')){$record.Inherited[$key]=[bool][Environment]::GetEnvironmentVariable($key,'Process')}
+ try{
+  $start=NewOptiShadeXPlaneStartInfo $Exe $Store
+  $record.Validation='Passed';$record.ResolvedLibrary='<GAME>/ReShade64.dll'
+  foreach($key in @('VK_LAYER_PATH','VK_ADD_LAYER_PATH','VK_INSTANCE_LAYERS','RESHADE_DISABLE_GRAPHICS_HOOK')){
+   $value=$start.EnvironmentVariables[$key]
+   if($key -in @('VK_LAYER_PATH','VK_ADD_LAYER_PATH')){$index=0;$value=(@($value -split ';'|Where-Object {$_}|ForEach-Object {if($_ -ieq (Join-Path $game 'OptiShadeData/Vulkan')){'<GAME>/OptiShadeData/Vulkan'}else{$index++;"<EXTERNAL_LAYER_PATH_$index>"}}) -join ';')}
+   $record.Effective[$key]=$value
+  }
+  foreach($name in @('ReShade64.dll','dxgi.dll')){$file=OwnedPath $game $name;$record.Binaries+=@{Name=$name;SHA256=(HashFile $file);Version=(Get-Item -LiteralPath $file).VersionInfo.FileVersion}}
+  $process=[Diagnostics.Process]::Start($start);$record.LaunchRequested=$true;$process.Dispose()
+ }catch{$record.Validation='Failed';$record.Reason=$_.Exception.Message;throw}
+ finally{
+  # Store beside the ownership receipt, outside game files; no global environment/registry changes.
+  try{$folder=Split-Path (ManifestPath $Store $game);[void][IO.Directory]::CreateDirectory($folder);$text=$record|ConvertTo-Json -Depth 6;$text=$text.Replace(($game|ConvertTo-Json -Compress).Trim('"'),'<GAME>');if($env:USERPROFILE){$text=$text.Replace(($env:USERPROFILE|ConvertTo-Json -Compress).Trim('"'),'<USERPROFILE>')};[IO.File]::WriteAllText((OwnedPath $folder 'XPlane-launch.json'),$text,[Text.UTF8Encoding]::new($false))}catch{Write-Warning 'Could not save X-Plane launch diagnostics.'}
+ }
 }
 function GetFusionInstallState([string]$Store,[string]$Game){
  $gamePath=ResolveFusionInstallFolder $Game

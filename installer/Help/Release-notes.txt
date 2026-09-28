@@ -1,53 +1,28 @@
-﻿# OptiShade 0.21.3-beta.3 Beta
+﻿# OptiShade 0.21.3-beta.4 Beta
 
-This experimental installer is built from the beta branch and published as a GitHub prerelease. It is offered only when beta versions are enabled in Settings.
+**X-PLANE 12 VULKAN STARTUP FIX**
+- Fixed the packaged Vulkan layer's Windows DLL path. Forward-slash relative paths could fail to load ReShade64.dll and surface as VK_ERROR_OUT_OF_HOST_MEMORY during vkCreateInstance.
+- Verified the failure and corrected startup with the actual packaged DLLs in an isolated Vulkan instance test. A full cockpit test on affected systems is still needed.
+- Play now validates the layer JSON, resolved DLL and recorded component hashes before launching. Invalid installations produce a repair/update message instead of forcing a broken layer.
+- Preserves inherited Vulkan layer paths and other requested layers, removes duplicate entries, and handles existing VK_LAYER_PATH overrides correctly.
+- All launch environment changes stay inside the child process. No driver changes or system-wide Vulkan registration.
+- Play explains when administrator mode prevents local Vulkan layer discovery. Reopen the manager normally before launching X-Plane.
+- X-Plane launch diagnostics now record validation, sanitized layer configuration and component hashes.
 
-**EXPERIMENTAL FEATURES**
-- X-Plane 12 Vulkan image effects and Neural Rendering. Launch XP12 using Play in this manager. Frame generation is not provided for XP12.
-- MSFS 2020/2024 TAA Neural Rendering using estimated guides. Use SDR with frame generation disabled. NR and TAA fallback require a fresh opt-in each game session.
-- These paths passed earlier local visual checks. This updated build includes further fixes; please report your results. Performance and compatibility vary.
+**BETA TO STABLE**
+- Increased the previous-manager cleanup wait from 2 to 30 seconds so a closing beta launcher can finish releasing its EXE. The update window remains responsive.
+- Only the exact unchanged previous EXE is removed. If another process still holds it open, the completion message shows its retained location.
+- This cleanup applies to switches started by Beta 4. Manually opening a separate stable installer does not remove other downloaded EXEs.
+- Return to stable continues to select the latest published stable release and turns beta opt-in off after success.
 
-**NEW FEATURES**
-- SnapShot: assign a key in the manager or in-game Keybinds. One PNG is saved in the game's Optishade Snapshots folder, followed by a completion notification. Browse screenshots opens that folder.
-- Snapshot storage resolves Xbox installation aliases. Cleanup records are verified before success is reported; unrelated pictures are not removed.
-- Capture requests stay with the active effects runtime instead of a different game window.
-- Selective uninstall lets you remove app files, saved INI presets or recorded snapshots. Remove everything requires confirmation. Snapshot cleanup is restricted to games recorded by this manager.
-- Beta build labels, saved update-channel preference and channel-correct download links. Beta revision numbers are compared numerically for upgrades and same-version repair.
-- Generated graphics logs no longer block updates. Changed or untracked graphics DLLs still require review.
-- NR memory-budget checks and tuning debounce are retained. TAA waits use completion events and log synchronous frame cost; the GPU safety barriers remain in place.
-- XP12 launch includes its ReShade compatibility argument.
+**INSTALLING**
+- Close your simulators, enable beta versions in Settings, then Check for updates.
+- If updating manually, run Beta 4 and update the recorded X-Plane installation in Setup before Play. Repair is for installations already on the matching version.
+- Presets and configuration are preserved. MSFS functionality and stable 0.21.3 are unchanged.
+- The existing dxgi.dll bridge remains required for the XP12 menu and experimental NR integration. Do not delete it manually; Restore uses ownership records and backups.
+- Use Play in the manager for X-Plane. TAA NR, Vulkan and XP12 remain experimental beta features.
 
-**FIXES**
-- Added on-demand downloads for three older Barbatos shader filenames used by Vapory presets, with pinned original sources and integrity checks.
-- Restore/uninstall now preserves changed, recorded shader source files in %LOCALAPPDATA%/OptiShade-Recovery before removing them from the game. Changed DLLs still require review.
-- Fixed in-game INI/ZIP imports failing when MSFS is launched through its WindowsApps link. Imports resolve the physical game folder; unsafe archive paths and linked shader folders remain blocked.
-- Fixed conflicting optional-MFG ownership records that could prevent restoring version.dll. Original backed-up files are preserved.
-- Added a check for a missing upscaler backend before evaluation. The reported MSFS crashes remain under investigation; this is not a confirmed fix for every crash.
-- Improved the missing/damaged installer-file message with recovery steps. Damaged or missing DLLs still fail verification.
+**DOWNLOADS**
+- One beta EXE and one portable ZIP. Choose one; portable users should preserve their Data folder when extracting the new version.
 
-**IMPROVEMENTS**
-- FPS overlay controls are now visible in Settings & status, with matching OptiShade switches: visibility, position, detail, text size, opacity and theme colours.
-- In-game Settings & status now includes UI size: Auto or 100–200%. Text and controls scale together; Auto uses 200% at native 4K. Save settings keeps the choice per game.
-- Retry NR after a memory-pressure pause without restarting the simulator.
-- Added a memory-pressure override beside Apply the model. It is off by default and lasts only for the current game session. Low VRAM can still cause stutters or crashes; device-loss checks remain active.
-- Compatible RTX 40 installations automatically receive the bundled MFG component. Native DLSS Frame Generation must still be enabled in game; Backspace opens its menu. Supported multipliers vary. Existing conflicting loaders are not overwritten by automatic MFG setup.
-- Other GPU families retain their supported options; this build does not install an unvalidated RTX 40 component on RTX 20/30/50, AMD or Intel.
-- Beta opt-in and uninstall choices now use purple toggle switches.
-- SnapShot and preset hotswap use the same keybind controls as the other actions.
-- Missing custom FX warn without blocking preset installation; known catalogue dependencies still download. Long import instructions are no longer truncated.
-- Successful updates place the new manager on the Desktop and remove the unchanged previous EXE. Returning to stable resets beta opt-in. Presets and configuration are preserved.
-
-**SWITCHING VERSIONS**
-- Download this update manually from GitHub if 0.21.2 reports no update. Its release-list parsing issue is fixed in this version; subsequent update checks and channel switches use the corrected code.
-- Enable beta versions in Settings and check for updates to download the beta prerelease. Stable users only receive stable releases; no beta is downloaded without opt-in and choosing to install it.
-- To return to stable, turn beta off and Check for updates, or choose a stable build with Return to stable. Successful return clears beta opt-in.
-- Close all simulators first. Presets, keybinds and configuration are preserved. Experimental TAA NR must be enabled again each session and is disabled in stable.
-- Restore XP12 before returning to stable if you want to remove its experimental installation. Stable leaves existing XP12 installations untouched and does not offer XP12 installation.
-- Updates started from this manager save the new EXE to your Desktop and remove the unchanged previous EXE after success. Updates started from 0.21.2 still use its older naming and retain the previous copy for this first update.
-- Portable version changes use a separate extraction and preserve the Data folder.
-
-**ANTIVIRUS UPDATE**
-- Bitdefender reviewed the submitted OptiShade sample and confirmed it is clean and no longer detected by its engines.
-- Other antivirus reports remain under investigation. If you still see a warning, include the app version, affected filename and detection name with your diagnostic ZIP.
-
-Please send diagnostic ZIPs, with a description of the issue, to the **diagnostic zips** channel in **BlackBox Discord**: https://discord.gg/6hjR9cSsy7
+Please post diagnostic ZIPs in the **diagnostic zips** channel in **BlackBox Discord**, including the simulator selected in Setup and what happened: https://discord.gg/6hjR9cSsy7

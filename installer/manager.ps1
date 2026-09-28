@@ -368,7 +368,7 @@ $form.FindName('Play').Add_Click({RunAction {
  $mp=ManifestPath $store $path.Text;$exe=$null
  if(Test-Path -LiteralPath $mp){$m=Get-Content $mp -Raw|ConvertFrom-Json;$exe=$m.LaunchExe}
  if(-not $exe -or -not(Test-Path -LiteralPath $exe)){$exe=ChooseGameExe}
- if($exe){AssertFusionExecutable $exe;if((Split-Path $exe -Leaf) -eq 'X-Plane.exe'){StartOptiShadeXPlane $exe}else{Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe)};$status.Text='Launch requested. X-Plane must be launched using Play here for the OptiShade Vulkan layer. Restore only after closing the game.'}
+ if($exe){AssertFusionExecutable $exe;if((Split-Path $exe -Leaf) -eq 'X-Plane.exe'){StartOptiShadeXPlane $exe $store}else{Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe)};$status.Text='Launch requested. X-Plane must be launched using Play here for the OptiShade Vulkan layer. Restore only after closing the game.'}
 }})
 # Hardware and launcher discovery run in another runspace so the intro remains skippable.
 $script:gpu=[pscustomobject]@{Names='Checking';Nvidia=$false;Known=$false}

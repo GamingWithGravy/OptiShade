@@ -90,6 +90,8 @@ function GetDetailedSupportReport([string]$Game,[string]$Store){
  $report.StartupEvidence=GetStartupEvidence $Game
  $report.PreRestoreEvidence='No saved pre-restore evidence available'
  try{if($Store){$saved=OwnedPath (Split-Path (ManifestPath $Store $Game)) 'PreRestoreDiagnostics.json';if((Get-Item -LiteralPath $saved -ErrorAction Stop).Length -le 1MB){$report.PreRestoreEvidence=Get-Content -LiteralPath $saved -Raw -Encoding UTF8|ConvertFrom-Json}}}catch{$report.PreRestoreEvidence='No readable pre-restore evidence available'}
+ $report.XPlaneLaunch='No saved X-Plane launch attempt'
+ try{$launch=OwnedPath (Split-Path (ManifestPath $Store $Game)) 'XPlane-launch.json';if((Get-Item -LiteralPath $launch -ErrorAction Stop).Length -le 65536){$report.XPlaneLaunch=Get-Content -LiteralPath $launch -Raw -Encoding UTF8|ConvertFrom-Json}}catch{}
  $report.CaptureAdvice='For black screens, export while the simulator is running if possible. Otherwise close the simulator and export before Restore. Saved pre-restore evidence is historical and timestamped.'
  # Environment.OSVersion can report the host manifest's compatibility version (6.2), not the installed OS.
  try{$os=Get-CimInstance Win32_OperatingSystem -ErrorAction Stop|Select-Object -First 1;if($null -eq $os){throw 'No OS metadata'};$report.Windows=@{Name=$os.Caption;Version=$os.Version;Build=$os.BuildNumber}}catch{$report.Windows='Unavailable (OS metadata query failed)'}

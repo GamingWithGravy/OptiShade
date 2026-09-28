@@ -108,7 +108,8 @@ $window.Add_ContentRendered({
   $window.FindName('Progress').IsIndeterminate=$false;$window.FindName('Progress').Value=100
   $action=if($settings.Rollback){'Rollback'}else{'Update'}
   $store=if($settings.Store){[string]$settings.Store}else{Join-Path $env:LOCALAPPDATA 'OptiShade'}
-  $cleanup=CompleteOptiShadeManagerUpdate $previous $settings.PreviousHash $script:target $settings.SHA256 $store $channel
+  $window.FindName('Status').Text='Installation complete. Waiting for the previous manager to close before removing its EXE...'
+  $cleanup=CompleteOptiShadeManagerUpdate $previous $settings.PreviousHash $script:target $settings.SHA256 $store $channel { $window.Dispatcher.Invoke([Action]{},[Windows.Threading.DispatcherPriority]::Background) }
   $window.FindName('Status').Text="$action complete. The selected OptiShade EXE is on your Desktop:`n$script:target`nUse this EXE from now on.`n$cleanup"
   $window.FindName('OpenLocation').Visibility='Visible'
   Remove-Item -LiteralPath $download -Force
