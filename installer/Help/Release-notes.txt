@@ -2,12 +2,12 @@
 
 This experimental installer is built from the beta branch and published as a GitHub prerelease. It is offered only when beta versions are enabled in Settings.
 
-EXPERIMENTAL FEATURES
+**EXPERIMENTAL FEATURES**
 - X-Plane 12 Vulkan image effects and Neural Rendering. Launch XP12 using Play in this manager. Frame generation is not provided for XP12.
 - MSFS 2020/2024 TAA Neural Rendering using estimated guides. Use SDR with frame generation disabled. NR and TAA fallback require a fresh opt-in each game session.
 - These paths passed earlier local visual checks. This updated build includes further fixes; please report your results. Performance and compatibility vary.
 
-NEW FEATURES AND FIXES
+**NEW FEATURES**
 - SnapShot: assign a key in the manager or in-game Keybinds. One PNG is saved in the game's Optishade Snapshots folder, followed by a completion notification. Browse screenshots opens that folder.
 - Snapshot storage resolves Xbox installation aliases. Cleanup records are verified before success is reported; unrelated pictures are not removed.
 - Capture requests stay with the active effects runtime instead of a different game window.
