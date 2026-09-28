@@ -40,7 +40,7 @@ $form.FindName('SupportDevelopment').Add_Click({
  ShowSupportDevelopment $form $store
  if(Test-Path -LiteralPath (Join-Path $store 'support-hidden.txt')){$form.FindName('SupportDevelopment').Visibility='Collapsed'}
 })
-$buttons=@('Browse','Install','Repair','Restore','Runtime','Retry','Uninstall','Scan','Play','LibraryGames','GamePath','Method','AddGame','HomeNav','LibraryNav','SetupNav','SettingsNav','KeybindsNav','ChangeMenuKey','ChangeHotSwapKey','ClearHotSwapKey','OpenLibrary','CheckCompatibility','TroubleshootingNav','ResetDefaults','ImportZip','RecoveryRepair','RecoveryRestore','CheckUpdates','RevertUpdate','BetaUpdates','SaveMenuKeys','DefaultMenuKeys','LoadMenuKeys','IncludeEffects','OwnIniMode','ChooseOwnIni','ApplyFxChoice','PrepareOlderRtx','PrepareMfg','OpenMsfs2020','OpenXPlane12')|ForEach-Object {$form.FindName($_)}
+$buttons=@('Browse','Install','Repair','Restore','Runtime','Retry','Uninstall','Scan','Play','LibraryGames','GamePath','Method','AddGame','HomeNav','LibraryNav','SetupNav','SettingsNav','KeybindsNav','ChangeMenuKey','ChangeHotSwapKey','ClearHotSwapKey','ChangeSnapshotKey','ClearSnapshotKey','BrowseSnapshots','OpenLibrary','CheckCompatibility','TroubleshootingNav','ResetDefaults','ImportZip','RecoveryRepair','RecoveryRestore','CheckUpdates','RevertUpdate','BetaUpdates','SaveMenuKeys','DefaultMenuKeys','LoadMenuKeys','IncludeEffects','OwnIniMode','ChooseOwnIni','ApplyFxChoice','PrepareOlderRtx','PrepareMfg','OpenMsfs2020','OpenXPlane12')|ForEach-Object {$form.FindName($_)}
 $form.Icon=[Windows.Media.Imaging.BitmapFrame]::Create([uri](Join-Path $PSScriptRoot 'OptiShade-app.ico'))
 $form.FindName('BrandIcon').Source=[Windows.Media.Imaging.BitmapFrame]::Create([uri](Join-Path $PSScriptRoot 'OptiShade-icon.png'))
 $form.FindName('BrandIcon').Cursor='SizeAll'
@@ -157,7 +157,7 @@ $form.FindName('Install').Add_Click({RunAction {
  if($form.FindName('OwnIniMode').IsChecked){$relative=SaveOwnPreset $script:ownIni $path.Text (Join-Path $PSScriptRoot 'EffectPackages.ini');$m|Add-Member -NotePropertyName FxPresetRelative -NotePropertyValue $relative -Force;WriteState $m $script:manifest}
  FinishOptionalDownloads $m $plan
 }})
-$form.FindName('Restore').Add_Click({RunAction {$m=ManifestPath $store $path.Text;if(-not(Test-Path $m)){throw 'No recorded installation for this game.'};RestoreFusion $m;$status.Text='Game restored. Original files are back and OptiShade game files are removed.'}})
+$form.FindName('Restore').Add_Click({RunAction {$m=ManifestPath $store $path.Text;if(-not(Test-Path $m)){throw 'No recorded installation for this game.'};RestoreFusion $m;$status.Text='Game restored. Original files are back and OptiShade game files are removed.';$restored=Get-Content -LiteralPath $m -Raw|ConvertFrom-Json;if($restored.RecoveredShaders){$status.Text+=' Edited shaders saved in: '+$restored.RecoveredShaders}}})
 $form.FindName('PrepareMfg').Add_Click({RunAction {
  $mp=ManifestPath $store $path.Text
  if(-not(Test-Path -LiteralPath $mp)){throw 'Install OptiShade in this game first.'}
@@ -242,7 +242,7 @@ $form.FindName('CheckCompatibility').Add_Click({RunAction {$exe=ChooseGameExe;if
 $path.Add_TextChanged({$form.FindName('Compatibility').Text='Check this game before installing. Automatic setup also checks again at install time.';RefreshHomeState})
 function CompleteDownloads{$mp=ManifestPath $store $path.Text;$m=Get-Content $mp -Raw|ConvertFrom-Json;$m|Add-Member -NotePropertyName Downloads -NotePropertyValue 'Complete' -Force;WriteState $m $mp;$status.Text='Install complete. You can close the manager and start your game.'}
 function ShowPage([string]$name){
- if($name -ne 'Keybinds'){$script:capturingHotSwap=$false;$form.FindName('ChangeHotSwapKey').Content='Change'}
+ if($name -ne 'Keybinds'){CancelSnapshotCapture;$script:capturingHotSwap=$false;$form.FindName('ChangeHotSwapKey').Content='Change'}
  if($name -ne 'Keybinds' -and $script:capturingMenuKey){$script:capturingMenuKey=$false;$form.FindName('ChangeMenuKey').Content='Change'}
  if($name -eq 'Library'){$name='Setup'}
  foreach($page in @('Home','Library','Setup','Keybinds','Settings','Troubleshooting')){$form.FindName($page+'Page').Visibility=if($page -eq $name){'Visible'}else{'Collapsed'}}
@@ -257,6 +257,8 @@ function ShowGames($games){
  $script:libraryGames=$cards;$form.FindName('LibraryGames').ItemsSource=$cards
 }
 function RefreshHomeState{
+ $form.FindName('MfgStatus').Text='RTX 40 MFG is installed automatically when compatible. Other GPU families keep their supported native options.'
+ try{if($path.Text){$mfgRecord=Get-Content -LiteralPath (ManifestPath $store $path.Text) -Raw|ConvertFrom-Json;if($mfgRecord.AutomaticMfgStatus){$form.FindName('MfgStatus').Text=$mfgRecord.AutomaticMfgStatus}elseif($mfgRecord.OptionalMfg){$form.FindName('MfgStatus').Text='RTX 40 MFG component installed. Enable native DLSS Frame Generation in game; Backspace opens its menu. Multipliers depend on the game and GPU.'}}}catch{}
  try{$state=if($path.Text){GetFusionInstallState $store $path.Text}else{'Not installed'}}catch{$state='Invalid path'}
  $installed=$state -match '^Installed';$incomplete=$state -match '^Installation incomplete'
  $upgrade=$false
@@ -438,13 +440,17 @@ $form.FindName('CheckUpdates').Add_Click({RunAction {
  else{$form.FindName('UpdateAvailable').Visibility='Collapsed';$status.Text='No newer '+(GetOptiShadeUpdateChannel)+' release is available.'}
 }})
 
+function CancelSnapshotCapture {$script:capturingSnapshot=$false;$form.FindName('ChangeSnapshotKey').Content='Change'}
 function RefreshMenuKeys {
+ CancelSnapshotCapture
  $script:capturingHotSwap=$false;$form.FindName('ChangeHotSwapKey').Content='Change'
  $script:capturingMenuKey=$false;$form.FindName('ChangeMenuKey').Content='Change'
  $form.FindName('KeybindsGame').Text=if([string]::IsNullOrWhiteSpace($path.Text)){'Select your installation on Setup.'}else{'Selected game: '+$path.Text}
  $keys=@{ShortcutKey=45;BackupShortcutKey=79};$script:menuKeyCandidate=0
  try{if(-not [string]::IsNullOrWhiteSpace($path.Text)){$keys=GetMenuSettings $path.Text}}
  catch{$form.FindName('PrimaryMenuKey').Text='Unavailable';$form.FindName('KeyCaptureHint').Text='Unable to read shortcuts: '+$_.Exception.Message;return}
+ $script:snapshotCandidate=[int]$keys.SnapshotKey
+ $form.FindName('SnapshotKey').Text=if($script:snapshotCandidate -gt 0){([Windows.Forms.Keys]$script:snapshotCandidate).ToString()}else{'Not set'}
  $script:hotSwapCandidate=[int]$keys.PresetHotSwapKey
  $form.FindName('HotSwapKey').Text=if($script:hotSwapCandidate -gt 0){([Windows.Forms.Keys]$script:hotSwapCandidate).ToString()}else{'Not set'}
  $script:menuKeyCandidate=[int]$keys.ShortcutKey
@@ -453,6 +459,7 @@ function RefreshMenuKeys {
  $form.FindName('BackupMenuHint').Text='Recovery shortcut: Ctrl+Shift+'+([Windows.Forms.Keys][int]$keys.BackupShortcutKey).ToString()+' (no Insert or numpad needed). Saving the primary key keeps this shortcut.'
 }
 function BeginMenuKeyCapture {
+ CancelSnapshotCapture
  $script:capturingHotSwap=$false;$form.FindName('ChangeHotSwapKey').Content='Change'
  $script:capturingMenuKey=$true;$form.FindName('ChangeMenuKey').Content='Press a key...'
  $form.FindName('KeyCaptureHint').Text='Press one key for the menu. Escape cancels; modifier combinations are not supported for the primary key.'
@@ -466,12 +473,12 @@ function CaptureMenuKey($event) {
  if([Windows.Input.Keyboard]::Modifiers -ne [Windows.Input.ModifierKeys]::None -or $code -notin (@(33..40)+@(45,46)+@(48..57)+@(65..90)+@(96..111)+@(112..123))){$form.FindName('KeyCaptureHint').Text='Choose a letter, number, function or navigation key without modifiers. Escape cancels.';return}
  $script:menuKeyCandidate=$code;$script:capturingMenuKey=$false
  $form.FindName('PrimaryMenuKey').Text=([Windows.Forms.Keys]$code).ToString();$form.FindName('ChangeMenuKey').Content='Change'
- $form.FindName('KeyCaptureHint').Text='Not saved yet. Click Save shortcuts to apply this key after restarting MSFS.'
+ $form.FindName('KeyCaptureHint').Text='Not saved yet. Click Save shortcuts to apply this key after restarting the game.'
 }
 $form.FindName('ChangeMenuKey').Add_Click({BeginMenuKeyCapture})
 $form.Add_PreviewKeyDown({CaptureMenuKey $_})
 $form.Add_Deactivated({if($script:capturingMenuKey){$script:capturingMenuKey=$false;$form.FindName('ChangeMenuKey').Content='Change';$form.FindName('KeyCaptureHint').Text='Key capture cancelled when the manager lost focus.'}})
-$form.FindName('ChangeHotSwapKey').Add_Click({$script:capturingMenuKey=$false;$form.FindName('ChangeMenuKey').Content='Change';$script:capturingHotSwap=$true;$form.FindName('ChangeHotSwapKey').Content='Press a key...';$form.FindName('KeyCaptureHint').Text='Press a hotswap key. Escape cancels; Backspace clears. Then Save shortcuts.'})
+$form.FindName('ChangeHotSwapKey').Add_Click({CancelSnapshotCapture;$script:capturingMenuKey=$false;$form.FindName('ChangeMenuKey').Content='Change';$script:capturingHotSwap=$true;$form.FindName('ChangeHotSwapKey').Content='Press a key...';$form.FindName('KeyCaptureHint').Text='Press a hotswap key. Escape cancels; Backspace clears. Then Save shortcuts.'})
 $form.FindName('ClearHotSwapKey').Add_Click({$script:capturingHotSwap=$false;$script:hotSwapCandidate=0;$form.FindName('HotSwapKey').Text='Not set';$form.FindName('ChangeHotSwapKey').Content='Change';$form.FindName('KeyCaptureHint').Text='Click Save shortcuts to keep this change.'})
 $form.Add_PreviewKeyDown({
  if(-not $script:capturingHotSwap){return};$_.Handled=$true;$key=$_.Key;if($key -eq [Windows.Input.Key]::System){$key=$_.SystemKey}
@@ -481,15 +488,27 @@ $form.Add_PreviewKeyDown({
  $script:hotSwapCandidate=$code;$script:capturingHotSwap=$false;$form.FindName('ChangeHotSwapKey').Content='Change';$form.FindName('HotSwapKey').Text=if($code){([Windows.Forms.Keys]$code).ToString()}else{'Not set'};$form.FindName('KeyCaptureHint').Text='Click Save shortcuts to keep this change.'
 })
 $form.Add_Deactivated({$script:capturingHotSwap=$false;$form.FindName('ChangeHotSwapKey').Content='Change'})
+$form.FindName('ChangeSnapshotKey').Add_Click({$script:capturingMenuKey=$false;$script:capturingHotSwap=$false;$form.FindName('ChangeMenuKey').Content='Change';$form.FindName('ChangeHotSwapKey').Content='Change';$script:capturingSnapshot=$true;$form.FindName('ChangeSnapshotKey').Content='Press a key...';$form.FindName('KeyCaptureHint').Text='Press a SnapShot key. Escape cancels; Backspace clears. Then Save shortcuts.'})
+$form.FindName('ClearSnapshotKey').Add_Click({CancelSnapshotCapture;$script:snapshotCandidate=0;$form.FindName('SnapshotKey').Text='Not set'})
+$form.Add_PreviewKeyDown({
+ if(-not $script:capturingSnapshot){return};$_.Handled=$true;$key=$_.Key;if($key -eq [Windows.Input.Key]::System){$key=$_.SystemKey}
+ if($key -eq [Windows.Input.Key]::Escape){CancelSnapshotCapture;return}
+ $code=[Windows.Input.KeyInterop]::VirtualKeyFromKey($key)
+ if($code -eq 8){$code=0}elseif([Windows.Input.Keyboard]::Modifiers -ne [Windows.Input.ModifierKeys]::None -or $code -notin (@(33..40)+@(45,46)+@(48..57)+@(65..90)+@(96..111)+@(112..123))){return}
+ $script:snapshotCandidate=$code;CancelSnapshotCapture;$form.FindName('SnapshotKey').Text=if($code){([Windows.Forms.Keys]$code).ToString()}else{'Not set'};$form.FindName('KeyCaptureHint').Text='Click Save shortcuts to keep this change.'
+})
+$form.Add_Deactivated({CancelSnapshotCapture})
+$form.FindName('BrowseSnapshots').Add_Click({RunAction {if([string]::IsNullOrWhiteSpace($path.Text)){throw 'Select your game in Setup first.'};$folder=OwnedPath $path.Text 'Optishade Snapshots';[IO.Directory]::CreateDirectory($folder)|Out-Null;Start-Process -FilePath (Join-Path $env:WINDIR 'explorer.exe') -ArgumentList ('"'+$folder+'"')}})
 $form.FindName('LoadMenuKeys').Add_Click({RunAction {RefreshMenuKeys;$status.Text='Showing shortcuts for the selected game folder.'}})
 $form.FindName('SaveMenuKeys').Add_Click({RunAction {
  if($script:capturingMenuKey -or -not $script:menuKeyCandidate){throw 'Press a primary menu key first.'}
  $keys=GetMenuSettings $path.Text
+ if($script:capturingSnapshot){throw 'Finish choosing the SnapShot key first.'}
  if($script:capturingHotSwap){throw 'Finish choosing the hotswap key first.'}
- SetMenuSettings $path.Text $script:menuKeyCandidate ([int]$keys.BackupShortcutKey) $script:hotSwapCandidate
- RefreshMenuKeys;$status.Text='Shortcuts saved. Restart MSFS to use them. Your recovery shortcut is unchanged.'
+ SetMenuSettings $path.Text $script:menuKeyCandidate ([int]$keys.BackupShortcutKey) $script:hotSwapCandidate $script:snapshotCandidate
+ RefreshMenuKeys;$status.Text='Shortcuts saved. Restart the game to use them. Your recovery shortcut is unchanged.'
 }})
-$form.FindName('DefaultMenuKeys').Add_Click({RunAction {SetMenuSettings $path.Text 45 79 0;RefreshMenuKeys;$status.Text='Default shortcuts saved: Insert and Ctrl+Shift+O. Restart MSFS.'}})
+$form.FindName('DefaultMenuKeys').Add_Click({RunAction {SetMenuSettings $path.Text 45 79 0 0;RefreshMenuKeys;$status.Text='Default shortcuts saved: Insert and Ctrl+Shift+O. Restart MSFS.'}})
 $path.Add_TextChanged({RefreshMenuKeys})
 RefreshMenuKeys
 ShowPage 'Home'

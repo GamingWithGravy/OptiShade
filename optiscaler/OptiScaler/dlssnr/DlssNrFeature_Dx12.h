@@ -60,6 +60,9 @@ void RenderMenu(::Config* config, float menuResScale);
 
 // Clears the session failure latch, so a failure caused by transient thrash does not cost a restart.
 void RetryAfterFailure();
+bool MemoryPressureOverride();
+bool MemoryPressureStopped();
+void SetMemoryPressureOverride(bool enabled);
 
 std::string FinishedPictureStatus();
 bool WaitForFinishedPicture();

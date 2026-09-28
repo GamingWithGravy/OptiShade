@@ -1,5 +1,5 @@
 ﻿$ErrorActionPreference='Stop'
-function GetBundledOptiShadeVersion { 'P0.21.2' }
+function GetBundledOptiShadeVersion { 'P0.21.3' }
 function TestBundledUpdateVersion($Manifest){
  try{
   $installed=[regex]::Match([string]$Manifest.Version,'\d+\.\d+(?:\.\d+){0,2}').Value
@@ -39,6 +39,17 @@ function IsGraphicsMod([string]$Relative,[string]$File){
 }
 function CleanModBackupReferences($Manifest,[string]$Folder){
  # Preserve verified backup references, including third-party graphics mods.
+ # Older optional-MFG installs appended a second version.dll record. Merge only
+ # that exact known shape; retain the displaced original and verify it normally.
+ $records=@($Manifest.Files|Where-Object Path -eq 'version.dll')
+ if($Manifest.OptionalMfg -and $records.Count -eq 2){
+  $mfg=@($records|Where-Object {$_.Hash -eq 'E9CA3587854EEB723E0579F7DDF6CFB1E6CF4BED79B0D75BC716003ED98FE040' -and -not $_.SourcePath -and -not $_.Backup -and -not $_.PreviousHash})
+  $original=@($records|Where-Object {-not $_.Hash -and -not $_.SourcePath -and $_.Backup -and $_.PreviousHash})
+  if($mfg.Count -eq 1 -and $original.Count -eq 1){
+   $mfg[0].Backup=$original[0].Backup;$mfg[0].PreviousHash=$original[0].PreviousHash
+   $Manifest.Files=@($Manifest.Files|Where-Object Path -ne 'version.dll')+@($mfg[0])
+  }
+ }
 }
 function RemoveUnreferencedBackups($Manifest,[string]$Folder){
  $root=OwnedPath $Folder 'Backups';$keep=@($Manifest.Files|Where-Object Backup|ForEach-Object {OwnedPath $Folder $_.Backup})
@@ -62,7 +73,7 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
     if($Proxy -notin @('winmm.dll','dxgi.dll','d3d12.dll','version.dll','dbghelp.dll','wininet.dll','winhttp.dll')){throw 'Unsupported installation method.'}
     $Game=FullPath $Game;$Payload=FullPath $Payload;AssertClosed $Game
     if(-not(Test-Path -LiteralPath $Game -PathType Container)){throw 'Choose the game folder first.'}
-    if(Test-Path -LiteralPath (Join-Path $Game 'X-Plane.exe')){throw 'X-Plane installation is removed from 0.21.2. Use the beta channel when available. Existing installations can still be restored.'}
+    if(Test-Path -LiteralPath (Join-Path $Game 'X-Plane.exe')){throw 'X-Plane installation is removed from 0.21.3. Use the beta channel when available. Existing installations can still be restored.'}
     $mp=ManifestPath $StateRoot $Game
     $old=$null;$oldJson=$null
     if(Test-Path -LiteralPath $mp){$oldJson=Get-Content -LiteralPath $mp -Raw;$old=$oldJson|ConvertFrom-Json;if($old.Status -ne 'Restored' -and -not $ReplaceExisting){throw 'OptiShade is already recorded here. Choose Repair or approve reinstalling it.'};if($old.Status -eq 'Restored'){$old=$null}}
@@ -100,7 +111,7 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
         $neuralGuides=$entry.Path -match '^OptiShadeData[\\/](Shaders[\\/]OptiShadeTaa[\\/]|Textures[\\/]vort_BlueNoise\.png$|Presets[\\/]X-Plane neural guides\.ini$)'
         if(-not $IncludeEffects -and $entry.Path -match '^OptiShadeData[\\/](Shaders|Textures|Presets)[\\/]' -and -not $bundledLook -and -not $neuralGuides){continue}
         $source=OwnedPath $Payload $entry.Path;$relative=if($entry.Path -eq 'winmm.dll'){$Proxy}else{$entry.Path};$dest=OwnedPath $Game $relative
-        if((HashFile $source) -ne $entry.Hash){throw "Installer payload is damaged: $($entry.Path)"}
+        if((HashFile $source) -ne $entry.Hash){throw "Installer verification failed for $($entry.Path). The extracted file is missing or differs from the packaged copy. No game files have been changed. Close the manager, download a fresh official EXE, and check antivirus protection history if this repeats. Do not replace the DLL from another website."}
         # Keep download receipts on repair/reinstall; bundled defaults must not erase them.
         if($relative -match '^OptiShadeData[\\/]Effects-install\.json$' -and (Test-Path -LiteralPath $dest)){continue}
         # A returning user's saved default look is their preset, not disposable payload.
@@ -169,6 +180,14 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
     foreach($entry in $rollback){if(Test-Path -LiteralPath $entry.Copy){Remove-Item -LiteralPath $entry.Copy -Force}}
     Remove-Item -LiteralPath $rollbackFolder
     RemoveUnreferencedBackups $manifest $folder
+    # An optional installation failure must not misreport a successful core install.
+    if(Test-Path -LiteralPath "$PSScriptRoot/mfg.ps1"){
+        try{
+            . "$PSScriptRoot/mfg.ps1"
+            $gpuNames=@(Get-CimInstance Win32_VideoController -ErrorAction Stop|ForEach-Object Name)
+            $null=EnsureAutomaticMfg $mp $Payload $gpuNames
+        }catch{Write-Warning ('Automatic MFG setup unavailable: '+$_.Exception.Message)}
+    }
     $mp
 }
 function RemoveRecordedOptiShadeLoaders($Manifest,[string]$ManifestPath){
@@ -185,6 +204,7 @@ function RemoveRecordedOptiShadeLoaders($Manifest,[string]$ManifestPath){
         }
     }
 }
+function GetShaderRecoveryRoot { Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'OptiShade-Recovery' }
 function RestoreFusion([string]$ManifestPath,[bool]$KeepPresets=$true){
     $m=Get-Content -LiteralPath $ManifestPath -Raw|ConvertFrom-Json
     CleanModBackupReferences $m (Split-Path $ManifestPath)
@@ -210,16 +230,35 @@ function RestoreFusion([string]$ManifestPath,[bool]$KeepPresets=$true){
         try{$handle=[IO.File]::Open($file,[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None);$handle.Dispose()}
         catch{throw ('Restore has not changed any files. Close MSFS and any log viewers, then retry. File is locked or not writable: '+$file)}
     }}
+    $changedShaders=@()
     foreach($f in $m.Files){
         $dest=OwnedPath $m.Game $f.Path;$actual=HashFile $dest
         # Older manifests incorrectly classified the installer-maintained FX receipt as immutable.
         $mutable=$f.Mutable -or ($f.Path -match '^OptiShadeData[\\/]Effects-install\.json$')
-        if($actual -and -not $mutable -and $actual -ne $f.Hash -and $actual -ne $f.PreviousHash){throw "A file changed after installation: $($f.Path). Restore stopped before changing anything."}
+        if($actual -and -not $mutable -and $actual -ne $f.Hash -and $actual -ne $f.PreviousHash){
+            if($f.Path -match '^OptiShadeData[\\/]Shaders[\\/].+\.(fx|fxh|h|hlsl)$'){
+                $changedShaders+=@{Path=$f.Path;Hash=$actual}
+            }else{throw "A file changed after installation: $($f.Path). Restore stopped before changing anything."}
+        }
         if($f.Backup -and (HashFile (OwnedPath $folder $f.Backup)) -ne $f.PreviousHash){throw "Original backup failed verification: $($f.Path)"}
     }
     foreach($relative in $m.OwnedDirectories){
         $dir=OwnedPath $m.Game $relative
         if(Test-Path -LiteralPath $dir){if(Get-ChildItem -LiteralPath $dir -Force -Recurse|Where-Object {$_.Attributes -band [IO.FileAttributes]::ReparsePoint}){throw 'A linked item was found in OptiShade data. Cleanup stopped.'}}
+    }
+    # Preserve edited, manifest-owned shader sources outside the game before cleanup.
+    # Do not extend this exception to loaders or other executable content.
+    if($changedShaders.Count){
+        $recovery=OwnedPath (GetShaderRecoveryRoot) ('Shaders-'+[guid]::NewGuid().ToString('N'))
+        foreach($shader in $changedShaders){
+            $copy=OwnedPath $recovery $shader.Path
+            New-Item -ItemType Directory -Path (Split-Path $copy) -Force|Out-Null
+            [IO.File]::Copy((OwnedPath $m.Game $shader.Path),$copy,$false)
+            if((HashFile $copy) -ne $shader.Hash){throw 'Changed shader recovery copy failed verification. Game files have not been removed.'}
+        }
+        $m|Add-Member -NotePropertyName RecoveredShaders -NotePropertyValue $recovery -Force
+        WriteState $m $ManifestPath
+        Write-Warning ('Changed shader sources were preserved in: '+$recovery)
     }
     # Preserve bounded evidence outside game files before cleanup. Diagnostics must never block recovery.
     try{

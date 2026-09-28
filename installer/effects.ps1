@@ -22,6 +22,8 @@ function InstallAllEffects([string]$Game,[string]$Catalogue,[scriptblock]$Progre
         if($line -match '^\[(.+)\]$'){$current=@{Id=$Matches[1]};$packages+=,$current}
         elseif($current -and $line -match '^([^=]+)=(.*)$'){$current[$Matches[1]]=$Matches[2]}
     }
+    # Historical versions are downloaded only when an imported preset needs them.
+    $packages=@($packages|Where-Object {$_.PresetOnly -ne '1'})
     $data=OwnedPath $Game 'OptiShadeData';$results=@();$index=0
     $previous=@();$report=OwnedPath $Game 'OptiShadeData/Effects-install.json'
     if(Test-Path -LiteralPath $report){try{$previous=Get-Content -LiteralPath $report -Raw|ConvertFrom-Json}catch{}}

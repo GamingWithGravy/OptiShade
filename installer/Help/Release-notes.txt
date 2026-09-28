@@ -1,35 +1,34 @@
-# OptiShade 0.21.2 Stable
+# OptiShade 0.21.3 Stable
 
-**A NOTE FROM GRAVY**
-I'm sorry for the problems caused by the 0.21 release and the disruption to your flying. Thank you to everyone who sent reports and diagnostic ZIPs. This stable build keeps the safeguards from 0.21.1 and improves version switching and uninstall options. Experimental work will stay on beta while testing continues.
+**NEW FEATURE - SNAPSHOT**
+- Set a SnapShot key in the manager's Keybinds page or the in-game Keybinds page.
+- Captures the rendered game image to a PNG in the game's "Optishade Snapshots" folder. The notification appears after saving.
+- Browse screenshots opens that folder. The old ReShade screenshot triggers are disabled to avoid duplicate captures.
+
+**FIXES**
+- Added on-demand downloads for three older Barbatos shader filenames used by Vapory presets, with pinned original sources and integrity checks.
+- Restore/uninstall now preserves changed, recorded shader source files in %LOCALAPPDATA%/OptiShade-Recovery before removing them from the game. Changed DLLs still require review.
+- Fixed in-game INI/ZIP imports failing when MSFS is launched through its WindowsApps link. Imports resolve the physical game folder; unsafe archive paths and linked shader folders remain blocked.
+- Fixed conflicting optional-MFG ownership records that could prevent restoring version.dll. Original backed-up files are preserved.
+- Added a check for a missing upscaler backend before evaluation. The reported MSFS crashes remain under investigation; this is not a confirmed fix for every crash.
+- Improved the missing/damaged installer-file message with recovery steps. Damaged or missing DLLs still fail verification.
 
 **IMPROVEMENTS**
-- New uninstall window: choose app files, saved INI presets, recorded OptiShade snapshots, or Remove everything. Removing everything requires an extra confirmation. Game saves, controls and unrelated pictures are kept.
-- The beta opt-in control now matches the Image effects style.
-- Update messages identify the selected stable or beta channel correctly. Changing channels clears the previous offer; downloads still require your choice.
+- Retry NR after a memory-pressure pause without restarting the simulator.
+- Added a memory-pressure override beside Apply the model. It is off by default and lasts only for the current game session. Low VRAM can still cause stutters or crashes; device-loss checks remain active.
+- Compatible RTX 40 installations automatically receive the bundled MFG component. Native DLSS Frame Generation must still be enabled in game; Backspace opens its menu. Supported multipliers vary. Existing conflicting loaders are not overwritten by automatic MFG setup.
+- Other GPU families retain their supported options; this build does not install an unvalidated RTX 40 component on RTX 20/30/50, AMD or Intel.
+- Beta opt-in and uninstall choices now use purple toggle switches.
 
-**FIXES AND STABILITY**
-- Retains NR memory-budget checks, device-failure protection and reduced model rebuilding while adjusting sliders.
-- Retains Xbox installation-folder detection fixes and fixes for generated logs blocking updates.
-- These safeguards do not establish that every reported crash is resolved. Please continue reporting problems.
-- Stable supports MSFS 2020 and 2024. Experimental XP12 installation, TAA NR and Vulkan NR remain excluded and continue on beta.
+**STABLE AND BETA**
+- This stable build supports MSFS 2020 and 2024. XP12, TAA NR and Vulkan NR remain beta-only.
+- Shared fixes are included in the local beta. Public beta downloads remain disabled pending testing.
 
-**ROLLBACK — REVERT UPDATE**
-- Use the permanent Revert update button below the update controls, select an available compatible build, then press Install selected build.
-- The regular EXE workflow downloads and verifies the selected installer, updates recorded installations, and keeps presets and configuration. The selected EXE is saved to your Desktop.
-- Close all simulators first. Withdrawn releases are not listed. 0.21 and 0.21.1 are withdrawn from downloads; older available versions may lack current fixes. Portable users must download the selected portable package separately. Restore any XP12 installation before selecting a build that does not support it.
+**INSTALLING**
+- Close your simulators and update normally; a restore/reinstall is normally unnecessary. Repair continues to use files from the matching manager version.
+- If installer verification reports a missing or damaged file, download a fresh official EXE and check antivirus protection history. Do not replace individual DLLs from unrelated websites.
 
-**BETA TESTING**
-- In Settings, enable Opt into beta versions for testing, then select Check for updates. Enabled checks beta prereleases; disabled checks stable releases.
-- The setting changes offered downloads; it does not install anything automatically. If no eligible beta exists, the launcher says so.
-- Beta builds are experimental and are marked BETA in the manager and splash screen. A separate manager folder does not isolate files installed into your game.
-- Use the matching release's instructions when switching versions. Keep your presets backed up.
+**ANTIVIRUS NOTICE**
+Some antivirus providers are flagging OptiShade. I've submitted a sample to Bitdefender for review and I'm investigating what's triggering the warnings. Thanks for your patience.
 
-**INSTALLING 0.21.2**
-- Close your simulators and update normally. A restore and reinstall is normally unnecessary. Repair uses the matching manager version rather than downloading an update.
-- Existing XP12 installations are not updated or removed automatically by this stable release.
-
-**ANTIVIRUS — SUSPECTED FALSE POSITIVES**
-The unsigned installer extracts a helper and graphics components; in-game features use graphics hooks. These behaviours can trigger heuristic alerts, but do not prove a particular detection is a false positive. Download only from official releases. If blocked, report the detection name and affected file path; do not disable antivirus or add blanket exclusions.
-
-Please send diagnostic ZIPs with a description of the issue to the **diagnostic zips** channel in **BlackBox Discord**: https://discord.gg/6hjR9cSsy7
+Please send diagnostic ZIPs, with a description of the issue, to the **diagnostic zips** channel in **BlackBox Discord**: https://discord.gg/6hjR9cSsy7

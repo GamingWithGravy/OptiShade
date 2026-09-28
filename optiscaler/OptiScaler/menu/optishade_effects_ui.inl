@@ -30,6 +30,7 @@ static bool Send(osfx::Command command){
  bool queued=send&&send(&command,sizeof(command));strcpy_s(feedback,queued?"Applying your change...":"Image effects are not ready yet. Try again after loading.");if(queued&&command.kind==osfx::Preset)RememberMainPreset(command.path);return queued;
 }
 #include "optishade_preset_hotswap.inl"
+#include "optishade_snapshot.inl"
 #include "optishade_preset_browser.inl"
 static bool startupDone=false;
 static bool NeedsStartupFrame(){return !startupDone||OptiShadeUpdates::NeedsFrame();}

@@ -59,14 +59,17 @@ EffectSearchPaths=.\OptiShadeData\Shaders\**
 TextureSearchPaths=.\OptiShadeData\Textures\**
 PresetPath=.\OptiShadeData\Presets\My look.ini
 IntermediateCachePath=.\OptiShadeData\Cache
-ScreenshotPath=.\OptiShadeData\Screenshots
+ScreenshotPath=.\Optishade Snapshots
 PerformanceMode=0
 SkipLoadingDisabledEffects=1
 [OVERLAY]
 ShowSplash=0
 TutorialProgress=4
 [SCREENSHOT]
-SavePath=.\OptiShadeData\Screenshots
+SavePath=.\Optishade Snapshots
+SaveBeforeShot=0
+SaveOverlayShot=0
+KeyScreenshot=0,0,0,0
 '@ | Set-Content "$payload/ReShade.ini" -Encoding ASCII
 "Techniques=`r`nTechniqueSorting=" | Set-Content "$payload/OptiShadeData/Presets/My look.ini" -Encoding ASCII
 foreach($dir in @('Shaders','Textures','Cache')){'OptiShade managed folder'|Set-Content "$payload/OptiShadeData/$dir/.keep"}
@@ -92,7 +95,7 @@ Push-Location "$root/installer"
 try{
  & go test -count=1 -v .
  if($LASTEXITCODE){throw 'Embedded payload verification failed. Installer was not built.'}
- & go build -trimpath -ldflags '-H=windowsgui -s -w' -o "$preview/OptiShade_Version_0.21.2.exe" .
+ & go build -trimpath -ldflags '-H=windowsgui -s -w' -o "$preview/OptiShade_Version_0.21.3.exe" .
  if($LASTEXITCODE){throw 'Installer build failed.'}
 }finally{Pop-Location}
 Write-Output "Built: $preview"

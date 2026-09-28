@@ -1,7 +1,23 @@
 ﻿param([Alias('Archive')][string]$ImportArchive,[Alias('Game')][string]$ImportGame,[Alias('Result')][string]$ImportResult,[Alias('Preset')][string]$ImportPreset)
 $ErrorActionPreference='Stop'
+function ResolveImportRoot([string]$Root){
+ $rootPath=[IO.Path]::GetFullPath($Root).TrimEnd('\','/')
+ # Resolve only the simulator's Store alias; never accept links inside FX data.
+ if($rootPath -match '^(?<package>.+[\\/]WindowsApps[\\/]Microsoft\.(?<edition>FlightSimulator|Limitless)_[^\\/]+)(?<suffix>(?:[\\/].*)?)$'){
+  $package=$Matches.package;$suffix=$Matches.suffix;$edition=$Matches.edition
+  $item=Get-Item -LiteralPath $package -Force -ErrorAction Stop
+  $targets=@($item.Target|Where-Object {-not [string]::IsNullOrWhiteSpace($_)})
+  if(-not($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $targets.Count -ne 1){throw 'Cannot resolve the simulator Store link. Use the actual Content folder shown in Xbox Manage > Files.'}
+  $target=[string]$targets[0];if($target.StartsWith('\??\')){$target=$target.Substring(4)}
+  if($target -notmatch '^[A-Za-z]:[\\/]' -or $target -match '(?i)[\\/]WindowsApps(?:[\\/]|$)'){throw 'The simulator link does not point to a supported physical installation.'}
+  $exe=if($edition -eq 'Limitless'){'FlightSimulator2024.exe'}else{'FlightSimulator.exe'}
+  if(-not(Test-Path -LiteralPath (Join-Path $target $exe) -PathType Leaf)){throw 'The simulator link target is missing its game executable.'}
+  $rootPath=[IO.Path]::GetFullPath($target.TrimEnd('\','/')+$suffix).TrimEnd('\','/')
+ }
+ return $rootPath
+}
 function ImportSafePath([string]$Root,[string]$Relative){
- $base=[IO.Path]::GetFullPath($Root).TrimEnd('\','/')
+ $base=ResolveImportRoot $Root
  $path=[IO.Path]::GetFullPath((Join-Path $base $Relative))
  if(-not $path.StartsWith($base+'\',[StringComparison]::OrdinalIgnoreCase)){throw 'Unsafe archive destination.'}
  for($check=$path;$check;$check=Split-Path $check -Parent){if(Test-Path -LiteralPath $check){if((Get-Item -LiteralPath $check -Force).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Linked folders are not supported for import.'}}}
@@ -93,6 +109,7 @@ function InstallPresetDependencies([string]$Preset,[string]$Game,[string]$Catalo
     $stream=$response.GetResponseStream();$out=[IO.File]::Create($zip)
     try{$buffer=New-Object byte[] 65536;$bytes=0L;$timer=[Diagnostics.Stopwatch]::StartNew();while(($n=$stream.Read($buffer,0,$buffer.Length)) -gt 0){$bytes+=$n;if($bytes -gt 256MB -or $timer.Elapsed.TotalSeconds -gt 120){throw 'Shader download exceeded its size or time limit.'};$out.Write($buffer,0,$n)}}finally{$out.Dispose();$stream.Dispose()}
    }finally{$response.Dispose()}
+   if($selection.Package.SHA256 -and (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash -ne $selection.Package.SHA256){throw 'Shader archive verification failed. No files from this package were installed.'}
    $null=ImportEffectsArchive $zip $Game -OnlyShaders $selection.Shaders
   }
   foreach($header in @('ReShade.fxh','ReShadeUI.fxh')){

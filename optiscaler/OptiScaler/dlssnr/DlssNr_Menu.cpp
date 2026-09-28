@@ -245,6 +245,11 @@ void RenderMenu(Config* config, float menuResScale)
             config->DlssNrApplyModel = applyModel;
 
         HelpMarker("Show or hide the NR effect. The model still runs when hidden.\nDisable Enable Neural Rendering to stop its GPU cost.");
+        ImGui::SameLine();
+        bool memoryOverride = DlssNr::MemoryPressureOverride();
+        if (ImGui::Checkbox("Override memory pressure (this session)", &memoryOverride))
+            DlssNr::SetMemoryPressureOverride(memoryOverride);
+        HelpMarker("Allows NR below the recommended free VRAM reserve. May cause stutters or crashes.\nResets when the game closes. Device-loss and model-error checks remain active.");
 
         // Either backend. The two keep separate state, and on a native Vulkan game the D3D12 side
         // is never touched -- so asking only that one reports "waiting for the upscaler" over a pass

@@ -34,6 +34,19 @@
      <Trigger Property="IsEnabled" Value="False"><Setter TargetName="ToggleSurface" Property="Opacity" Value="0.45"/></Trigger>
     </ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
   </Style>
+  <Style x:Key="OptiShadeSwitch" TargetType="CheckBox">
+   <Setter Property="Cursor" Value="Hand"/><Setter Property="Foreground" Value="#EAE1F6"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="CheckBox">
+    <StackPanel Orientation="Horizontal" Background="Transparent">
+     <Border x:Name="Track" Width="44" Height="24" CornerRadius="12" Background="#342A43" BorderBrush="#69517C" BorderThickness="1" Margin="0,0,12,0">
+      <Ellipse x:Name="Thumb" Width="18" Height="18" Fill="#B9ADC7" HorizontalAlignment="Left" Margin="2,0"/>
+     </Border><ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True"/>
+    </StackPanel><ControlTemplate.Triggers>
+     <Trigger Property="IsChecked" Value="True"><Setter TargetName="Track" Property="Background" Value="#9148D8"/><Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/><Setter TargetName="Thumb" Property="Fill" Value="White"/></Trigger>
+     <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Track" Property="BorderBrush" Value="#E7D5FF"/></Trigger>
+     <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45"/></Trigger>
+    </ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+  </Style>
   <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/></Style>
   <Style TargetType="ComboBox">
    <Setter Property="Foreground" Value="#F3EFFB"/><Setter Property="Background" Value="#282238"/>
@@ -63,7 +76,7 @@
      <Button x:Name="SupportDevelopment" Content="Buy me a coffee" Margin="0,8,0,10" Padding="12,9"/>
      <TextBlock Text="OptiShade - created by gravy" Foreground="#D4B7F9" FontWeight="SemiBold" FontSize="12"/>
 
-     <TextBlock Text="VERSION  /  0.21.2" Foreground="#71657F" FontSize="10" Margin="0,12,0,0"/>
+     <TextBlock Text="VERSION  /  0.21.3" Foreground="#71657F" FontSize="10" Margin="0,12,0,0"/>
     </StackPanel>
     <Grid/>
    </DockPanel>
@@ -113,7 +126,7 @@
      </Grid>
      </StackPanel><Border x:Name="DeveloperMessagePanel" Grid.Row="1" Background="#21172F" CornerRadius="12" Padding="14,8" Margin="0,4,0,8"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
       <TextBlock Text="Developer message" Foreground="#D4B7F9" FontWeight="SemiBold" Margin="0,0,0,6"/>
-      <TextBlock Text="Stable development focuses on MSFS 2020 and 2024. XP12, TAA and Vulkan testing continues on beta. Please send diagnostic ZIPs to the diagnostic zips channel in BlackBox Discord." Foreground="#C9B6DF" TextWrapping="Wrap"/>
+      <TextBlock Text="SnapShot and import/restore improvements are included for MSFS 2020 and 2024. XP12, TAA and Vulkan remain beta-only. Please send diagnostic ZIPs to the diagnostic zips channel in BlackBox Discord." Foreground="#C9B6DF" TextWrapping="Wrap"/>
      </StackPanel></ScrollViewer></Border>
     </Grid>
     <Grid x:Name="LibraryPage" Visibility="Collapsed"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
@@ -123,13 +136,15 @@
      </DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer>
     </Grid>
     <ScrollViewer x:Name="KeybindsPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto"><StackPanel Margin="0,14,8,16"><TextBlock Text="Keybinds" FontSize="28" FontWeight="SemiBold"/><TextBlock x:Name="KeybindsGame" Text="Select your installation on Setup." Foreground="#BD9CEC" Margin="0,12,0,8"/><StackPanel Margin="0,12,0,0">
-<TextBlock Text="For the selected game folder. Close MSFS before saving; restart the simulator to use the new keys. A shortcut only works after the overlay has loaded. Check your simulator and other overlays for conflicts." TextWrapping="Wrap" Foreground="#AA9CB9"/>
+<TextBlock Text="For the selected game folder. Close the game before saving; restart the simulator to use the new keys. A shortcut only works after the overlay has loaded. Check your simulator and other overlays for conflicts." TextWrapping="Wrap" Foreground="#AA9CB9"/>
 <TextBlock Text="Primary key" Margin="0,12,0,6"/><WrapPanel><TextBlock x:Name="PrimaryMenuKey" Text="Insert" FontSize="16" MinWidth="120" VerticalAlignment="Center" Margin="0,0,16,0"/><Button x:Name="ChangeMenuKey" Content="Change"/></WrapPanel><TextBlock x:Name="KeyCaptureHint" Text="Click Change, press one key, then Save shortcuts. Escape cancels." Foreground="#AA9CB9" Margin="0,8,0,0"/>
 <WrapPanel Margin="0,16,0,0"><TextBlock Text="Preset hotswap:" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/><TextBlock x:Name="HotSwapKey" Text="Not set" FontSize="16" MinWidth="100" VerticalAlignment="Center"/><Button x:Name="ChangeHotSwapKey" Content="Change"/><Button x:Name="ClearHotSwapKey" Content="Clear"/></WrapPanel><TextBlock Text="Choose Preset 1 and Preset 2 in the in-game Image effects tab." Foreground="#AA9CB9" Margin="0,8,0,0"/>
+<WrapPanel Margin="0,16,0,0"><TextBlock Text="SnapShot:" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/><TextBlock x:Name="SnapshotKey" Text="Not set" FontSize="16" MinWidth="100" VerticalAlignment="Center"/><Button x:Name="ChangeSnapshotKey" Content="Change"/><Button x:Name="ClearSnapshotKey" Content="Clear"/></WrapPanel>
+<TextBlock Text="Snapshots are saved in the game's Optishade Snapshots folder." Foreground="#AA9CB9" Margin="0,12,0,6" TextWrapping="Wrap"/><Button x:Name="BrowseSnapshots" Content="Browse screenshots" HorizontalAlignment="Left"/>
 <TextBlock x:Name="BackupMenuHint" Text="Recovery shortcut: Ctrl+Shift+O (no Insert or numpad needed)." Margin="0,12,0,6" Foreground="#AA9CB9"/>
 <WrapPanel Margin="0,12,0,0"><Button x:Name="LoadMenuKeys" Content="Read installed keys" Margin="0,0,8,8"/><Button x:Name="SaveMenuKeys" Content="Save shortcuts" Margin="0,0,8,8"/><Button x:Name="DefaultMenuKeys" Content="Restore default shortcuts" Margin="0,0,8,8"/></WrapPanel>
 </StackPanel></StackPanel></ScrollViewer>
-    <StackPanel x:Name="SettingsPage" Visibility="Collapsed" Margin="0,14,0,0"><TextBlock Text="Settings" FontSize="28" FontWeight="SemiBold"/><CheckBox Style="{StaticResource ImageEffectsToggle}" x:Name="BetaUpdates" Content="Opt into beta versions for testing" Foreground="#D4B7F9" Margin="0,18,0,0"/><TextBlock Text="Beta builds are experimental. Enabling this shows prereleases in update checks; installation still requires your choice." TextWrapping="Wrap" Foreground="#AA9CB9" Margin="0,8,0,0"/><Button x:Name="GitHub" Content="GitHub releases and downloads" HorizontalAlignment="Left" Margin="0,18,0,0"/><Button x:Name="Help" Content="Tutorial, how it works and features" HorizontalAlignment="Left" Background="#8650C8" Margin="0,18,0,8"/><TextBlock Text="Remove OptiShade from all games recorded by this installer." Foreground="#AA9CB9" Margin="0,20,0,12"/><TextBlock Text="Uninstall removes OptiShade and restores files it backed up. Choose whether to remove app files, saved INI presets and recorded snapshots. Game settings, controls and saves stay untouched. Your original installer EXE is kept." Foreground="#AA9CB9" Margin="0,0,0,20"/><Button x:Name="Uninstall" Content="Uninstall OptiShade" Background="#30212C" Foreground="#E3B7CC" Margin="0,0,10,10"/></StackPanel>
+    <StackPanel x:Name="SettingsPage" Visibility="Collapsed" Margin="0,14,0,0"><TextBlock Text="Settings" FontSize="28" FontWeight="SemiBold"/><CheckBox Style="{StaticResource OptiShadeSwitch}" x:Name="BetaUpdates" Content="Opt into beta versions for testing" Foreground="#D4B7F9" Margin="0,18,0,0"/><TextBlock Text="Beta builds are experimental. Enabling this shows prereleases in update checks; installation still requires your choice." TextWrapping="Wrap" Foreground="#AA9CB9" Margin="0,8,0,0"/><Button x:Name="GitHub" Content="GitHub releases and downloads" HorizontalAlignment="Left" Margin="0,18,0,0"/><Button x:Name="Help" Content="Tutorial, how it works and features" HorizontalAlignment="Left" Background="#8650C8" Margin="0,18,0,8"/><TextBlock Text="Remove OptiShade from all games recorded by this installer." Foreground="#AA9CB9" Margin="0,20,0,12"/><TextBlock Text="Uninstall removes OptiShade and restores files it backed up. Choose whether to remove app files, saved INI presets and recorded snapshots. Game settings, controls and saves stay untouched. Your original installer EXE is kept." Foreground="#AA9CB9" Margin="0,0,0,20"/><Button x:Name="Uninstall" Content="Uninstall OptiShade" Background="#30212C" Foreground="#E3B7CC" Margin="0,0,10,10"/></StackPanel>
     <ScrollViewer x:Name="TroubleshootingPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
      <ScrollViewer.Resources>
       <Style TargetType="ScrollBar">
@@ -170,7 +185,7 @@
 
 <Expander Header="Advanced options and downloads" Foreground="#BD9CEC" Margin="0,20,0,12"><StackPanel Margin="0,14,0,0">     <TextBlock Text="Installation method - restore before trying another if the menu does not appear." Foreground="#94869F" FontSize="12" Margin="0,0,0,6"/>
      <ComboBox x:Name="Method" SelectedIndex="0" Margin="0,0,0,12" Padding="8"><ComboBoxItem Content="Automatic - check game and graphics card" Tag="auto"/><ComboBoxItem Content="Windows multimedia - Xbox / Vulkan (winmm)" Tag="winmm.dll"/><ComboBoxItem Content="DirectX graphics (dxgi)" Tag="dxgi.dll"/><ComboBoxItem Content="DirectX 12 fallback (d3d12)" Tag="d3d12.dll"/><ComboBoxItem Content="Version library fallback (version)" Tag="version.dll"/><ComboBoxItem Content="Debug library fallback (dbghelp)" Tag="dbghelp.dll"/></ComboBox>
-     <WrapPanel><Button x:Name="ImportZip" Content="Install FX / INI from ZIP" Margin="0,0,10,10"/></WrapPanel><TextBlock Text="Select imported looks in game under Image effects > Saved look." Foreground="#AA9CB9" Margin="0,0,0,14"/><Button x:Name="CheckCompatibility" Content="Check game and runtime versions" HorizontalAlignment="Left" Margin="0,0,0,10"/><TextBlock x:Name="Compatibility" Text="Check this game before installing. Automatic setup also checks again at install time." TextWrapping="Wrap" Foreground="#BDA0F4" Margin="0,0,0,14"/><WrapPanel><Button x:Name="PrepareMfg" Content="Enable optional RTX 40 MFG" Margin="0,0,10,10"/><Button x:Name="PrepareOlderRtx" Content="Prepare older RTX test" Margin="0,0,10,10"/><Button x:Name="Runtime" Content="Add NVIDIA runtime" Margin="0,0,10,10"/><Button x:Name="Retry" Content="Retry unfinished downloads" Margin="0,0,10,10"/></WrapPanel></StackPanel></Expander>     <TextBlock Text="Restore removes OptiShade. Game settings, saves and saved INI presets are kept." Foreground="#94869F" FontSize="11" Margin="0,4,0,0"/>
+     <WrapPanel><Button x:Name="ImportZip" Content="Install FX / INI from ZIP" Margin="0,0,10,10"/></WrapPanel><TextBlock Text="Select imported looks in game under Image effects > Saved look." Foreground="#AA9CB9" Margin="0,0,0,14"/><Button x:Name="CheckCompatibility" Content="Check game and runtime versions" HorizontalAlignment="Left" Margin="0,0,0,10"/><TextBlock x:Name="Compatibility" Text="Check this game before installing. Automatic setup also checks again at install time." TextWrapping="Wrap" Foreground="#BDA0F4" Margin="0,0,0,14"/><TextBlock x:Name="MfgStatus" Foreground="#BDA0F4" Margin="0,0,0,10" Text="RTX 40: MFG component installs automatically when compatible and no other loader occupies its slot. Other GPU families keep their supported native options."/><WrapPanel><Button x:Name="PrepareMfg" Content="Retry RTX 40 MFG setup" Margin="0,0,10,10"/><Button x:Name="PrepareOlderRtx" Content="Prepare older RTX test" Margin="0,0,10,10"/><Button x:Name="Runtime" Content="Add NVIDIA runtime" Margin="0,0,10,10"/><Button x:Name="Retry" Content="Retry unfinished downloads" Margin="0,0,10,10"/></WrapPanel></StackPanel></Expander>     <TextBlock Text="Restore removes OptiShade. Game settings, saves and saved INI presets are kept." Foreground="#94869F" FontSize="11" Margin="0,4,0,0"/>
 
     </StackPanel></ScrollViewer>
    </Grid>

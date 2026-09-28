@@ -1051,6 +1051,14 @@ static NVSDK_NGX_Result TryEvaluateOptiFeature(ID3D12GraphicsCommandList* InCmdL
         }
     }
 
+    if (feature == nullptr)
+    {
+        // A failed/rebuilding backend must not become a null dereference here.
+        D3D12Hooks::SetRootSignatureTracking(true);
+        LOG_ERROR("Upscaler backend unavailable for handle {}; evaluation stopped", handleId);
+        return NVSDK_NGX_Result_FAIL_FeatureNotFound;
+    }
+
     // Fallback to FSR 2.1.2 if feature failed to initialize and user didn't explicitly request it
     if (!feature->IsInited() && cfg.Dx12Upscaler.value_or_default() != Upscaler::FSR21)
     {

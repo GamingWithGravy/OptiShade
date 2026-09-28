@@ -808,7 +808,7 @@ void reshade::runtime::draw_gui()
 	const bool show_splash_window = _show_splash && (is_loading() || (_reload_count <= 1 && (_last_present_time - _last_reload_time) < std::chrono::seconds(5)) || (!_show_overlay && _tutorial_index == 0 && _input != nullptr));
 
 	// Do not show this message in the same frame the screenshot is taken (so that it won't show up on the GUI screenshot)
-	const bool show_screenshot_message = (_show_screenshot_message || !_last_screenshot_save_successful) && !_should_save_screenshot && (_last_present_time - _last_screenshot_time) < std::chrono::seconds(_last_screenshot_save_successful ? 3 : 5);
+	const bool show_screenshot_message = false; // SnapShot completion is reported by the OptiShade UI.
 	const bool show_preset_transition_message = _show_preset_transition_message && _is_in_preset_transition;
 	const bool show_message_window = show_screenshot_message || show_preset_transition_message || !_preset_save_successful;
 
@@ -2119,7 +2119,7 @@ void reshade::runtime::draw_gui_settings()
 		ImGui::SetItemTooltip(_("Clear effect cache located in \"%s\"."), _effect_cache_path.u8string().c_str());
 	}
 
-	if (ImGui::CollapsingHeader(_("Screenshots"), ImGuiTreeNodeFlags_DefaultOpen))
+	if (false) // Configure SnapShot in OptiShade Keybinds; legacy capture options are disabled.
 	{
 		if (_input != nullptr)
 		{
