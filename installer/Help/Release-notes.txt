@@ -27,7 +27,8 @@
 
 **STABLE AND BETA**
 - This stable build supports MSFS 2020 and 2024. XP12, TAA NR and Vulkan NR remain beta-only.
-- Shared fixes are also included in beta. Opt into beta versions in Settings to receive experimental builds; turn it off and check for updates to return to stable.
+- Stable downloads come only from GitHub Releases. Beta downloads come only from the beta branch after you enable beta in Settings; checking for updates never installs a build automatically. Turn beta off and check for updates, or use Revert update, to return to the latest stable release.
+- Beta downloads are pinned to a single branch commit and verified before installation. The old 0.21.2 updater requires this newer manager to support branch downloads.
 
 **INSTALLING**
 - Close your simulators and update normally; a restore/reinstall is normally unnecessary. Repair continues to use files from the matching manager version.
