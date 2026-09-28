@@ -33,7 +33,7 @@ function SuspendRollbackLogs {
  foreach($record in Get-ChildItem -LiteralPath $records -Filter manifest.json -Recurse -File -ErrorAction SilentlyContinue){
   $m=Get-Content -LiteralPath $record.FullName -Raw|ConvertFrom-Json
   if($m.Status -ne 'Installed'){continue}
-  if(Test-Path -LiteralPath (Join-Path $m.Game 'X-Plane.exe')){throw 'Restore X-Plane original files before returning to a stable build.'}
+  if([version]$settings.Version -lt [version]'0.21' -and (Test-Path -LiteralPath (Join-Path $m.Game 'X-Plane.exe'))){throw 'Restore X-Plane original files before installing a version below 0.21.'}
   $game=[IO.Path]::GetFullPath($m.Game);$check=$game
   while($check){
    if((Get-Item -LiteralPath $check -Force -ErrorAction Stop).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Rollback stopped: select the physical game installation folder in Setup first.'}
@@ -103,11 +103,6 @@ $window.Add_ContentRendered({
   $window.FindName('Status').Text='Updating installed game files and keeping your presets...'
   $window.FindName('Progress').Value=70
   RunUpdateStage $script:target '--apply-update'
-  if($settings.Channel -eq 'stable' -or $settings.Rollback){
-   $channelStore=if($env:OPTISHADE_STORE){$env:OPTISHADE_STORE}else{Join-Path $env:LOCALAPPDATA 'OptiShade'}
-   $channelMarker=Join-Path $channelStore 'beta-updates.txt'
-   if(Test-Path -LiteralPath $channelMarker){Remove-Item -LiteralPath $channelMarker -Force}
-  }
   $window.FindName('Progress').IsIndeterminate=$false;$window.FindName('Progress').Value=100
   $action=if($settings.Rollback){'Rollback'}else{'Update'}
   $store=if($settings.Store){[string]$settings.Store}else{Join-Path $env:LOCALAPPDATA 'OptiShade'}

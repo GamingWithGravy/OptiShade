@@ -60,10 +60,10 @@ function GetOptiShadePreviousReleases([string]$Current='0.21.3-beta.2'){
 }
 function ShowOptiShadeRevert($Owner,[string]$Current='0.21.3-beta.2'){
  [xml]$markup=@'
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="Revert update" Width="650" Height="520" WindowStartupLocation="CenterOwner" WindowStyle="None" AllowsTransparency="True" Background="Transparent" Foreground="#F3EFFB" FontFamily="Segoe UI" ResizeMode="NoResize">
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="Return to stable" Width="650" Height="520" WindowStartupLocation="CenterOwner" WindowStyle="None" AllowsTransparency="True" Background="Transparent" Foreground="#F3EFFB" FontFamily="Segoe UI" ResizeMode="NoResize">
  <Border CornerRadius="20" Background="#171020" BorderBrush="#40314F" BorderThickness="1" Padding="28"><Grid>
  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
- <TextBlock Text="Revert update" FontSize="26" FontWeight="SemiBold"/>
+ <TextBlock Text="Return to stable" FontSize="26" FontWeight="SemiBold"/>
  <ComboBox Name="Versions" Grid.Row="1" Margin="0,18,0,18" DisplayMemberPath="Version"/>
  <TextBlock Name="Instructions" Grid.Row="2" TextWrapping="Wrap" Foreground="#CEC0DF"/>
  <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right"><Button Name="Close" Content="Close" Margin="0,0,12,0"/><Button Name="Continue" Content="Install selected build" Background="#8650C8" IsEnabled="False"/></StackPanel>
@@ -75,7 +75,7 @@ function ShowOptiShadeRevert($Owner,[string]$Current='0.21.3-beta.2'){
  $dialog.Resources.MergedDictionaries.Add([Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($theme)))
  $dialog.Resources.Add([Windows.Controls.ComboBox],$Owner.FindResource([Windows.Controls.ComboBox]))
  $dialog.Resources.Add([Windows.Controls.ComboBoxItem],$Owner.FindResource([Windows.Controls.ComboBoxItem]))
- $dialog.FindName('Instructions').Text="Choose a stable build, then press Install selected build. This leaves the beta channel.`n`nOptiShade will download the official installer, verify its SHA-256, check your installations and run the installation automatically. Presets and configuration are kept. The selected manager will be saved to your Desktop.`n`nClose all simulators first. This changes all supported, recorded game installations. Modified graphics loaders will stop the operation.`n`nOnly builds supporting the automatic installation workflow are listed (0.20.12 onward). Restore X-Plane original files before returning to a stable build. Older features and fixes will be lost."
+ $dialog.FindName('Instructions').Text="Choose a stable build, then press Install selected build. This leaves the beta channel.`n`nOptiShade will download the official installer, verify its SHA-256, check your installations and run the installation automatically. Presets and configuration are kept. The selected stable manager will replace this beta on your Desktop after success, and beta opt-in will be turned off.`n`nClose all simulators first. This changes all supported, recorded game installations. Modified graphics loaders will stop the operation.`n`nOnly builds supporting the automatic installation workflow are listed (0.20.12 onward). Restore X-Plane original files before returning to a stable build. Older features and fixes will be lost."
  $dialog.FindName('Close').Add_Click({$dialog.Close()})
  $dialog.FindName('Continue').Add_Click({
   $selected=$dialog.FindName('Versions').SelectedItem
