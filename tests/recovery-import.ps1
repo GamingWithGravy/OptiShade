@@ -51,3 +51,21 @@ New-Item -ItemType Junction -Path "$physical/OptiShadeData/Linked" -Target $outs
 $blocked=$false;try{ImportSafePath "$alias/OptiShadeData" 'Linked/escape.fx'}catch{$blocked=$true}
 Assert $blocked 'Nested linked import destination remains blocked'
 Assert (-not(Test-Path "$outside/escape.fx")) 'Linked destination remains untouched'
+
+. "$PSScriptRoot/../installer/library.ps1"
+$package='Microsoft.Limitless_test_x64__8wekyb3d8bbwe'
+$firstRoot=Join-Path $fixture 'FirstDrive/WindowsApps';$secondRoot=Join-Path $fixture 'SecondDrive/WindowsApps'
+New-Item -ItemType Directory -Path $firstRoot,$secondRoot -Force|Out-Null
+$second=Join-Path $secondRoot $package;$first=Join-Path $firstRoot $package
+New-Item -ItemType Junction -Path $second -Target $physical|Out-Null
+New-Item -ItemType Junction -Path $first -Target $second|Out-Null
+Assert ((ResolveFusionStoreFolder $first) -eq $physical) 'Game discovery resolves the two-hop Xbox package chain'
+Assert ((ImportSafePath "$first/OptiShadeData" 'Shaders/Chained.fx') -eq "$physical\OptiShadeData\Shaders\Chained.fx") 'In-game import resolves the same two-hop Xbox chain'
+$chainZip=Join-Path $fixture 'chain.zip';MakeZip $chainZip @('Shaders/ChainOnly.fx')
+Assert ((ImportEffectsArchive $chainZip $first) -eq 1) 'Actual shader ZIP imports through both package links'
+$blocked=$false;try{ImportSafePath "$first/OptiShadeData" 'Linked/escape.fx'}catch{$blocked=$true}
+Assert $blocked 'Two-hop resolution still rejects linked shader destinations'
+$wrong=Join-Path $firstRoot 'Microsoft.Limitless_other_x64__8wekyb3d8bbwe'
+New-Item -ItemType Junction -Path $wrong -Target $second|Out-Null
+$blocked=$false;try{ResolveSimulatorStoreTarget $wrong}catch{$blocked=$true}
+Assert $blocked 'A link to a different package identity is rejected'

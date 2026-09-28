@@ -1,15 +1,12 @@
 ﻿param([Alias('Archive')][string]$ImportArchive,[Alias('Game')][string]$ImportGame,[Alias('Result')][string]$ImportResult,[Alias('Preset')][string]$ImportPreset)
 $ErrorActionPreference='Stop'
+. "$PSScriptRoot/store-paths.ps1"
 function ResolveImportRoot([string]$Root){
  $rootPath=[IO.Path]::GetFullPath($Root).TrimEnd('\','/')
  # Resolve only the simulator's Store alias; never accept links inside FX data.
  if($rootPath -match '^(?<package>.+[\\/]WindowsApps[\\/]Microsoft\.(?<edition>FlightSimulator|Limitless)_[^\\/]+)(?<suffix>(?:[\\/].*)?)$'){
   $package=$Matches.package;$suffix=$Matches.suffix;$edition=$Matches.edition
-  $item=Get-Item -LiteralPath $package -Force -ErrorAction Stop
-  $targets=@($item.Target|Where-Object {-not [string]::IsNullOrWhiteSpace($_)})
-  if(-not($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $targets.Count -ne 1){throw 'Cannot resolve the simulator Store link. Use the actual Content folder shown in Xbox Manage > Files.'}
-  $target=[string]$targets[0];if($target.StartsWith('\??\')){$target=$target.Substring(4)}
-  if($target -notmatch '^[A-Za-z]:[\\/]' -or $target -match '(?i)[\\/]WindowsApps(?:[\\/]|$)'){throw 'The simulator link does not point to a supported physical installation.'}
+  $target=ResolveSimulatorStoreTarget $package
   $exe=if($edition -eq 'Limitless'){'FlightSimulator2024.exe'}else{'FlightSimulator.exe'}
   if(-not(Test-Path -LiteralPath (Join-Path $target $exe) -PathType Leaf)){throw 'The simulator link target is missing its game executable.'}
   $rootPath=[IO.Path]::GetFullPath($target.TrimEnd('\','/')+$suffix).TrimEnd('\','/')

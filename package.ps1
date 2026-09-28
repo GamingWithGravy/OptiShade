@@ -73,6 +73,7 @@ KeyScreenshot=0,0,0,0
 "Techniques=`r`nTechniqueSorting=" | Set-Content "$payload/OptiShadeData/Presets/My look.ini" -Encoding ASCII
 foreach($dir in @('Shaders','Textures','Cache')){'OptiShade managed folder'|Set-Content "$payload/OptiShadeData/$dir/.keep"}
 New-Item -ItemType Directory -Path "$payload/OptiShadeData/Tools" -Force|Out-Null
+Copy-Item "$root/installer/store-paths.ps1" "$payload/OptiShadeData/Tools/store-paths.ps1" -Force
 Copy-Item "$root/installer/import-effects.ps1" "$payload/OptiShadeData/Tools/import-effects.ps1" -Force
 Copy-Item "$root/installer/EffectPackages.ini" "$payload/OptiShadeData/Tools/EffectPackages.ini" -Force
 New-Item -ItemType Directory -Path "$payload/OptiShadeData/Tools/StandardHeaders" -Force|Out-Null
