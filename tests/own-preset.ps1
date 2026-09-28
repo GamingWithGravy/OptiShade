@@ -43,3 +43,8 @@ Check ((Get-Content "$game/OptiShadeData/Presets/Gravy - Fusion Cinema Custom v1
 $fullGame=Join-Path $fixture 'FullGame';New-Item -ItemType Directory -Path $fullGame|Out-Null
 $fullManifest=InstallFusion $fullGame $payload $store "$fixture/Manager.exe" -IncludeEffects $true
 Check ((Test-Path "$fullGame/OptiShadeData/Shaders/Custom/Gravy_FusionCinema.fx") -and (Test-Path "$fullGame/OptiShadeData/Shaders/Unneeded.fx")) 'Full FX install includes Fusion Cinema alongside the catalogue'
+Set-Content $ini "Techniques=Colour@Needed.fx`nTechniqueSorting=Colour@Needed.fx,Slow@SlowSharp.fx,MiAO@MiAO.fx`n[Unavailable.fx]`nValue=1"
+Check (@(GetPresetShaderNames $ini).Count -eq 1 -and (GetPresetShaderNames $ini) -eq 'Needed.fx') 'Disabled ordering and unused parameter sections are not required dependencies'
+TestOwnPreset $ini $game $catalogue
+Set-Content $ini "Techniques=`nTechniqueSorting=Old@Unavailable.fx`n[Unavailable.fx]"
+Check (@(GetPresetShaderNames $ini).Count -eq 0) 'Empty look does not require any disabled effects'

@@ -1,4 +1,4 @@
-// Run the same bounded importer as the launcher without blocking a Present.
+﻿// Run the same bounded importer as the launcher without blocking a Present.
 static HANDLE zipProcess=nullptr;
 static std::filesystem::path zipResult;
 static std::filesystem::path zipError;
@@ -61,6 +61,17 @@ static bool StartZipImport(const std::filesystem::path& archive,const std::files
  if(dependencies)loadAfterImport=archive;
  strcpy_s(feedback,dependencies?"Downloading missing FX from the catalogue. The current look stays active until installation succeeds...":"Extracting ZIP in the background. Existing files and your current look are kept...");return true;
 }
+static std::set<std::string> ActivePresetShaders(std::string text){
+ if(text.compare(0,3,"\xEF\xBB\xBF")==0)text.erase(0,3);
+ std::smatch match;
+ const std::regex techniques("(?:^|\\n)[ \\t]*Techniques[ \\t]*=([^\\r\\n]*)",std::regex::icase);
+ std::set<std::string> names;
+ if(!std::regex_search(text,match,techniques))return names;
+ const auto active=match[1].str();
+ const std::regex shader("@([^@,;\\[\\]\\r\\n/\\\\]+\\.fx)(?=,|\\s*$)",std::regex::icase);
+ for(std::sregex_iterator it(active.begin(),active.end(),shader),end;it!=end;++it)names.insert((*it)[1].str());
+ return names;
+}
 static bool RequestPresetLoad(const std::filesystem::path& preset,const std::filesystem::path& root,bool discardApproved=false){
  std::error_code ec;
  if(std::filesystem::file_size(preset,ec)>4*1024*1024||ec){strcpy_s(feedback,"Could not read preset, or preset exceeds 4 MB.");return false;}
@@ -68,9 +79,8 @@ static bool RequestPresetLoad(const std::filesystem::path& preset,const std::fil
  std::set<std::string> installed,required;
  auto lower=[](std::string s){for(auto& c:s)c=(char)tolower((unsigned char)c);return s;};
  for(std::filesystem::recursive_directory_iterator it(root/L"Shaders",ec),end;it!=end&&!ec;it.increment(ec))if(it->is_regular_file(ec))installed.insert(lower(it->path().filename().string()));
- // Only explicit shader filenames can be mapped reliably. Never infer a package from a technique name.
- const std::regex shader("(?:@|\\[)([^@,;\\[\\]\\r\\n/\\\\]+\\.fx)(?=,|\\]|\\s*(?:\\r?\\n|$))",std::regex::icase);
- for(std::sregex_iterator it(text.begin(),text.end(),shader),end;it!=end;++it)required.insert((*it)[1].str());
+ // Disabled ordering entries and saved sections are not preset dependencies.
+ required=ActivePresetShaders(text);
  missingShaders.clear();for(const auto& name:required)if(!installed.count(lower(name)))missingShaders.push_back(name);
  if(!missingShaders.empty()){dependencyPreset=preset;dependencyRoot=root;dependencyDiscardApproved=discardApproved;askDependencies=true;return true;}
  osfx::Command c{};c.kind=osfx::Preset;auto path=preset.u8string();strncpy_s(c.path,(const char*)path.c_str(),_TRUNCATE);return Send(c);
