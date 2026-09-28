@@ -1,13 +1,16 @@
 ﻿param([Parameter(Mandatory=$true)][string]$Config)
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName PresentationFramework
+. "$PSScriptRoot/update-lifecycle.ps1"
 $settings=Get-Content -LiteralPath $Config -Raw -Encoding UTF8|ConvertFrom-Json
 $script:target=[IO.Path]::GetFullPath($settings.Installer)
 $desktop=if($settings.Desktop){[string]$settings.Desktop}else{[Environment]::GetFolderPath('DesktopDirectory')}
 if([string]::IsNullOrWhiteSpace($desktop) -or -not [IO.Path]::IsPathRooted($desktop) -or -not (Test-Path -LiteralPath $desktop -PathType Container)){throw 'Your Desktop folder is unavailable. Reconnect it and retry the update.'}
 $desktop=[IO.Path]::GetFullPath($desktop)
 $safeVersion=([string]$settings.Version) -replace '[^a-zA-Z0-9._-]','_'
-$destination=Join-Path $desktop ('OptiShade_Version_'+$safeVersion+'_'+[guid]::NewGuid().ToString('N').Substring(0,8)+'.exe')
+$channel=if($safeVersion -match '-(?:alpha|beta|rc)'){'beta'}else{'stable'}
+$destination=Join-Path $desktop (GetOptiShadeManagerName $safeVersion $channel)
+$previous=$script:target
 $uri=[uri]$settings.Url
 if($uri.Scheme -ne 'https' -or $uri.Host -ne 'github.com' -or $uri.AbsolutePath -cnotmatch '^/GamingWithGravy/(OptiShade|OptiShade_V0[.]19[.]17)/releases/download/' -or $settings.SHA256 -notmatch '^[a-fA-F0-9]{64}$' -or [IO.Path]::GetExtension($script:target) -ne '.exe'){throw 'Invalid update information.'}
 [xml]$markup=@'
@@ -92,7 +95,10 @@ $window.Add_ContentRendered({
   $staged=$destination+'.updating'
   Copy-Item -LiteralPath $download -Destination $staged
   if((Get-FileHash -LiteralPath $staged -Algorithm SHA256).Hash -ne $settings.SHA256){throw 'Staged update verification failed.'}
-  [IO.File]::Move($staged,$destination)
+  if(Test-Path -LiteralPath $destination){
+   if((Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash -ne $settings.SHA256){throw 'A different EXE already uses the destination name on your Desktop. Move that file and retry; it has not been overwritten.'}
+   Remove-Item -LiteralPath $staged -Force
+  }else{[IO.File]::Move($staged,$destination)}
   $script:target=$destination
   $window.FindName('Status').Text='Updating installed game files and keeping your presets...'
   $window.FindName('Progress').Value=70
@@ -104,7 +110,9 @@ $window.Add_ContentRendered({
   }
   $window.FindName('Progress').IsIndeterminate=$false;$window.FindName('Progress').Value=100
   $action=if($settings.Rollback){'Rollback'}else{'Update'}
-  $window.FindName('Status').Text="$action complete. The selected OptiShade EXE is on your Desktop:`n$script:target`nUse this EXE from now on. Your previous copy remains in its original location."
+  $store=if($settings.Store){[string]$settings.Store}else{Join-Path $env:LOCALAPPDATA 'OptiShade'}
+  $cleanup=CompleteOptiShadeManagerUpdate $previous $settings.PreviousHash $script:target $settings.SHA256 $store $channel
+  $window.FindName('Status').Text="$action complete. The selected OptiShade EXE is on your Desktop:`n$script:target`nUse this EXE from now on.`n$cleanup"
   $window.FindName('OpenLocation').Visibility='Visible'
   Remove-Item -LiteralPath $download -Force
   $script:updating=$false;$window.FindName('Launch').Visibility='Visible';$window.FindName('DoneClose').Visibility='Visible'

@@ -1,11 +1,11 @@
-# OptiShade 0.21.3-beta.2 — Local test candidate
+# OptiShade 0.21.3-beta.2 Beta
 
-This build is experimental and has not been published. Keep 0.21.2 Stable available. Do not use this candidate for an important flight.
+This is an optional experimental release. Stable users will not receive it unless they opt into beta versions in Settings.
 
 EXPERIMENTAL FEATURES
 - X-Plane 12 Vulkan image effects and Neural Rendering. Launch XP12 using Play in this manager. Frame generation is not provided for XP12.
 - MSFS 2020/2024 TAA Neural Rendering using estimated guides. Use SDR with frame generation disabled. NR and TAA fallback require a fresh opt-in each game session.
-- These paths passed earlier local visual checks, but this final candidate still needs a fresh cockpit check. Performance and compatibility vary.
+- These paths passed earlier local visual checks. This updated build includes further fixes; please report your results. Performance and compatibility vary.
 
 NEW FEATURES AND FIXES
 - SnapShot: assign a key in the manager or in-game Keybinds. One PNG is saved in the game's Optishade Snapshots folder, followed by a completion notification. Browse screenshots opens that folder.
@@ -31,16 +31,19 @@ NEW FEATURES AND FIXES
 - Compatible RTX 40 installations automatically receive the bundled MFG component. Native DLSS Frame Generation must still be enabled in game; Backspace opens its menu. Supported multipliers vary. Existing conflicting loaders are not overwritten by automatic MFG setup.
 - Other GPU families retain their supported options; this build does not install an unvalidated RTX 40 component on RTX 20/30/50, AMD or Intel.
 - Beta opt-in and uninstall choices now use purple toggle switches.
+- SnapShot and preset hotswap use the same keybind controls as the other actions.
+- Missing custom FX warn without blocking preset installation; known catalogue dependencies still download. Long import instructions are no longer truncated.
+- Successful updates place the new manager on the Desktop and remove the unchanged previous EXE. Returning to stable resets beta opt-in. Presets and configuration are preserved.
 
-SWITCHING VERSIONS
-- Enabling beta in Settings changes eligible downloads, not installed files. No public prerelease is available for this candidate.
-- Restore XP12 original files before returning to stable. Stable does not support the XP12 installation.
-- Use Revert update for available stable releases. Close all simulators first. Portable version changes use a separate downloaded package.
-- Keep preset and manager-data backups. Separate manager folders do not isolate files installed into the same game.
+**SWITCHING VERSIONS**
+- Enable beta versions in Settings, then Check for updates to download this beta. Beta downloads are separate from stable release assets.
+- To return to stable, turn beta off and Check for updates, or choose a stable build with Revert update. Successful return clears beta opt-in.
+- Close all simulators first. Presets, keybinds and configuration are preserved. Experimental TAA NR must be enabled again each session and is disabled in stable.
+- Restore XP12 before returning to stable if you want to remove its experimental installation. Stable leaves existing XP12 installations untouched and does not offer XP12 installation.
+- Updates started from this manager save the new EXE to your Desktop and remove the unchanged previous EXE after success. Updates started from 0.21.2 still use its older naming and retain the previous copy for this first update.
+- Portable version changes use a separate extraction and preserve the Data folder.
 
-KNOWN LIMITATIONS
-- TAA and Vulkan NR use estimated guides and synchronous GPU work. Low FPS, stalls or image artefacts remain possible; live testing is required.
-- No promise of AMD NR, universal game support, VR compatibility or a particular MFG multiplier is made by this beta.
-- Some antivirus providers are flagging OptiShade. I've submitted a sample to Bitdefender for review and I'm investigating what's triggering the warnings. Thanks for your patience.
+**ANTIVIRUS NOTICE**
+Bitdefender has confirmed that the submitted sample is clean and is no longer detected by its engines. Further reports and affected builds are still being investigated.
 
-Please post diagnostic ZIPs with the issue description in the diagnostic zips channel in BlackBox Discord: https://discord.gg/6hjR9cSsy7
+Please send diagnostic ZIPs, with a description of the issue, to the **diagnostic zips** channel in **BlackBox Discord**: https://discord.gg/6hjR9cSsy7
