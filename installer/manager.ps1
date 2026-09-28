@@ -83,12 +83,11 @@ function StartManagerUpdate($Update){
  $worker=Join-Path $updateDir 'update-worker.ps1';Copy-Item -LiteralPath "$PSScriptRoot/update-worker.ps1" -Destination $worker
  Copy-Item -LiteralPath "$PSScriptRoot/dialog-theme.xaml" -Destination (Join-Path $updateDir 'dialog-theme.xaml')
  Copy-Item -LiteralPath "$PSScriptRoot/update-lifecycle.ps1" -Destination (Join-Path $updateDir 'update-lifecycle.ps1')
- Copy-Item -LiteralPath "$PSScriptRoot/beta-download.ps1" -Destination (Join-Path $updateDir 'beta-download.ps1')
  $config=Join-Path $updateDir 'update.json';$Update|Add-Member -NotePropertyName Installer -NotePropertyValue $Installer -Force
  $Update|Add-Member -NotePropertyName Desktop -NotePropertyValue ([Environment]::GetFolderPath('DesktopDirectory')) -Force
  $Update|Add-Member -NotePropertyName PreviousHash -NotePropertyValue ((Get-FileHash -LiteralPath $Installer -Algorithm SHA256).Hash) -Force
  $Update|Add-Member -NotePropertyName Store -NotePropertyValue $store -Force
- $Update|ConvertTo-Json -Depth 8|Set-Content -LiteralPath $config -Encoding UTF8
+ $Update|ConvertTo-Json|Set-Content -LiteralPath $config -Encoding UTF8
  $hostExe=Join-Path $updateDir 'OptiShade_updater.exe';Copy-Item -LiteralPath "$PSScriptRoot/FusionSetup.exe" -Destination $hostExe
  try{Start-Process -FilePath $hostExe -ArgumentList @('--update-worker',('"'+$config+'"')) -WindowStyle Hidden -Verb RunAs;$form.Close()}
  catch{$status.Text='The updater could not start or administrator access was cancelled. No update was applied. '+$_.Exception.Message}

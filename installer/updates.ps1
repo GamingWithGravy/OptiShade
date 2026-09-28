@@ -1,5 +1,4 @@
 ﻿. "$PSScriptRoot/update-lifecycle.ps1"
-. "$PSScriptRoot/beta-download.ps1"
 function GetOptiShadeReleaseAsset($Release,[string]$Version){
  $channel=if($Release.prerelease){'beta'}else{'stable'}
  $readable=GetOptiShadeManagerName $Version $channel
@@ -27,17 +26,16 @@ function GetBetaVersionKey([string]$Value){
  $revision=if($Matches[3]){[int]$Matches[3]}else{0}
  [pscustomobject]@{Numeric=[version]$Matches[1];Stage=$stage;Revision=$revision}
 }
-# Stable reads published releases; beta reads only its branch manifest after explicit opt-in.
+# The persisted setting selects release assets, never source-code branch archives.
 function GetOptiShadeUpdate([string]$Current='0.21.3',[switch]$ReportErrors,[ValidateSet('stable','beta')][string]$InstalledChannel='stable'){
  [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
  try{
   $channel=GetOptiShadeUpdateChannel
   $currentKey=GetBetaVersionKey $Current
   if(-not $currentKey){throw 'Invalid current version'}
-  if($channel -eq 'beta'){return GetOptiShadeBetaCandidate $Current}
   $releases=@(Invoke-RestMethod 'https://api.github.com/repos/GamingWithGravy/OptiShade/releases?per_page=100' -Headers @{'User-Agent'='OptiShade-beta-update-check'} -TimeoutSec 12)
   $candidates=@(foreach($release in $releases){
-   if($release.draft -or $release.prerelease){continue}
+   if($release.draft -or ([bool]$release.prerelease -ne ($channel -eq 'beta'))){continue}
    $version=([string]$release.tag_name) -replace '^v','';$key=GetBetaVersionKey $version
    if(-not $key -or ($channel -eq 'beta' -and $key.Stage -eq 3) -or ($channel -eq 'stable' -and $key.Stage -ne 3)){continue}
    if(-not (($channel -ne $InstalledChannel -and (($currentKey.Stage -eq 3) -eq ($InstalledChannel -eq 'stable'))) -or ($channel -eq 'stable' -and $currentKey.Stage -ne 3)) -and ($key.Numeric -lt $currentKey.Numeric -or ($key.Numeric -eq $currentKey.Numeric -and ($key.Stage -lt $currentKey.Stage -or ($key.Stage -eq $currentKey.Stage -and $key.Revision -le $currentKey.Revision))))){continue}
