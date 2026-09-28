@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "menu_common.h"
 #include "../../../shared/RenderingCapability.h"
 #include "../../../shared/D3D12Capabilities.h"
@@ -7732,27 +7732,36 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
     State::Instance().vulkanSkipHooks=true;
     ctx.primaryGpu=std::make_unique<std::decay_t<decltype(IdentifyGpu::getPrimaryGpu())>>(ctx.state.api == API::Vulkan ? IdentifyGpu::getPrimaryGpu() : RenderingGpu(ctx.state));
     State::Instance().vulkanSkipHooks=false;
+    const float uiScale=std::clamp(ctx.menuResScale,0.5f,2.0f);
+    // Scope metrics and font size to this menu; overlays retain their own scale.
+    const auto baseStyle=ImGui::GetStyle();
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,baseStyle.WindowPadding*uiScale);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,baseStyle.FramePadding*uiScale);
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,baseStyle.ItemSpacing*uiScale);
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing,baseStyle.ItemInnerSpacing*uiScale);
+    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize,baseStyle.ScrollbarSize*uiScale);
+    ImGui::PushFontSize(std::round(fontSize*uiScale));
     const ImVec2 available(std::max(1.f,ctx.io.DisplaySize.x-30.f),std::max(1.f,ctx.io.DisplaySize.y-30.f));
-    static ImVec2 previousViewport{};
-    if(previousViewport.x!=ctx.io.DisplaySize.x||previousViewport.y!=ctx.io.DisplaySize.y){
-        ImGui::SetNextWindowSize(ImVec2(std::min(980.f,available.x),std::min(available.y,std::max(740.f,ctx.io.DisplaySize.y*.92f))),ImGuiCond_Always);
-        ImGui::SetNextWindowPos(ImVec2(15,15),ImGuiCond_Always);previousViewport=ctx.io.DisplaySize;
+    static ImVec2 previousViewport{};static float previousUiScale=0;
+    if(previousViewport.x!=ctx.io.DisplaySize.x||previousViewport.y!=ctx.io.DisplaySize.y||previousUiScale!=uiScale){
+        ImGui::SetNextWindowSize(ImVec2(std::min(980.f*uiScale,available.x),std::min(available.y,740.f*uiScale)),ImGuiCond_Always);
+        ImGui::SetNextWindowPos(ImVec2(15,15),ImGuiCond_Always);previousViewport=ctx.io.DisplaySize;previousUiScale=uiScale;
     }
-    ImGui::SetNextWindowSizeConstraints(ImVec2(std::min(680.f,available.x),std::min(420.f,available.y)),ImVec2(std::min(1600.f,available.x),available.y));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(std::min(680.f*uiScale,available.x),std::min(420.f*uiScale,available.y)),ImVec2(std::min(1600.f*uiScale,available.x),available.y));
     ImGui::SetNextWindowPos(ImVec2(15,15),ImGuiCond_FirstUseEver);
     bool visible=_isVisible;static bool saved=false;
     if(ImGui::Begin("optishade | fusion engine",&visible,ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar)){
         ImGui::SetWindowFontScale(1.75f);ImGui::TextUnformatted("optishade  " OPTISHADE_VERSION_TEXT);ImGui::SetWindowFontScale(1.f);
-        ImGui::SameLine(ImGui::GetWindowWidth()-100);if(ImGui::SmallButton("Close"))visible=false;
+        ImGui::SameLine(ImGui::GetWindowWidth()-100*uiScale);if(ImGui::SmallButton("Close"))visible=false;
         OptiShadeUpdates::DrawHeader();
         ImGui::TextColored(ImGui::GetStyleColorVec4(ImGuiCol_CheckMark),"powered by fusion engine");
         ImGui::TextDisabled("created by gravy");ImGui::Spacing();
 
         ImGui::Separator();
         static int page=0;const char* pages[]={"Performance","Neural rendering","Image effects","Settings & status"};
-        for(int i=0;i<4;i++){if(i)ImGui::SameLine();ImGui::PushStyleColor(ImGuiCol_Button,page==i?ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive):ImVec4(.12f,.12f,.18f,1.f));if(ImGui::Button(pages[i],ImVec2((ImGui::GetWindowWidth()-70.f)/4.f,40)))page=i;ImGui::PopStyleColor();}
+        for(int i=0;i<4;i++){if(i)ImGui::SameLine();ImGui::PushStyleColor(ImGuiCol_Button,page==i?ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive):ImVec4(.12f,.12f,.18f,1.f));if(ImGui::Button(pages[i],ImVec2((ImGui::GetWindowWidth()-70.f*uiScale)/4.f,40*uiScale)))page=i;ImGui::PopStyleColor();}
         ImGui::Separator();
-        ImGui::BeginChild("OptiShade content",ImVec2(0,-56));
+        ImGui::BeginChild("OptiShade content",ImVec2(0,-56*uiScale));
         if(page==0){
             ImGui::TextWrapped("Get a sharper picture, a smoother frame rate, or a balance of both. Some options depend on the game.");
             ImGui::Spacing();ImGui::SeparatorText("Upscaling");
@@ -7843,6 +7852,54 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
             ImGui::EndDisabled();
         }else if(page==2){OptiShadeUI::DrawEffects();}
         else{
+            ImGui::SeparatorText("UI size");
+            const char* sizeNames[]={"Auto (match resolution)","100%","125%","150%","175%","200%"};
+            const float sizeValues[]={0.f,1.f,1.25f,1.5f,1.75f,2.f};
+            char sizeLabel[40]{};
+            if(config->MenuScale.has_value())sprintf_s(sizeLabel,"%.0f%%",uiScale*100);
+            else sprintf_s(sizeLabel,"Auto (%.0f%%)",uiScale*100);
+            ImGui::SetNextItemWidth(240*uiScale);
+            if(ImGui::BeginCombo("Menu size",sizeLabel)){
+                for(int i=0;i<6;i++)if(ImGui::Selectable(sizeNames[i],i==0?!config->MenuScale.has_value():(config->MenuScale.has_value()&&std::abs(config->MenuScale.value()-sizeValues[i])<.01f))){
+                    if(i==0)config->MenuScale.reset();else config->MenuScale=sizeValues[i];saved=false;
+                }
+                ImGui::EndCombo();
+            }
+            ImGui::TextWrapped("Enlarges menu text and controls. Auto uses 200%% at native 4K. Save settings to keep this choice for this game.");
+            ImGui::SeparatorText("FPS overlay");
+            bool showFps=config->ShowFps.value_or_default();
+            if(OptiShadeUI::EffectSwitch("Show FPS",showFps)){config->ShowFps=!showFps;saved=false;}
+            ImGui::SameLine();ImGui::TextUnformatted("Show FPS overlay");
+            bool horizontal=config->FpsOverlayHorizontal.value_or_default();
+            if(OptiShadeUI::EffectSwitch("Horizontal FPS",horizontal)){config->FpsOverlayHorizontal=!horizontal;saved=false;}
+            ImGui::SameLine();ImGui::TextUnformatted("Horizontal layout");
+            const char* positions[]={"Top left","Top right","Bottom left","Bottom right"};
+            int position=std::clamp((int)config->FpsOverlayPosition.value_or_default(),0,3);
+            ImGui::SetNextItemWidth(240*uiScale);
+            if(ImGui::Combo("Position",&position,positions,4)){config->FpsOverlayPosition=(FpsOverlayPos)position;saved=false;}
+            const char* details[]={"FPS only","Simple","Detailed","Detailed with graph","Full","Full with graph","Reflex timings"};
+            int detail=std::clamp((int)config->FpsOverlayType.value_or_default(),0,6);
+            ImGui::SetNextItemWidth(240*uiScale);
+            if(ImGui::Combo("Detail level",&detail,details,7)){config->FpsOverlayType=(FpsOverlay)detail;saved=false;}
+            char fpsSizeLabel[40]{};
+            if(config->FpsScale.has_value())sprintf_s(fpsSizeLabel,"%.0f%%",config->FpsScale.value()*100);else strcpy_s(fpsSizeLabel,"Match menu size");
+            ImGui::SetNextItemWidth(240*uiScale);
+            if(ImGui::BeginCombo("FPS text size",fpsSizeLabel)){
+                for(int i=0;i<6;i++)if(ImGui::Selectable(i==0?"Match menu size":sizeNames[i],i==0?!config->FpsScale.has_value():(config->FpsScale.has_value()&&std::abs(config->FpsScale.value()-sizeValues[i])<.01f))){
+                    if(i==0)config->FpsScale.reset();else config->FpsScale=sizeValues[i];saved=false;
+                }
+                ImGui::EndCombo();
+            }
+            float opacity=config->FpsOverlayAlpha.value_or_default()*100;
+            ImGui::SetNextItemWidth(240*uiScale);
+            if(ImGui::SliderFloat("Background opacity",&opacity,0,100,"%.0f%%",ImGuiSliderFlags_AlwaysClamp)){config->FpsOverlayAlpha=opacity/100;saved=false;}
+            bool themed=config->OverlaysUseTheme.value_or_default();
+            if(OptiShadeUI::EffectSwitch("FPS theme",themed)){config->OverlaysUseTheme=!themed;saved=false;}
+            ImGui::SameLine();ImGui::TextUnformatted("Use OptiShade colours");
+            if(ImGui::Button("Reset FPS overlay")){
+                config->ShowFps.reset();config->FpsOverlayPosition.reset();config->FpsOverlayType.reset();config->FpsScale.reset();config->FpsOverlayAlpha.reset();config->FpsOverlayHorizontal.reset();config->OverlaysUseTheme.reset();saved=false;
+            }
+            ImGui::TextWrapped("These controls change the overlay only. Save settings keeps your choices for this game.");
             ImGui::SeparatorText("Overlay colour");
             ImGui::TextWrapped("Choose an accent for your in-game menu. Purple is the default. This does not change your game's picture or your FX preset.");
             const char* paletteNames[]={"Purple","Blue","Teal","Green","Amber","Rose"};
@@ -7850,7 +7907,7 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
             auto setAccent=[&](const ImVec4& c){saved=false;config->MenuAccentColorR=c.x;config->MenuAccentColorG=c.y;config->MenuAccentColorB=c.z;ApplyThemeStyle();};
             for(int i=0;i<6;i++){
                 if(i)ImGui::SameLine();
-                ImGui::PushID(i);if(ImGui::ColorButton(paletteNames[i],palette[i],ImGuiColorEditFlags_NoTooltip,ImVec2(34,28)))setAccent(palette[i]);
+                ImGui::PushID(i);if(ImGui::ColorButton(paletteNames[i],palette[i],ImGuiColorEditFlags_NoTooltip,ImVec2(34*uiScale,28*uiScale)))setAccent(palette[i]);
                 if(ImGui::IsItemHovered())ImGui::SetTooltip("%s",paletteNames[i]);ImGui::PopID();
             }
             float accent[]={config->MenuAccentColorR.value_or_default(),config->MenuAccentColorG.value_or_default(),config->MenuAccentColorB.value_or_default()};
@@ -7867,10 +7924,10 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
             if(ImGui::CollapsingHeader("Advanced compatibility")){RenderQuirksSettings(ctx);RenderAdvancedSettings(ctx);RenderUpscalerInputsSettings(ctx);RenderApiAndTextureSettings(ctx);}
         }
         ImGui::EndChild();ImGui::Separator();
-        if(ImGui::Button("Save settings",ImVec2(160,34)))saved=config->SaveIni();
+        if(ImGui::Button("Save settings",ImVec2(160*uiScale,34*uiScale)))saved=config->SaveIni();
         ImGui::SameLine();if(saved)ImGui::TextDisabled("Settings saved. Neural rendering will start off.");else ImGui::TextDisabled("Menu: %s / Ctrl+Shift+%s",Keybind::KeyNameFromVirtualKeyCode(config->ShortcutKey.value_or_default()).c_str(),Keybind::KeyNameFromVirtualKeyCode(config->BackupShortcutKey.value_or_default()).c_str());
     }
-    ImGui::End();if(!visible)HideMenu();
+    ImGui::End();ImGui::PopFontSize();ImGui::PopStyleVar(5);if(!visible)HideMenu();
 }
 void KeyUp(UINT vKey)
 {

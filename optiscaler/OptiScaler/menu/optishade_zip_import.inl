@@ -88,10 +88,11 @@ static bool RequestPresetLoad(const std::filesystem::path& preset,const std::fil
 static void DrawDependencyPrompt(){
  if(askDependencies){ImGui::OpenPopup("Missing FX files");askDependencies=false;}
  const auto area=ImGui::GetMainViewport()->WorkSize;
- ImGui::SetNextWindowSize(ImVec2((std::min)(700.f,area.x-24),(std::min)(450.f,area.y-24)),ImGuiCond_Appearing);
+ const float scale=std::clamp(ImGui::GetFontSize()/18.f,.5f,2.f);
+ ImGui::SetNextWindowSize(ImVec2((std::min)(700.f*scale,area.x-24),(std::min)(450.f*scale,area.y-24)),ImGuiCond_Appearing);
  if(ImGui::BeginPopupModal("Missing FX files",nullptr,ImGuiWindowFlags_NoCollapse)){
   ImGui::TextWrapped("This INI has missing FX files. Would you like to install and load them now?");
-  ImGui::BeginChild("Missing shader list",ImVec2(0,100),true);
+  ImGui::BeginChild("Missing shader list",ImVec2(0,100*scale),true);
   for(const auto& name:missingShaders)ImGui::BulletText("%s",name.c_str());
   ImGui::EndChild();
   ImGui::TextWrapped("OptiShade will download matching packages from its catalogue, install the required FX with includes and textures, then load this look. Existing files are kept. The preset will still load if some FX are not in the catalogue. Check the author's ZIP for custom FX and follow their installation instructions; missing FX can change the look. Compilation and depth-dependent effects can still require adjustment.");
