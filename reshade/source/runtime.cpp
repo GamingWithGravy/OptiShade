@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (C) 2014 Patrick Mours
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -4384,7 +4384,7 @@ void reshade::runtime::save_texture(const texture &tex)
 			// Default to a save failure unless it is reported to succeed below
 			bool save_success = false;
 
-			if (FILE *const file = _wfsopen(screenshot_path.c_str(), L"wbx", SH_DENYNO))
+			if (FILE *const file = _wfsopen(screenshot_path.c_str(), L"wb", SH_DENYNO))
 			{
 				const auto write_callback = [](void *context, void *data, int size) {
 					fwrite(data, 1, size, static_cast<FILE *>(context));

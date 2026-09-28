@@ -44,7 +44,7 @@ $form.FindName('SupportDevelopment').Add_Click({
  ShowSupportDevelopment $form $store
  if(Test-Path -LiteralPath (Join-Path $store 'support-hidden.txt')){$form.FindName('SupportDevelopment').Visibility='Collapsed'}
 })
-$buttons=@('Browse','Install','Repair','Restore','Runtime','Retry','Uninstall','Scan','Play','LibraryGames','GamePath','Method','AddGame','HomeNav','LibraryNav','SetupNav','SettingsNav','KeybindsNav','ChangeMenuKey','ChangeHotSwapKey','ClearHotSwapKey','ChangeSnapshotKey','ClearSnapshotKey','BrowseSnapshots','OpenLibrary','CheckCompatibility','TroubleshootingNav','ResetDefaults','ImportZip','RecoveryRepair','RecoveryRestore','CheckUpdates','BetaUpdates','SaveMenuKeys','DefaultMenuKeys','LoadMenuKeys','IncludeEffects','OwnIniMode','ChooseOwnIni','ApplyFxChoice','PrepareOlderRtx','PrepareMfg','OpenMsfs2020','OpenXPlane12')|ForEach-Object {$form.FindName($_)}
+$buttons=@('Browse','Install','Repair','Restore','Runtime','Retry','Uninstall','Scan','Play','LibraryGames','GamePath','Method','AddGame','HomeNav','LibraryNav','SetupNav','SettingsNav','KeybindsNav','ChangeMenuKey','ChangeHotSwapKey','ClearHotSwapKey','ChangeSnapshotKey','ClearSnapshotKey','BrowseSnapshots','OpenLibrary','CheckCompatibility','TroubleshootingNav','ResetDefaults','ImportZip','RecoveryRepair','RecoveryRestore','CheckUpdates','RevertUpdate','BetaUpdates','SaveMenuKeys','DefaultMenuKeys','LoadMenuKeys','IncludeEffects','OwnIniMode','ChooseOwnIni','ApplyFxChoice','PrepareOlderRtx','PrepareMfg','OpenMsfs2020','OpenXPlane12')|ForEach-Object {$form.FindName($_)}
 $form.Icon=[Windows.Media.Imaging.BitmapFrame]::Create([uri](Join-Path $PSScriptRoot 'OptiShade-app.ico'))
 $form.FindName('BrandIcon').Source=[Windows.Media.Imaging.BitmapFrame]::Create([uri](Join-Path $PSScriptRoot 'OptiShade-icon.png'))
 $form.FindName('BrandIcon').Cursor='SizeAll'
@@ -166,7 +166,7 @@ $form.FindName('Install').Add_Click({RunAction {
  if($form.FindName('OwnIniMode').IsChecked){$relative=SaveOwnPreset $script:ownIni $path.Text (Join-Path $PSScriptRoot 'EffectPackages.ini');$m|Add-Member -NotePropertyName FxPresetRelative -NotePropertyValue $relative -Force;WriteState $m $script:manifest}
  FinishOptionalDownloads $m $plan
 }})
-$form.FindName('Restore').Add_Click({RunAction {$m=ManifestPath $store $path.Text;if(-not(Test-Path $m)){throw 'No recorded installation for this game.'};RestoreFusion $m;$status.Text='Game restored. Original files are back and OptiShade game files are removed.'}})
+$form.FindName('Restore').Add_Click({RunAction {$m=ManifestPath $store $path.Text;if(-not(Test-Path $m)){throw 'No recorded installation for this game.'};RestoreFusion $m;$status.Text='Game restored. Original files are back and OptiShade game files are removed.';$restored=Get-Content -LiteralPath $m -Raw|ConvertFrom-Json;if($restored.RecoveredShaders){$status.Text+=' Edited shaders saved in: '+$restored.RecoveredShaders}}})
 $form.FindName('PrepareMfg').Add_Click({RunAction {
  $mp=ManifestPath $store $path.Text
  if(-not(Test-Path -LiteralPath $mp)){throw 'Install OptiShade in this game first.'}
@@ -266,6 +266,8 @@ function ShowGames($games){
  $script:libraryGames=$cards;$form.FindName('LibraryGames').ItemsSource=$cards
 }
 function RefreshHomeState{
+ $form.FindName('MfgStatus').Text='RTX 40 MFG is installed automatically when compatible. Other GPU families keep their supported native options.'
+ try{if($path.Text){$mfgRecord=Get-Content -LiteralPath (ManifestPath $store $path.Text) -Raw|ConvertFrom-Json;if($mfgRecord.AutomaticMfgStatus){$form.FindName('MfgStatus').Text=$mfgRecord.AutomaticMfgStatus}elseif($mfgRecord.OptionalMfg){$form.FindName('MfgStatus').Text='RTX 40 MFG component installed. Enable native DLSS Frame Generation in game; Backspace opens its menu. Multipliers depend on the game and GPU.'}}}catch{}
  try{$state=if($path.Text){GetFusionInstallState $store $path.Text}else{'Not installed'}}catch{$state='Invalid path'}
  $installed=$state -match '^Installed';$incomplete=$state -match '^Installation incomplete'
  $upgrade=$false

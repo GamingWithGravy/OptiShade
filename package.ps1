@@ -58,7 +58,7 @@ EffectSearchPaths=.\OptiShadeData\Shaders\**
 TextureSearchPaths=.\OptiShadeData\Textures\**
 PresetPath=.\OptiShadeData\Presets\My look.ini
 IntermediateCachePath=.\OptiShadeData\Cache
-ScreenshotPath=.\OptiShadeData\Screenshots
+ScreenshotPath=.\Optishade Snapshots
 PerformanceMode=0
 SkipLoadingDisabledEffects=1
 [OVERLAY]
@@ -94,11 +94,11 @@ Push-Location "$root/installer"
 try{
  & go test -count=1 -v .
  if($LASTEXITCODE){throw 'Embedded payload verification failed. Installer was not built.'}
- & go build -trimpath -ldflags '-H=windowsgui -s -w' -o "$preview/OptiShade_Version_0.21.3-beta.1.exe" .
+ & go build -trimpath -ldflags '-H=windowsgui -s -w' -o "$preview/OptiShade_Version_0.21.3-beta.2.exe" .
  if($LASTEXITCODE){throw 'Installer build failed.'}
 }finally{Pop-Location}
-if($env:OPTISHADE_SIGNING_THUMBPRINT){& "$root/sign-release.ps1" -File "$preview/OptiShade_Version_0.21.3-beta.1.exe" -Thumbprint $env:OPTISHADE_SIGNING_THUMBPRINT}
-if($VerifySecurity -or $RequireSigned){& "$root/verify-release-security.ps1" -Files @("$root/installer/FusionSetup.exe","$preview/OptiShade_Version_0.21.3-beta.1.exe") -Report "$preview/security-check.json" -RequireSigned:$RequireSigned}
+if($env:OPTISHADE_SIGNING_THUMBPRINT){& "$root/sign-release.ps1" -File "$preview/OptiShade_Version_0.21.3-beta.2.exe" -Thumbprint $env:OPTISHADE_SIGNING_THUMBPRINT}
+if($VerifySecurity -or $RequireSigned){& "$root/verify-release-security.ps1" -Files @("$root/installer/FusionSetup.exe","$preview/OptiShade_Version_0.21.3-beta.2.exe") -Report "$preview/security-check.json" -RequireSigned:$RequireSigned}
 Write-Output "Built: $preview"
 
 

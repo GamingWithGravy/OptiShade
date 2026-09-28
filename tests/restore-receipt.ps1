@@ -40,3 +40,23 @@ $before=[IO.File]::ReadAllText($saved)
 RestoreFusion $mp
 if([IO.File]::ReadAllText($saved) -ne $before){throw 'Repeat restore overwrote useful evidence'}
 'PASS: pre-restore installed evidence survives cleanup and repeated Restore'
+
+# A beta-era guide may have been edited by a local test after installation.
+$game2=Join-Path $fixture 'ChangedShaderGame';$payload2=Join-Path $fixture 'ShaderPayload'
+New-Item -ItemType Directory -Path $game2,"$payload2/OptiShadeData/Shaders/OptiShadeTaa" -Force|Out-Null
+Set-Content "$payload2/winmm.dll" 'loader'
+$guide='OptiShadeData/Shaders/OptiShadeTaa/OptiShade_TAA_Guides.fx'
+Set-Content "$payload2/$guide" 'original guide'
+@(Get-ChildItem $payload2 -Recurse -File|ForEach-Object {@{Path=$_.FullName.Substring($payload2.Length+1);Hash=(HashFile $_.FullName)}})|ConvertTo-Json|Set-Content "$payload2/files.json"
+function GetShaderRecoveryRoot { Join-Path $fixture 'Recovery' }
+$mp2=InstallFusion $game2 $payload2 $store "$fixture/setup.exe"
+Set-Content "$game2/$guide" 'edited guide'
+$editedHash=HashFile "$game2/$guide"
+RestoreFusion $mp2
+$restored=Get-Content $mp2 -Raw|ConvertFrom-Json
+if($restored.Status -ne 'Restored' -or (Test-Path "$game2/winmm.dll")){throw 'Changed guide blocked restore'}
+$copy=Join-Path $restored.RecoveredShaders $guide
+if((HashFile $copy) -ne $editedHash){throw 'Edited guide was not preserved'}
+RestoreFusion $mp2
+if((HashFile $copy) -ne $editedHash){throw 'Repeated restore removed recovery copy'}
+'PASS: edited TAA guide preserved outside app store; restore completes and repeat restore keeps it'

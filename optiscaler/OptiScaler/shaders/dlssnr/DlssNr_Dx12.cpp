@@ -1439,6 +1439,9 @@ void RecordBuiltPrimaryTuning(const Config& cfg)
 // holding two threads apart -- but the D3D11-on-D3D12 bridge enters from its own call site, and the
 // cost is a CPU-side lock on a path that already records command lists.
 std::recursive_mutex g_nrMutex;
+// Session-only policy override. Never bypass device loss or model failures.
+static bool g_memoryPressureStopped = false;
+static bool g_memoryPressureOverride = false;
 
 // Runs the pass inside the same state envelope every other OptiScaler compute pass runs in.
 //
@@ -1747,7 +1750,7 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
     const bool allocating = !g_nr.feature || g_nr.width != admissionDesc.Width || g_nr.height != admissionDesc.Height;
     static ULONGLONG lastMemoryCheck = 0;
     const auto memoryCheckTime = GetTickCount64();
-    if (!lastMemoryCheck || memoryCheckTime - lastMemoryCheck >= 1000)
+    if (allocating || !lastMemoryCheck || memoryCheckTime - lastMemoryCheck >= 1000)
     {
         lastMemoryCheck = memoryCheckTime;
         Microsoft::WRL::ComPtr<IDXGIFactory4> factory;
@@ -1763,10 +1766,11 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
                 LOG_INFO("DLSS-NR memory admission: {}x{}, independent={}, budget={} MiB, usage={} MiB, reserve={} MiB",
                      admissionDesc.Width, admissionDesc.Height, frame.IndependentCommands,
                      memory.Budget / 1048576, memory.CurrentUsage / 1048576, reserve / 1048576);
-            if (memory.Budget && free < reserve)
+            if (memory.Budget && free < reserve && !g_memoryPressureOverride)
             {
                 g_nr.failed = true;
-                g_nr.reason = "GPU memory pressure stopped NR; lower graphics/resolution and restart";
+                g_memoryPressureStopped = true;
+                g_nr.reason = "GPU memory pressure paused NR; lower graphics/resolution, then Retry";
                 Config::Instance()->DlssNrEnabled = false;
                 LOG_WARN("DLSS-NR stopped: {}", g_nr.reason);
                 return;
@@ -3196,10 +3200,23 @@ std::string DeferredDlssStatus() { return SynchronousDeferredDlssStatus(); }
 
 void RetryAfterFailure()
 {
+    std::lock_guard<std::recursive_mutex> guard(g_nrMutex);
+    if (g_memoryPressureStopped) Config::Instance()->DlssNrEnabled = true;
+    g_memoryPressureStopped = false;
     g_nr.failed = false;
     g_nr.reason = "";
     g_nr.reset = true;
 
+}
+
+bool MemoryPressureOverride() { std::lock_guard<std::recursive_mutex> guard(g_nrMutex); return g_memoryPressureOverride; }
+bool MemoryPressureStopped() { std::lock_guard<std::recursive_mutex> guard(g_nrMutex); return g_memoryPressureStopped; }
+void SetMemoryPressureOverride(bool enabled)
+{
+    std::lock_guard<std::recursive_mutex> guard(g_nrMutex);
+    g_memoryPressureOverride = enabled;
+    LOG_WARN("NR memory headroom override for this session: {}", enabled);
+    if (enabled && g_memoryPressureStopped) RetryAfterFailure();
 }
 
 // Consume only the residual produced by this exact CPU evaluate. Dispatch failures

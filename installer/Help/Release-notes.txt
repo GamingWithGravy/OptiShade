@@ -1,4 +1,4 @@
-# OptiShade 0.21.3-beta.1 — Local test candidate
+# OptiShade 0.21.3-beta.2 — Local test candidate
 
 This build is experimental and has not been published. Keep 0.21.2 Stable available. Do not use this candidate for an important flight.
 
@@ -17,6 +17,21 @@ NEW FEATURES AND FIXES
 - NR memory-budget checks and tuning debounce are retained. TAA waits use completion events and log synchronous frame cost; the GPU safety barriers remain in place.
 - XP12 launch includes its ReShade compatibility argument.
 
+**FIXES**
+- Added on-demand downloads for three older Barbatos shader filenames used by Vapory presets, with pinned original sources and integrity checks.
+- Restore/uninstall now preserves changed, recorded shader source files in %LOCALAPPDATA%/OptiShade-Recovery before removing them from the game. Changed DLLs still require review.
+- Fixed in-game INI/ZIP imports failing when MSFS is launched through its WindowsApps link. Imports resolve the physical game folder; unsafe archive paths and linked shader folders remain blocked.
+- Fixed conflicting optional-MFG ownership records that could prevent restoring version.dll. Original backed-up files are preserved.
+- Added a check for a missing upscaler backend before evaluation. The reported MSFS crashes remain under investigation; this is not a confirmed fix for every crash.
+- Improved the missing/damaged installer-file message with recovery steps. Damaged or missing DLLs still fail verification.
+
+**IMPROVEMENTS**
+- Retry NR after a memory-pressure pause without restarting the simulator.
+- Added a memory-pressure override beside Apply the model. It is off by default and lasts only for the current game session. Low VRAM can still cause stutters or crashes; device-loss checks remain active.
+- Compatible RTX 40 installations automatically receive the bundled MFG component. Native DLSS Frame Generation must still be enabled in game; Backspace opens its menu. Supported multipliers vary. Existing conflicting loaders are not overwritten by automatic MFG setup.
+- Other GPU families retain their supported options; this build does not install an unvalidated RTX 40 component on RTX 20/30/50, AMD or Intel.
+- Beta opt-in and uninstall choices now use purple toggle switches.
+
 SWITCHING VERSIONS
 - Enabling beta in Settings changes eligible downloads, not installed files. No public prerelease is available for this candidate.
 - Restore XP12 original files before returning to stable. Stable does not support the XP12 installation.
@@ -26,6 +41,6 @@ SWITCHING VERSIONS
 KNOWN LIMITATIONS
 - TAA and Vulkan NR use estimated guides and synchronous GPU work. Low FPS, stalls or image artefacts remain possible; live testing is required.
 - No promise of AMD NR, universal game support, VR compatibility or a particular MFG multiplier is made by this beta.
-- Windows security software may flag unsigned graphics-hook software. Report the exact detection; do not disable antivirus or use blanket exclusions.
+- Some antivirus providers are flagging OptiShade. I've submitted a sample to Bitdefender for review and I'm investigating what's triggering the warnings. Thanks for your patience.
 
 Please post diagnostic ZIPs with the issue description in the diagnostic zips channel in BlackBox Discord: https://discord.gg/6hjR9cSsy7

@@ -1,4 +1,17 @@
 ﻿# Optional upstream RTXMFG integration. Upstream code retains its MIT licence.
+function EnsureAutomaticMfg([string]$ManifestPath,[string]$Payload,[string[]]$GpuNames){
+ $m=Get-Content -LiteralPath $ManifestPath -Raw|ConvertFrom-Json
+ if($m.OptionalMfg){return 'Already installed'}
+ if(-not(Test-Path -LiteralPath (Join-Path $m.Game 'FlightSimulator.exe')) -and -not(Test-Path -LiteralPath (Join-Path $m.Game 'FlightSimulator2024.exe'))){return 'Not a supported simulator'}
+ $nvidia=@($GpuNames|Where-Object {$_ -match '(?i)NVIDIA|\bRTX\b|\bGTX\b'}|Select-Object -Unique)
+ # Only this adapter family has a pinned, licensed integration in this build.
+ if($nvidia.Count -ne 1 -or $nvidia[0] -notmatch '\bRTX\s*40\d{2}\b'){return 'No automatic component for this GPU configuration'}
+ try{InstallOptionalMfg $ManifestPath $Payload $GpuNames;$message='RTX 40 MFG installed automatically. Enable native DLSS Frame Generation in game; Backspace opens the MFG menu. Supported multipliers vary.'}
+ catch{$message='Automatic RTX 40 MFG was not installed: '+$_.Exception.Message}
+ $m=Get-Content -LiteralPath $ManifestPath -Raw|ConvertFrom-Json
+ $m|Add-Member AutomaticMfgStatus $message -Force;WriteState $m $ManifestPath
+ return $message
+}
 function SetMfgIniValue([string]$Text,[string]$Section,[string]$Key,[string]$Value){
  $lines=[Collections.Generic.List[string]]::new();$active=$false;$found=$false;$sectionFound=$false
  foreach($line in ($Text -split '\r?\n')){

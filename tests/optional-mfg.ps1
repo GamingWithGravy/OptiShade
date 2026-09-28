@@ -1,4 +1,4 @@
-$ErrorActionPreference='Stop'
+﻿$ErrorActionPreference='Stop'
 . "$PSScriptRoot/../installer/ownership.ps1"
 . "$PSScriptRoot/../installer/mfg.ps1"
 function AssertClosed($Game){}
@@ -53,3 +53,16 @@ Assert ((Get-Content "$game/version.dll") -eq 'unrecognised changed loader') 'Le
 Copy-Item "$payload/OptiShadeData/MFG/RTXMFG.dll" "$game/version.dll" -Force
 RestoreFusion $mp
 Assert ((HashFile "$game/version.dll") -eq $originalHash) 'Legacy duplicate MFG records recover original loader'
+
+Set-Content "$game/FlightSimulator2024.exe" 'fixture'
+$mp=InstallFusion $game $payload $store "$root/Manager.exe" 'winmm.dll' @(FindFusionConflicts $game)
+$null=EnsureAutomaticMfg $mp $payload @('NVIDIA GeForce RTX 5090')
+Assert (-not(Test-Path "$game/version.dll")) 'RTX 50 receives no RTX 40 loader'
+$null=EnsureAutomaticMfg $mp $payload @('NVIDIA GeForce RTX 3070')
+Assert (-not(Test-Path "$game/version.dll")) 'Unsupported MFG family receives no incompatible loader'
+$null=EnsureAutomaticMfg $mp $payload @('NVIDIA GeForce RTX 4070','AMD Radeon Graphics')
+Assert ((Get-Content $mp -Raw|ConvertFrom-Json).OptionalMfg) 'RTX 40 automatic setup permits an integrated companion GPU'
+$null=EnsureAutomaticMfg $mp $payload @('NVIDIA GeForce RTX 4070')
+Assert (@((Get-Content $mp -Raw|ConvertFrom-Json).Files|Where-Object Path -eq 'version.dll').Count -eq 1) 'Automatic setup is idempotent'
+RestoreFusion $mp
+Assert ((HashFile "$game/version.dll") -eq $originalHash) 'Automatically installed MFG restores previous loader'

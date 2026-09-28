@@ -35,3 +35,19 @@ Assert ((Get-Content $mp -Raw|ConvertFrom-Json).Status -eq 'Installed') 'Locked 
 RestoreFusion $mp
 Assert ((Get-Content $mp -Raw|ConvertFrom-Json).Status -eq 'Restored') 'Restore succeeds once log is released'
 "Fixture: $fixture"
+
+# Reproduce the WindowsApps alias used when an in-game import worker starts.
+$physical=Join-Path $fixture 'PhysicalGame';$apps=Join-Path $fixture 'WindowsApps'
+New-Item -ItemType Directory -Path "$physical/OptiShadeData/Shaders",$apps -Force|Out-Null
+Set-Content "$physical/FlightSimulator2024.exe" 'fixture'
+Set-Content "$physical/OptiScaler.ini" '[Menu]'
+$alias=Join-Path $apps 'Microsoft.Limitless_test_x64__8wekyb3d8bbwe'
+New-Item -ItemType Junction -Path $alias -Target $physical|Out-Null
+$resolved=ImportSafePath "$alias/OptiShadeData" 'Shaders/A.fx'
+Assert ($resolved -eq [IO.Path]::GetFullPath("$physical/OptiShadeData/Shaders/A.fx")) 'WindowsApps import resolves to physical game directory'
+Assert ((ImportEffectsArchive $zip $alias) -eq 4) 'ZIP import works through simulator Store alias'
+$outside=Join-Path $fixture 'Outside';New-Item -ItemType Directory -Path $outside|Out-Null
+New-Item -ItemType Junction -Path "$physical/OptiShadeData/Linked" -Target $outside|Out-Null
+$blocked=$false;try{ImportSafePath "$alias/OptiShadeData" 'Linked/escape.fx'}catch{$blocked=$true}
+Assert $blocked 'Nested linked import destination remains blocked'
+Assert (-not(Test-Path "$outside/escape.fx")) 'Linked destination remains untouched'

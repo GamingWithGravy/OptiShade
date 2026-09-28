@@ -98,7 +98,7 @@ function ShowUninstallOptions($Owner){
  <CheckBox Name="IniFiles" Content="Remove INI files" Margin="0,0,0,14"/>
  <CheckBox Name="Snapshots" Content="Remove snapshots"/>
  </StackPanel></Border>
- <TextBlock Text="INI removal covers saved presets in OptiShadeData/Presets. Snapshot removal covers recorded, unchanged OptiShade captures, across your recorded games. Other photos, game settings, controls and saves are kept. Your downloaded installer EXE is kept." TextWrapping="Wrap" Foreground="#AA9CB9" Margin="0,16,0,12"/>
+ <TextBlock Text="INI removal covers saved presets in OptiShadeData/Presets. Snapshot removal covers recorded, unchanged OptiShade captures, across your recorded games. Other photos, game settings, controls and saves are kept. Your downloaded installer EXE is kept. Edited shader sources are preserved in %LOCALAPPDATA%/OptiShade-Recovery." TextWrapping="Wrap" Foreground="#AA9CB9" Margin="0,16,0,12"/>
  <TextBlock Name="Warning" Visibility="Collapsed" Text="This will remove your INI files and snapshots. Are you sure?" TextWrapping="Wrap" Foreground="#FF8799" FontWeight="SemiBold" Margin="0,8,0,10"/>
  <CheckBox Name="Confirm" Visibility="Collapsed" Content="Yes, remove my INI files and snapshots" Margin="0,0,0,12"/>
  <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0"><Button Name="Cancel" Content="Close" Background="#282238" IsCancel="True" Margin="0,0,12,0"/><Button Name="Remove" Content="Remove selected" Background="#8650C8"/></StackPanel>
@@ -106,7 +106,7 @@ function ShowUninstallOptions($Owner){
 </Window>
 '@
  $dialog=[Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($markup));$dialog.Owner=$Owner
- $dialog.Resources.Add([Windows.Controls.CheckBox],$Owner.FindResource('ImageEffectsToggle'))
+ $dialog.Resources.Add([Windows.Controls.CheckBox],$Owner.FindResource('OptiShadeSwitch'))
  [xml]$theme=Get-Content "$PSScriptRoot/dialog-theme.xaml" -Raw;$dialog.Resources.MergedDictionaries.Add([Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($theme)))
  $refresh={
   $all=[bool]$dialog.FindName('Everything').IsChecked

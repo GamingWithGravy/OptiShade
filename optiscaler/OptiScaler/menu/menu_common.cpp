@@ -7813,6 +7813,7 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
             ImGui::TextWrapped("DLSS neural rendering changes the image using NVIDIA's model. Start with one pass; extra passes cost GPU time.");
             ImGui::Text("Model status: %s",DlssNr::IsRunning()?"Running":"Not running");
             if(auto reason=DlssNr::FailureReason();reason&&reason[0])ImGui::TextWrapped("%s",reason);
+            if(DlssNr::MemoryPressureStopped() && ImGui::Button("Retry NR after memory pressure"))DlssNr::RetryAfterFailure();
             ImGui::BeginDisabled(nrUnsupportedGpu);
             const bool olderRtx = nrGpu.vendorId == VendorId::Nvidia &&
                 (nrGpu.name.find("RTX 20") != std::string::npos || nrGpu.name.find("RTX 30") != std::string::npos || nrGpu.name.find("RTX 40") != std::string::npos);
@@ -7825,6 +7826,12 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
             }
 
             ImGui::TextWrapped("Adds detail and changes lighting with NVIDIA's model. It can change faces and scenery, and may lower your frame rate.");
+            bool applyModel=config->DlssNrApplyModel.value_or_default();
+            if(ImGui::Checkbox("Apply the model",&applyModel))config->DlssNrApplyModel=applyModel;
+            ImGui::SameLine();
+            bool memoryOverride=DlssNr::MemoryPressureOverride();
+            if(ImGui::Checkbox("Override memory pressure (this session)",&memoryOverride))DlssNr::SetMemoryPressureOverride(memoryOverride);
+            ImGui::TextDisabled("May cause stutters or crashes if VRAM is low. Resets when the game closes.");
             const int passLimit=config->DlssNrUnlockPasses.value_or_default()?5:3;int passes=(int)std::clamp(config->DlssNrPasses.value_or_default(),1u,(uint32_t)passLimit);if(ImGui::SliderInt("Passes",&passes,1,passLimit))config->DlssNrPasses=(uint32_t)passes;
             ImGui::TextDisabled("Start with one. Extra passes can add detail, but take more time.");
             static float strength=1.f;if(!ImGui::IsAnyItemActive())strength=config->DlssNrIntensity.value_or_default();
