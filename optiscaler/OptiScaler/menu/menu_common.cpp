@@ -5,6 +5,7 @@
 #include <imgui/ImGuiNotify.hpp>
 #include <shellapi.h>
 #include "optishade_effects_ui.inl"
+#include "optishade_mfg_ui.inl"
 #include <framegen/dlssg/MfgUnlock.h>
 #include <framegen/dlssg/AmpereMfgLoader.h>
 #include <dlssnr/DlssNr_ExposureScan.h>
@@ -47,6 +48,40 @@
 #include <hooks/Xell_Hooks.h>
 #include <low_latency/input/input_common.h>
 
+namespace
+{
+optishade::menu_geometry::State mainMenuGeometry;
+std::string mainMenuGeometryContext;
+
+void SaveMenuGeometryBoundary(bool boundary = false, bool editing = false)
+{
+    const auto now = GetTickCount64();
+    if (mainMenuGeometryContext.empty() || !mainMenuGeometry.Due(now, editing, boundary)) return;
+    const bool saved = Config::Instance()->SaveMenuGeometry(mainMenuGeometryContext, *mainMenuGeometry.Preferred());
+    mainMenuGeometry.Saved(now, saved);
+    if (!saved) LOG_WARN("Menu geometry could not be saved; existing configuration retained");
+}
+
+std::string MenuGeometryContext(HWND window, bool isUwp)
+{
+    // The existing menu has HWND-bound surfaces, not a reliable headset/eye ID.
+    // Use only that established identity; never infer VR from render dimensions.
+    // Separate overlay/direct modes and window classes; simultaneous same-class
+    // secondary windows get separate bounded slots. Recreated HWNDs reuse a slot.
+    static optishade::menu_geometry::Contexts contexts;
+    wchar_t name[256] {};
+    if (!window || !GetClassNameW(window, name, 256)) return {};
+    uint64_t hash = 14695981039346656037ull;
+    for (const auto* p = name; *p; ++p) { hash ^= static_cast<uint16_t>(*p); hash *= 1099511628211ull; }
+    const std::string base = std::string(Config::Instance()->OverlayMenu.value_or_default() ? "overlay-" : "direct-") +
+        (isUwp ? "uwp-" : "win-") + std::to_string(hash);
+    // Excess unknown surfaces get defaults, never overwrite another view.
+    return contexts.Select(base,reinterpret_cast<uintptr_t>(window),[](uintptr_t handle) {
+        return IsWindow(reinterpret_cast<HWND>(handle)) != FALSE;
+    });
+}
+}
+
 #define MARK_ALL_BACKENDS_CHANGED()                                                                                    \
     for (auto& singleChangeBackend : State::Instance().changeBackend)                                                  \
         singleChangeBackend.second = true;
@@ -70,6 +105,14 @@ static GpuInformation RenderingGpu(const State& state) {
     if (!luid.HighPart && !luid.LowPart) return {};
     return IdentifyGpu::getGpuByLuid(luid); // Unknown never becomes the first adapter.
 }
+
+static bool OptionalMfgRenderingGpu(const State& state)
+{
+    const auto gpu=RenderingGpu(state);
+    return OptiShadeMfgUI::SupportedRenderingGpu(gpu.vendorId==VendorId::Nvidia && !gpu.softwareAdapter,gpu.name);
+}
+static bool OptionalMfgOwnsFrameGeneration(const State& state)
+{ return OptiShadeMfgUI::OwnsFrameGeneration(OptionalMfgRenderingGpu(state)); }
 
 static float fontSize = 14.0f; // just changing this doesn't make other elements scale ideally
 static ImVec2 overlaySize(0.0f, 0.0f);
@@ -288,8 +331,8 @@ void MenuCommon::UpdateManualInput(HWND targetHwnd)
             return;
 
         const bool isMenu=vk==config->ShortcutKey.value_or_default();
-        if(isMenu&&OptiInput::IsKeyPressed(vk))freshMenuPress=true;
-        if (OptiInput::IsKeyReleased(vk) && (!isMenu||freshMenuPress))
+        if(isMenu&&OptiInput::IsMenuKeyPressed())freshMenuPress=true;
+        if ((isMenu?OptiInput::IsMenuKeyReleased():OptiInput::IsKeyReleased(vk)) && (!isMenu||freshMenuPress))
         {
             if(isMenu)freshMenuPress=false;
             lastKey = vk;
@@ -398,8 +441,12 @@ class Keybind
 
     static std::string KeyNameFromVirtualKeyCode(USHORT virtualKey)
     {
-        if (virtualKey == (USHORT) UnboundKey)
+        if (virtualKey == 0 || virtualKey == (USHORT) UnboundKey)
             return "Unbound";
+        if (virtualKey == VK_SNAPSHOT)
+            return "Print Screen";
+        if (virtualKey >= VK_NUMPAD0 && virtualKey <= VK_NUMPAD9)
+            return "NumPad " + std::to_string(virtualKey - VK_NUMPAD0);
 
         UINT scanCode = MapVirtualKeyW(virtualKey, MAPVK_VK_TO_VSC);
 
@@ -1349,7 +1396,8 @@ void MenuCommon::HandleMenuShortcuts(RenderMenuContext& ctx)
         {
             inputFG = false;
 
-            if (state.activeFgInput != FGInput::NoFG && state.activeFgOutput != FGOutput::NoFG &&
+            if (!OptionalMfgOwnsFrameGeneration(state) &&
+                state.activeFgInput != FGInput::NoFG && state.activeFgOutput != FGOutput::NoFG &&
                 (state.currentFGSwapchain != nullptr || state.activeFgInput == FGInput::NvngxFG))
             {
                 config->FGEnabled = !config->FGEnabled.value_or_default();
@@ -1415,6 +1463,7 @@ void MenuCommon::HandleMenuShortcuts(RenderMenuContext& ctx)
             }
             else
             {
+                SaveMenuGeometryBoundary(true);
                 ImGui::CloseCurrentPopup();
 
                 _showMipmapCalcWindow = false;
@@ -3103,6 +3152,7 @@ void MenuCommon::RenderActiveUpscalerSettings(RenderMenuContext& ctx)
 void MenuCommon::RenderFrameGenerationSelection(RenderMenuContext& ctx)
 {
     auto& state = ctx.state;
+    if (OptiShadeMfgUI::Draw(OptionalMfgRenderingGpu(state))) return;
     auto config = ctx.config;
     bool external = config->ExternalFrameGeneration.value_or_default();
     const bool ampereActive = config->FGDLSSGAmpereMfgUnlock.value_or_default();
@@ -3807,6 +3857,7 @@ void MenuCommon::RenderFrameGenerationSelection(RenderMenuContext& ctx)
 void MenuCommon::RenderFrameGenerationRuntimeSettings(RenderMenuContext& ctx)
 {
     auto& state = ctx.state;
+    if (OptionalMfgOwnsFrameGeneration(state)) return;
     auto config = ctx.config;
     auto& currentFeature = ctx.currentFeature;
     auto& menuResScale = ctx.menuResScale;
@@ -5152,6 +5203,10 @@ void MenuCommon::RenderFsrCommonSettings(RenderMenuContext& ctx)
 void MenuCommon::RenderFramerateSettings(RenderMenuContext& ctx)
 {
     auto& state = ctx.state;
+    if (OptionalMfgOwnsFrameGeneration(state)) {
+        ImGui::TextWrapped("Use Limit FPS with Reflex in the Multi Frame Generation controls above.");
+        return;
+    }
     auto config = ctx.config;
     auto& menuResScale = ctx.menuResScale;
 
@@ -7161,17 +7216,20 @@ void MenuCommon::RenderApiAndTextureSettings(RenderMenuContext& ctx)
 }
 
 void OptiShadeUI::DrawSnapshotKeybind(){
- auto c=Config::Instance();auto& value=c->SnapshotKey;auto code=value.value_or_default();
- static auto key=Keybind("SnapShot",16);key.Render(value,false);
- if(SnapshotConflict(code))ImGui::TextColored(ImVec4(1,.4f,.3f,1),"Choose a key that is not assigned to another OptiShade action.");
+ auto c=Config::Instance();auto& value=c->SnapshotKey;
+ static auto key=Keybind("SnapShot",16);key.Render(value);
+ ImGui::PushTextWrapPos();
+ if(SnapshotConflict(value.value_or_default()))ImGui::TextColored(ImVec4(1,.4f,.3f,1),"Choose a key that is not assigned to another OptiShade action.");
+ ImGui::PopTextWrapPos();
  auto folder=Util::DllPath().parent_path()/L"Optishade Snapshots";
  if(ImGui::Button("Browse screenshots")){
   std::error_code ec;std::filesystem::create_directories(folder,ec);
   if(ec||reinterpret_cast<INT_PTR>(ShellExecuteW(nullptr,L"open",folder.c_str(),nullptr,nullptr,SW_SHOWNORMAL))<=32)SnapshotNotice(false,"Could not open the game's Optishade Snapshots folder.");
  }
  ImGui::TextWrapped("Saved as PNG inside Optishade Snapshots in this game's installation folder. Save settings to keep your keybind.");
+ ImGui::TextWrapped("Turn Num Lock on for number-pad digits. With Num Lock off they act as navigation keys and may conflict with another shortcut.");
 }
-void OptiShadeUI::DrawHotSwapKeybind(){auto& value=Config::Instance()->PresetHotSwapKey;static auto key=Keybind("Preset hotswap",15);key.Render(value,false);ImGui::TextDisabled("Save settings to keep this key. Escape cancels; Backspace clears it.");}
+void OptiShadeUI::DrawHotSwapKeybind(){auto& value=Config::Instance()->PresetHotSwapKey;static auto key=Keybind("Preset hotswap",15);key.Render(value);ImGui::TextWrapped("Save settings to keep this key. Escape cancels; Backspace clears it.");}
 
 void MenuCommon::RenderKeybindSettings(RenderMenuContext& ctx)
 {
@@ -7195,6 +7253,15 @@ void MenuCommon::RenderKeybindSettings(RenderMenuContext& ctx)
 
         ImGui::Text("Backup menu: Ctrl+Shift+%s",Keybind::KeyNameFromVirtualKeyCode(config->BackupShortcutKey.value_or_default()).c_str());
         menu.Render(config->ShortcutKey);
+        const int primaryMenuKey=config->ShortcutKey.value_or_default();
+        const bool navigationKey=primaryMenuKey==VK_INSERT||primaryMenuKey==VK_DELETE||primaryMenuKey==VK_HOME||
+            primaryMenuKey==VK_END||primaryMenuKey==VK_PRIOR||primaryMenuKey==VK_NEXT;
+        ImGui::BeginDisabled(!navigationKey);
+        bool physicalNavigation=config->MenuPhysicalNavigationKey.value_or_default();
+        if(ImGui::Checkbox("Distinguish keypad navigation keys",&physicalNavigation))
+            config->MenuPhysicalNavigationKey=physicalNavigation;
+        ShowTooltip("Use the dedicated Insert/Home/End/Delete/Page Up/Page Down key. Legacy logical mode also accepts keypad navigation with Num Lock off. Physical mode needs WM/raw/DirectInput events; the backup menu shortcut remains available.");
+        ImGui::EndDisabled();
         fpsOverlay.Render(config->FpsShortcutKey);
         fpsOverlayCycle.Render(config->FpsCycleShortcutKey);
         fgEnable.Render(config->FGShortcutKey);
@@ -7404,7 +7471,7 @@ void MenuCommon::RenderMainMenuBottomBar(RenderMenuContext& ctx)
     ImGui::SameLine(0.0f, 15.0f);
 
     if (ImGui::Button("Save Settings"))
-        config->SaveIni();
+        OptiShadeMfgUI::SaveSettings(*config,OptionalMfgOwnsFrameGeneration(ctx.state));
 
     ImGui::SameLine(0.0f, 6.0f);
 
@@ -7741,17 +7808,18 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
     ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing,baseStyle.ItemInnerSpacing*uiScale);
     ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize,baseStyle.ScrollbarSize*uiScale);
     ImGui::PushFontSize(std::round(fontSize*uiScale));
-    const ImVec2 available(std::max(1.f,ctx.io.DisplaySize.x-30.f),std::max(1.f,ctx.io.DisplaySize.y-30.f));
-    static ImVec2 previousViewport{};static float previousUiScale=0;
-    if(previousViewport.x!=ctx.io.DisplaySize.x||previousViewport.y!=ctx.io.DisplaySize.y||previousUiScale!=uiScale){
-        ImGui::SetNextWindowSize(ImVec2(std::min(980.f*uiScale,available.x),std::min(available.y,740.f*uiScale)),ImGuiCond_Always);
-        ImGui::SetNextWindowPos(ImVec2(15,15),ImGuiCond_Always);previousViewport=ctx.io.DisplaySize;previousUiScale=uiScale;
+    const optishade::menu_geometry::View view {ctx.io.DisplaySize.x, ctx.io.DisplaySize.y};
+    const auto area = optishade::menu_geometry::Available(view);
+    const ImVec2 available(area.width, area.height);
+    optishade::menu_geometry::Rect placement;
+    if(mainMenuGeometry.Prepare(view,uiScale,placement)){
+        ImGui::SetNextWindowSize(ImVec2(placement.width,placement.height),ImGuiCond_Always);
+        ImGui::SetNextWindowPos(ImVec2(placement.x,placement.y),ImGuiCond_Always);
     }
     ImGui::SetNextWindowSizeConstraints(ImVec2(std::min(680.f*uiScale,available.x),std::min(420.f*uiScale,available.y)),ImVec2(std::min(1600.f*uiScale,available.x),available.y));
-    ImGui::SetNextWindowPos(ImVec2(15,15),ImGuiCond_FirstUseEver);
     bool visible=_isVisible;static bool saved=false;
     if(ImGui::Begin("optishade | fusion engine",&visible,ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar)){
-        ImGui::SetWindowFontScale(1.75f);ImGui::TextUnformatted("optishade  " OPTISHADE_VERSION_TEXT);ImGui::SetWindowFontScale(1.f);
+        ImGui::SetWindowFontScale(1.75f);ImGui::TextUnformatted("optishade  " OPTISHADE_VERSION_DISPLAY);ImGui::SetWindowFontScale(1.f);
         ImGui::SameLine(ImGui::GetWindowWidth()-100*uiScale);if(ImGui::SmallButton("Close"))visible=false;
         OptiShadeUpdates::DrawHeader();
         ImGui::TextColored(ImGui::GetStyleColorVec4(ImGuiCol_CheckMark),"powered by fusion engine");
@@ -7809,7 +7877,7 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
             }
             ImGui::Spacing();ImGui::SeparatorText("Smoother motion");
             ImGui::TextWrapped("Frame generation adds frames between the ones the game draws. It can look smoother, but it does not make your controls respond faster.");
-            if(ImGui::CollapsingHeader("Frame generation options")){RenderFrameGenerationSelection(ctx);RenderFrameGenerationRuntimeSettings(ctx);}
+            if(!OptiShadeMfgUI::Draw(OptionalMfgRenderingGpu(ctx.state)) && ImGui::CollapsingHeader("Frame generation options")){RenderFrameGenerationSelection(ctx);RenderFrameGenerationRuntimeSettings(ctx);}
             ImGui::Spacing();ImGui::SeparatorText("Frame rate");
             ImGui::TextWrapped("A frame-rate limit can help keep motion steady and reduce GPU load.");
             if(ImGui::CollapsingHeader("Set a frame-rate limit"))RenderFramerateSettings(ctx);
@@ -7924,9 +7992,14 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
             if(ImGui::CollapsingHeader("Advanced compatibility")){RenderQuirksSettings(ctx);RenderAdvancedSettings(ctx);RenderUpscalerInputsSettings(ctx);RenderApiAndTextureSettings(ctx);}
         }
         ImGui::EndChild();ImGui::Separator();
-        if(ImGui::Button("Save settings",ImVec2(160*uiScale,34*uiScale)))saved=config->SaveIni();
+        if(ImGui::Button("Save settings",ImVec2(160*uiScale,34*uiScale)))saved=OptiShadeMfgUI::SaveSettings(*config,OptionalMfgOwnsFrameGeneration(ctx.state));
         ImGui::SameLine();if(saved)ImGui::TextDisabled("Settings saved. Neural rendering will start off.");else ImGui::TextDisabled("Menu: %s / Ctrl+Shift+%s",Keybind::KeyNameFromVirtualKeyCode(config->ShortcutKey.value_or_default()).c_str(),Keybind::KeyNameFromVirtualKeyCode(config->BackupShortcutKey.value_or_default()).c_str());
     }
+    const auto position=ImGui::GetWindowPos();const auto size=ImGui::GetWindowSize();
+    const auto* window=ImGui::GetCurrentWindow();const auto& imgui=*ImGui::GetCurrentContext();
+    const bool geometryEditing=imgui.MovingWindow==window||imgui.ActiveIdWindow==window||imgui.NavWindowingTarget==window;
+    mainMenuGeometry.Observe({position.x,position.y,size.x,size.y},geometryEditing,GetTickCount64());
+    SaveMenuGeometryBoundary(false,geometryEditing);
     ImGui::End();ImGui::PopFontSize();ImGui::PopStyleVar(5);if(!visible)HideMenu();
 }
 void KeyUp(UINT vKey)
@@ -8064,6 +8137,7 @@ bool MenuCommon::RenderMenu()
 
 void MenuCommon::Init(HWND InHwnd, bool isUWP)
 {
+    SaveMenuGeometryBoundary(true);
     // Reset shutdown flag in case of re-init
     State::Instance().isShuttingDown = false;
 
@@ -8089,6 +8163,8 @@ void MenuCommon::Init(HWND InHwnd, bool isUWP)
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    mainMenuGeometryContext=MenuGeometryContext(InHwnd,isUWP);
+    mainMenuGeometry.Load(Config::Instance()->LoadMenuGeometry(mainMenuGeometryContext));
     ImGui::StyleColorsDark();
 
     ImGuiIO& io = ImGui::GetIO();
@@ -8174,6 +8250,9 @@ void MenuCommon::Shutdown()
 {
     if (!MenuCommon::_isInited)
         return;
+    SaveMenuGeometryBoundary(true);
+    mainMenuGeometry.Load({});
+    mainMenuGeometryContext.clear();
 
     // if (_oWndProc != nullptr)
     //{
@@ -8206,6 +8285,7 @@ void MenuCommon::HideMenu()
 {
     if (!_isVisible)
         return;
+    SaveMenuGeometryBoundary(true);
 
     _isVisible = false;
 

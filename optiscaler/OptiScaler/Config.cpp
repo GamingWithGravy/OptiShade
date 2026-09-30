@@ -9,8 +9,18 @@
 #include <misc/IdentifyGpu.h>
 
 #include <SimpleIni.h>
+#include "../../shared/AtomicConfigWrite.h"
+#include "../../shared/MenuGeometryIni.h"
+#include <mutex>
 
 static CSimpleIniA ini;
+static std::recursive_mutex configIniMutex;
+
+static bool SaveOwnedIni(CSimpleIniA& value, const std::filesystem::path& path)
+{
+    std::string text;
+    return value.Save(text) >= 0 && optishade::AtomicConfigWrite(path, text);
+}
 
 static inline int64_t GetTicks()
 {
@@ -48,6 +58,7 @@ Config::Config()
 
 bool Config::Reload(std::filesystem::path iniPath)
 {
+    const std::lock_guard lock(configIniMutex);
     auto pathWStr = iniPath.wstring();
 
     LOG_INFO("Trying to load ini from: {0}", wstring_to_string(pathWStr));
@@ -577,6 +588,7 @@ bool Config::Reload(std::filesystem::path iniPath)
 
             // Don't enable again if set false because of Linux issue
             OverlayMenu.set_from_config(readBool("Menu", "OverlayMenu"));
+            MenuPhysicalNavigationKey.set_from_config(readBool("Menu", "PhysicalNavigationKey"));
             ShortcutKey.set_from_config(readInt("Menu", "ShortcutKey"));
             BackupShortcutKey.set_from_config(readInt("Menu", "BackupShortcutKey"));
             PresetHotSwapKey.set_from_config(readInt("Menu", "PresetHotSwapKey"));
@@ -931,6 +943,7 @@ bool Config::Reload(std::filesystem::path iniPath)
 
 bool Config::LoadFromPath(const wchar_t* InPath)
 {
+    const std::lock_guard lock(configIniMutex);
     std::filesystem::path iniPath(InPath);
     auto newPath = iniPath / fileName;
 
@@ -985,6 +998,7 @@ std::string GetFloatValue(std::optional<float> value)
 
 bool Config::SaveIni()
 {
+    const std::lock_guard lock(configIniMutex);
     // Upscalers
     {
         auto SaveUpscaler = [&](const char* key, auto& upscalerSetting)
@@ -1502,6 +1516,7 @@ bool Config::SaveIni()
     {
         ini.SetValue("Menu", "Scale", GetFloatValue(Instance()->MenuScale).c_str());
         ini.SetValue("Menu", "OverlayMenu", GetBoolValue(Instance()->OverlayMenu.value_for_config()).c_str());
+        ini.SetValue("Menu", "PhysicalNavigationKey", GetBoolValue(Instance()->MenuPhysicalNavigationKey.value_for_config()).c_str());
 
         ini.SetLongValue("Menu", "BackupShortcutKey", Instance()->BackupShortcutKey.value_or_default());
         ini.SetLongValue("Menu", "PresetHotSwapKey", Instance()->PresetHotSwapKey.value_or_default());
@@ -1847,11 +1862,12 @@ bool Config::SaveIni()
 
     LOG_INFO("Trying to save ini to: {0}", wstring_to_string(pathWStr));
 
-    return ini.SaveFile(absoluteFileName.wstring().c_str()) >= 0;
+    return SaveOwnedIni(ini, absoluteFileName);
 }
 
 bool Config::SaveXeFG()
 {
+    const std::lock_guard lock(configIniMutex);
     ini.SetValue("XeFG", "DepthInverted", GetBoolValue(Instance()->FGXeFGDepthInverted.value_for_config()).c_str());
     ini.SetValue("XeFG", "JitteredMV", GetBoolValue(Instance()->FGXeFGJitteredMV.value_for_config()).c_str());
     ini.SetValue("XeFG", "HighResMV", GetBoolValue(Instance()->FGXeFGHighResMV.value_for_config()).c_str());
@@ -1859,7 +1875,19 @@ bool Config::SaveXeFG()
     auto pathWStr = absoluteFileName.wstring();
     LOG_INFO("Trying to save ini to: {0}", wstring_to_string(pathWStr));
 
-    return ini.SaveFile(absoluteFileName.wstring().c_str()) >= 0;
+    return SaveOwnedIni(ini, absoluteFileName);
+}
+
+std::optional<optishade::menu_geometry::Geometry> Config::LoadMenuGeometry(const std::string& context)
+{
+    const std::lock_guard lock(configIniMutex);
+    return optishade::menu_geometry::LoadIni(ini, context);
+}
+
+bool Config::SaveMenuGeometry(const std::string& context, const optishade::menu_geometry::Geometry& geometry)
+{
+    const std::lock_guard lock(configIniMutex);
+    return optishade::menu_geometry::SaveIni(ini, absoluteFileName, context, geometry);
 }
 
 void Config::CheckUpscalerFiles()

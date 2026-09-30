@@ -47,3 +47,15 @@ __pycache__/
 /tools/amd-neural-lab/
 /docs/AMD-neural-research.md
 /docs/Local-0208-phases.md
+
+# Generated standalone test harnesses
+/tests/*.exe
+
+# Private support and handoff exclusion
+*[Hh]andoff*.md
+*[Pp]rompt*.md
+*Codex_*
+*codex-*
+/docs/Maintenance-*.md
+**/PrivateDiagnostics/
+OptiShade-diagnostics-*.zip

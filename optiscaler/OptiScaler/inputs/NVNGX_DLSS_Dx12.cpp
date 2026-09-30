@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "../../../shared/UpscalerFailureNotice.h"
 #include "../../../shared/BackendSelection.h"
 #include "Util.h"
 #include "Config.h"
@@ -683,6 +684,7 @@ static NVSDK_NGX_Result TryCreateOptiFeature(ID3D12GraphicsCommandList* InCmdLis
 
         D3D12Hooks::SetRootSignatureTracking(true);
 
+        optishade::UpscalerFailureNotices().Retire(optishade::UpscalerFailureKey(optishade::UpscalerApi::Dx12, handleId));
         Dx12Contexts.erase(handleId);
         return NVSDK_NGX_Result_Fail;
     }
@@ -695,6 +697,7 @@ static NVSDK_NGX_Result TryCreateOptiFeature(ID3D12GraphicsCommandList* InCmdLis
         D3D12Hooks::SetRootSignatureTracking(true);
 
         // Partial cleanup � handle is allocated but context is incomplete
+        optishade::UpscalerFailureNotices().Retire(optishade::UpscalerFailureKey(optishade::UpscalerApi::Dx12, handleId));
         Dx12Contexts.erase(handleId);
         return NVSDK_NGX_Result_Fail;
     }
@@ -892,6 +895,7 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D12_ReleaseFeature(NVSDK_NGX_Handle* 
                 State::Instance().currentFeature = nullptr;
 
             // Erase from map (smart pointer reset is implicit on erase)
+            optishade::UpscalerFailureNotices().Retire(optishade::UpscalerFailureKey(optishade::UpscalerApi::Dx12, handleId));
             Dx12Contexts.erase(it);
         }
     }
@@ -1089,10 +1093,14 @@ static NVSDK_NGX_Result TryEvaluateOptiFeature(ID3D12GraphicsCommandList* InCmdL
         evalSuccess = feature->Evaluate(InCmdList, InParameters);
     }
 
-    if (!evalSuccess)
+    const auto failureNotice = optishade::UpscalerFailureNotices().Observe(
+        optishade::UpscalerFailureKey(optishade::UpscalerApi::Dx12, handleId), evalSuccess, GetTickCount64());
+    if (failureNotice.notify)
     {
-        LOG_ERROR("Feature evaluation failed for '{}'", feature->Name());
-        ImGui::InsertNotification({ ImGuiToastType::Error, 10000, "Upscaler failed to run!" });
+        LOG_ERROR("Feature evaluation failed for '{}'; DX12 handle={} failures={} aggregateOverflow={}; repeated notices limited",
+                  feature->Name(), handleId, failureNotice.failures, failureNotice.overflow);
+        ImGui::InsertNotification({ ImGuiToastType::Error, 10000,
+                                   "Upscaler failed to run: %s. See diagnostics for details.", feature->Name().c_str() });
     }
 
     // Restore root signatures

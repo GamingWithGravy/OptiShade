@@ -1,5 +1,5 @@
 ﻿function ShowReleaseNotes($Owner,[string]$Store){
- $version='0.21.3';$marker=Join-Path $Store 'release-notes-dismissed.txt'
+ $version='0.21.4';$marker=Join-Path $Store 'release-notes-dismissed.txt'
  if((Test-Path -LiteralPath $marker) -and (Get-Content -LiteralPath $marker -Raw).Trim() -eq $version){return}
  [xml]$markup=@'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="What's new in OptiShade" Width="720" Height="620" WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True" WindowStartupLocation="CenterOwner" Background="Transparent" Foreground="#F3EFFB" FontFamily="Segoe UI">
@@ -13,7 +13,7 @@
 '@
  $dialog=[Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($markup));$dialog.Owner=$Owner
  [xml]$theme=Get-Content "$PSScriptRoot/dialog-theme.xaml" -Raw; $dialog.Resources.MergedDictionaries.Add([Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($theme)))
- $dialog.FindName('Title').Text="What's new in OptiShade $version"
+ $dialog.FindName('Title').Text=("What's new in OptiShade "+($version -replace '-beta(?:[.-]?\d+)?$',' beta'))
  $dialog.FindName('Notes').Text=Get-Content -LiteralPath "$PSScriptRoot/Help/Release-notes.txt" -Raw -Encoding UTF8
  $dialog.FindName('Close').Add_Click({$dialog.Close()})
  $dialog.FindName('HeaderClose').Add_Click({$dialog.Close()})

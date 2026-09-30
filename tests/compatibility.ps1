@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference='Stop'
+$ErrorActionPreference='Stop'
 . "$PSScriptRoot/../installer/compatibility.ps1"
 $fixture=Join-Path $env:TEMP ('OptiShade-compatibility-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $fixture | Out-Null
@@ -11,13 +11,13 @@ $plan=GetFusionCompatibility $fixture $exe $rtx
 Check (-not $plan.PossibleInput -and -not $plan.DownloadNvidia) 'No input: no NVIDIA downloads, even on RTX'
 Check ($plan.Performance -match 'Image effects|image effects') 'Effects-only explanation'
 $managed=Join-Path $fixture 'OptiShadeData/Engine';New-Item -ItemType Directory -Path $managed -Force|Out-Null
-Copy-Item "$PSScriptRoot/../installer/FusionSetup.exe" (Join-Path $managed 'nvngx_dlss.dll')
+[IO.File]::WriteAllText((Join-Path $managed 'nvngx_dlss.dll'),'synthetic stored-file fixture; never loaded')
 $plan=GetFusionCompatibility $fixture $exe $rtx
 Check (-not $plan.PossibleInput) 'Our own runtime files do not imply native support'
-Copy-Item "$PSScriptRoot/../installer/FusionSetup.exe" (Join-Path $fixture 'nvngx_dlssg.dll')
+[IO.File]::WriteAllText((Join-Path $fixture 'nvngx_dlssg.dll'),'synthetic stored-file fixture; never loaded')
 $plan=GetFusionCompatibility $fixture $exe $rtx
 Check (-not $plan.PossibleInput) 'Frame-generation companion alone is not an upscaler input'
-Copy-Item "$PSScriptRoot/../installer/FusionSetup.exe" (Join-Path $fixture 'libxess.dll')
+[IO.File]::WriteAllText((Join-Path $fixture 'libxess.dll'),'synthetic stored-file fixture; never loaded')
 $plan=GetFusionCompatibility $fixture $exe $rtx
 Check (-not $plan.PossibleInput) 'ETS2 copied upscaler files do not enable an unsupported feed path'
 $exe=Join-Path $fixture 'GenericGame.exe'

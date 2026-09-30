@@ -12,7 +12,7 @@ Copy-Item "$fixture/new.exe" "$fixture/current.exe"
 $script:downloadFixture="$fixture/new.exe"
 $testDesktop=Join-Path $fixture 'Redirected Desktop';New-Item -ItemType Directory -Path $testDesktop|Out-Null
 $originalHash=(Get-FileHash "$fixture/current.exe").Hash
-$config=@{Desktop=$testDesktop;Installer="$fixture/current.exe";Url='https://github.com/GamingWithGravy/OptiShade_V0.19.17/releases/download/v9.0.0/test.exe';Version='9.0.0';SHA256=(Get-FileHash "$fixture/new.exe").Hash;Notes='Fixture update; no game installation touched.'}
+$config=@{Desktop=$testDesktop;Installer="$fixture/current.exe";Url='https://github.com/GamingWithGravy/OptiShade/releases/download/v9.0.0/Optishade%209.0.0%20stable.exe';Version='9.0.0';SHA256=(Get-FileHash "$fixture/new.exe").Hash;Notes='Fixture update; no game installation touched.';Store=(Join-Path $fixture 'Store');InstalledChannel='stable';Channel='stable';ExplicitReturnToStable=$false;Rollback=$false}
 $config|ConvertTo-Json|Set-Content "$fixture/config.json"
 # Isolate the test from live processes and the network. All file replacement,
 # verification and child-process execution still run through the real worker.

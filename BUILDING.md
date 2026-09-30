@@ -15,15 +15,12 @@ The engine dependencies are vendored under optiscaler/external and reshade/deps,
 From the repository root:
 
 ```powershell
-.\build-performance.cmd
-.\build-reshade.cmd
-.\build-installer-host.cmd
-powershell -NoProfile -File .\package.ps1
+powershell -NoProfile -File .\build-candidate.ps1
 ```
 
 Use a PowerShell environment permitted to run your locally reviewed build scripts. Network access is needed for the pinned Go resource generator on its first run. Check each command succeeds before continuing.
 
-The first two commands compile the engine DLLs. The third builds the WPF/PowerShell host and icon resources. package.ps1 assembles the payload, verifies embedded hashes and script encoding, and builds `dist/OptiShade_Version_0.20.5.exe`. The three text guides under installer/Help are embedded in the EXE. Packaging does not publish or deploy it.
+The candidate script compiles the engine DLLs, installer host and version resources, then records their hashes against the source used to build them. Packaging requires that matching record, verifies embedded files, and produces one installer EXE in `dist`. Use `-SkipPackage` to compile and verify only the core components. This build retains the hash-pinned upstream MFG DLL, including its separate Backspace menu, alongside the new OptiShade controls. The future controls-only replacement is separate work; see [MFG build requirements](optiscaler/docs/RTX40-MFG.md). Packaging does not publish or deploy anything.
 
 For this build, the ignored `optiscaler/OptiScaler/library` directory and `reshade/res/version.h` were restored from the existing local development inputs because they were absent from the public checkout. Keep these matching inputs to reproduce this build; do not substitute newer libraries.
 
@@ -32,3 +29,28 @@ Generated executables, objects, payload staging and dist are excluded from Git. 
 ## Runtime files
 
 Standard and SweetFX packs are bundled from installer/DefaultEffects. Additional effect packs and optional NVIDIA files are downloaded using the included manifests. A compatible neural-rendering model may need to be supplied separately. These are not a promise that every NVIDIA card supports every feature.
+
+## Update compatibility
+
+The display names are **0.21.4 stable** and **0.21.5 beta**. The beta's internal
+release identity remains `0.21.5-beta.1` for existing updater compatibility;
+the beta revision is omitted from the app's ordinary version display.
+
+When publishing is explicitly authorised, use one installer asset per release:
+
+| Release tag | Single EXE asset name | Display label |
+| --- | --- | --- |
+| `v0.21.4` | `OptiShade_Version_0.21.4.exe` | Optishade 0.21.4 stable |
+| `v0.21.5-beta.1` | `OptiShade_Version_0.21.5-beta.1.exe` | Optishade 0.21.5 beta |
+
+Retain the exact asset names: older launchers match them before downloading.
+Do not upload a second renamed copy. A portable ZIP may accompany that EXE.
+Mark beta as a prerelease; stable is the latest stable release. New launchers
+save the downloaded manager with a readable Desktop name and verify its hash
+before removing the recorded previous EXE.
+
+The published 0.21.3 update readers accept this format. Older beta launchers
+must have beta opt-in enabled when checking. The published 0.21.2 reader has an
+existing release-array handling defect; a new asset name cannot repair that
+already-installed code. The compatibility fixtures retain this known failure
+rather than claiming that all historical launchers can update.

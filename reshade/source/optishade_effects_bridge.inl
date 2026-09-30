@@ -1,4 +1,5 @@
 #include "../../shared/PresetHotSwapPolicy.h"
+#include "../../shared/PresetTechniquePolicy.h"
 // OptiShade additions, GPL-3.0-or-later. Upstream runtime remains BSD-3-Clause.
 #include "../../shared/EffectsBridge.h"
 #include <mutex>
@@ -77,12 +78,24 @@ static bool Pump(reshade::api::effect_runtime* runtime,bool loading,bool& perfor
 static void Publish(reshade::api::effect_runtime* runtime,bool loading,bool compileOK,bool rendered,bool performanceMode){
  std::lock_guard guard(lock);if(owner!=runtime)return;
  snapshot.performanceMode=performanceMode;snapshot.connected=1;snapshot.loading=loading;snapshot.compileOK=compileOK;snapshot.enabled=runtime->get_effects_state();++snapshot.frames;if(rendered)++snapshot.effectFrames;
- if(loading){snapshot.techniques=snapshot.uniforms=0;return;}
+ if(loading){snapshot.techniques=snapshot.uniforms=0;snapshot.presetState=0;snapshot.presetReport[0]=0;return;}
  // Publish the active preset every frame, even with the overlay closed. Only throttle the expensive effect lists.
 size_t presetSize=sizeof(snapshot.preset);runtime->get_current_preset_path(snapshot.preset,&presetSize);snapshot.preset[1023]=0;
 if(!requested||snapshot.frames%6!=0)return;requested=false;
  snapshot.techniques=snapshot.uniforms=snapshot.truncated=0;size_t size=sizeof(snapshot.preset);runtime->get_current_preset_path(snapshot.preset,&size);snapshot.preset[1023]=0;
  runtime->enumerate_techniques(nullptr,[](auto* r,reshade::api::effect_technique t,void*){if(snapshot.techniques==osfx::MaxTechniques){snapshot.truncated=1;return;}auto& out=snapshot.technique[snapshot.techniques++];size_t n=sizeof(out.name);r->get_technique_name(t,out.name,&n);n=sizeof(out.effect);r->get_technique_effect_name(t,out.effect,&n);out.name[127]=out.effect[127]=0;out.enabled=r->get_technique_state(t);},nullptr);
+ std::vector<std::string> expected;
+ const auto presetPath=std::filesystem::u8path(snapshot.preset);std::error_code presetError;
+ const bool presetReadable=std::filesystem::is_regular_file(presetPath,presetError)&&!presetError&&reshade::ini_file::load_cache(presetPath).has({},"Techniques");
+ if(presetReadable)reshade::ini_file::load_cache(presetPath).get({},"Techniques",expected);
+ std::vector<optishade::preset::Technique> compiled;compiled.reserve(snapshot.techniques);
+ for(uint32_t i=0;i<snapshot.techniques;++i){const auto& t=snapshot.technique[i];compiled.push_back({t.effect,t.name,t.enabled!=0});}
+ auto audit=optishade::preset::audit(expected,compiled,compileOK,snapshot.truncated!=0,snapshot.enabled!=0,snapshot.dirty!=0);
+ snapshot.presetState=static_cast<uint32_t>(presetReadable?audit.state:optishade::preset::State::Unknown);
+ snapshot.presetRequested=audit.requested;snapshot.presetApplied=audit.applied;snapshot.presetMissing=static_cast<uint32_t>(audit.missing.size());
+ std::string report;for(const auto& missing:audit.missing){if(!report.empty())report+="; ";report+=missing;}
+ if(report.size()>=sizeof(snapshot.presetReport))report.resize(sizeof(snapshot.presetReport)-5),report+=" ...";
+ strncpy_s(snapshot.presetReport,report.c_str(),_TRUNCATE);
  runtime->enumerate_uniform_variables(inspected[0]?inspected:nullptr,[](auto* r,reshade::api::effect_uniform_variable u,void*){
    char source[64]{};size_t n=sizeof(source);if(r->get_annotation_string_from_uniform_variable(u,"source",source,&n)&&source[0])return;
    if(snapshot.uniforms==osfx::MaxUniforms){snapshot.truncated=1;return;}auto& out=snapshot.uniform[snapshot.uniforms++];out={};n=sizeof(out.name);r->get_uniform_variable_name(u,out.name,&n);n=sizeof(out.effect);r->get_uniform_variable_effect_name(u,out.effect,&n);n=sizeof(out.label);r->get_annotation_string_from_uniform_variable(u,"ui_label",out.label,&n);out.name[127]=out.effect[127]=out.label[127]=0;

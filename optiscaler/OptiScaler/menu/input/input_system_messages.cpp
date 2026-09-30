@@ -14,6 +14,10 @@ void SetKeyUpStateOnly(int vk, DWORD messageTime)
         return;
 
     ButtonState& key = _state.Keys[vk];
+    if(vk==VK_SNAPSHOT){
+        if(_state.PrintScreen.OlderThanDown(messageTime))return;
+        _state.PrintScreen.ObserveInternalRelease(messageTime);
+    }
 
     if (key.Down)
         key.Released = true;
@@ -54,6 +58,33 @@ void ResetButtonBlockedStateLocked()
         mouseButton.BlockedDown = false;
 
     SyncAggregateModifierStateLocked();
+}
+
+void ClearFocusInputStateLocked()
+{
+    _state.Keys = {};
+    _state.MouseButtons = {};
+    _state.PhysicalMenu = {};
+    _state.PrintScreen = {};
+    _state.LastPressedKey = 0;
+    _state.MouseWheel = 0;
+    _state.TextInput.clear();
+    ResetRawInputBlockStateLocked();
+    ResetRawInputSanitizeCacheLocked();
+    _state.ExternalPendingMouseDeltaX = 0;
+    _state.ExternalPendingMouseDeltaY = 0;
+    EndCursorClipBlockLocked();
+}
+
+void ReconcileInputFocusLocked(bool focused)
+{
+    const bool previouslyFocused = _state.Focused;
+    _state.Focused = focused;
+    if (previouslyFocused && !focused) ClearFocusInputStateLocked();
+    _state.BlockMouse = _state.MenuVisible && focused;
+    _state.BlockKeyboard = _state.MenuVisible && focused;
+    _state.BlockCursor = _state.MenuVisible && focused;
+    if (!previouslyFocused && focused && _state.MenuVisible) BeginCursorClipBlockLocked();
 }
 
 void SetMouseDownFromRawState(int button, DWORD messageTime, bool blocked)
@@ -216,6 +247,7 @@ void SetKeyDown(int vk, DWORD messageTime, bool blocked)
 
     if (!key.Down)
     {
+        if(vk==VK_SNAPSHOT&&!_state.PrintScreen.ObserveDown(messageTime))return;
         key.Pressed = true;
         _state.LastPressedKey = vk;
 
@@ -245,6 +277,10 @@ bool SetKeyUp(int vk, DWORD messageTime)
         return false;
 
     ButtonState& key = _state.Keys[vk];
+    if(vk==VK_SNAPSHOT&&_state.PrintScreen.OlderThanDown(messageTime))return false;
+    if(vk==VK_SNAPSHOT&&_state.PrintScreen.MissingWindowDown(messageTime)){
+        key.Pressed=true;key.Released=true;_state.LastPressedKey=vk;
+    }
 
     const bool wasBlockedDown = key.BlockedDown;
 
@@ -491,13 +527,13 @@ bool HandleWindowMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, Inpu
     {
     case WM_SETFOCUS:
     {
-        _state.Focused = true;
+        ReconcileInputFocusLocked(true);
         break;
     }
 
     case WM_KILLFOCUS:
     {
-        _state.Focused = false;
+        ReconcileInputFocusLocked(false);
         break;
     }
 
@@ -565,10 +601,14 @@ bool HandleWindowMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, Inpu
     case WM_SYSKEYDOWN:
     {
         const int vk = NormalizeModifierVirtualKey(static_cast<int>(wParam), lParam);
-        SetKeyDown(vk, GetMessageTime(), _state.BlockKeyboard || IsReservedMenuKeyLocked(vk));
+        const unsigned scan = (static_cast<ULONG_PTR>(lParam) >> 16) & 0xff;
+        const bool e0 = (lParam & (1UL << 24)) != 0;
+        ObserveMenuKeyLocked(vk, scan, e0, false, false, PhysicalKeySource::Window);
+        const bool reserved = IsReservedMenuEventLocked(vk, scan, e0);
+        SetKeyDown(vk, GetMessageTime(), _state.BlockKeyboard || (reserved && !IsPhysicalMenuBindingLocked()));
         OPTIINPUT_LOG_VERBOSE("key down vk:{} blocked:{}", vk, _state.BlockKeyboard ? 1 : 0);
 
-        shouldBlock = _state.BlockKeyboard || IsReservedMenuKeyLocked(vk);
+        shouldBlock = _state.BlockKeyboard || reserved;
         break;
     }
 
@@ -576,12 +616,15 @@ bool HandleWindowMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, Inpu
     case WM_SYSKEYUP:
     {
         const int vk = NormalizeModifierVirtualKey(static_cast<int>(wParam), lParam);
+        const unsigned scan = (static_cast<ULONG_PTR>(lParam) >> 16) & 0xff;
+        const bool e0 = (lParam & (1UL << 24)) != 0;
+        ObserveMenuKeyLocked(vk, scan, e0, false, true, PhysicalKeySource::Window);
         const bool wasBlockedDown = SetKeyUp(vk, GetMessageTime());
         OPTIINPUT_LOG_VERBOSE("key up vk:{} wasBlockedDown:{}", vk, wasBlockedDown ? 1 : 0);
 
         // If the game saw the key down before the menu opened,
         // let it see the matching key up to avoid stuck movement/actions.
-        shouldBlock = wasBlockedDown || IsReservedMenuKeyLocked(vk);
+        shouldBlock = wasBlockedDown || IsReservedMenuEventLocked(vk, scan, e0);
         break;
     }
 
@@ -592,7 +635,7 @@ bool HandleWindowMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, Inpu
 
         const UINT scan = (static_cast<ULONG_PTR>(lParam) >> 16) & 0xff;
         const UINT extended = (lParam & (1UL << 24)) ? 0xe000 : 0;
-        shouldBlock = _state.BlockKeyboard || IsReservedMenuKeyLocked(MapVirtualKeyW(scan | extended, MAPVK_VSC_TO_VK_EX));
+        shouldBlock = _state.BlockKeyboard || IsReservedMenuEventLocked(MapVirtualKeyW(scan | extended, MAPVK_VSC_TO_VK_EX), scan, extended != 0);
         break;
     }
 
@@ -676,6 +719,7 @@ bool HandleWindowMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, Inpu
 
 void ClearTransientState()
 {
+    _state.PhysicalMenu.EndFrame();
     for (ButtonState& key : _state.Keys)
     {
         key.Pressed = false;
@@ -717,10 +761,10 @@ LRESULT CALLBACK OptiInputWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 
         {
             std::unique_lock lock(_state.Mutex);
-            originalWndProc = _state.OriginalWndProc;
+            originalWndProc = reinterpret_cast<WNDPROC>(GetPropW(hwnd, OriginalWndProcProperty));
         }
 
-        if (originalWndProc != nullptr)
+        if (originalWndProc != nullptr && originalWndProc != OptiInputWndProc)
             return CallWindowProcW(originalWndProc, hwnd, msg, wParam, lParam);
 
         return DefWindowProcW(hwnd, msg, wParam, lParam);
@@ -733,13 +777,18 @@ LRESULT CALLBACK OptiInputWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
     {
         std::unique_lock lock(_state.Mutex);
 
-        originalWndProc = _state.OriginalWndProc;
+        // A previous HWND can remain underneath another overlay's wrapper
+        // after our active input window changes. Its original chain belongs to
+        // that HWND, not the new window's global state.
+        originalWndProc = reinterpret_cast<WNDPROC>(GetPropW(hwnd, OriginalWndProcProperty));
         OPTIINPUT_LOG_VERBOSE("WndProc dispatch hwnd:{} msg:{}({:#x}) input:{} original:{} menu:{} focused:{}",
                               static_cast<void*>(hwnd), WindowMessageName(msg), static_cast<unsigned>(msg),
                               static_cast<void*>(_state.InputHwnd), reinterpret_cast<std::uintptr_t>(originalWndProc),
                               _state.MenuVisible ? 1 : 0, _state.Focused ? 1 : 0);
         unicodeNoCharProbe = msg == WM_UNICHAR && wParam == UNICODE_NOCHAR && IsTargetWindow(hwnd);
         handled = HandleWindowMessage(hwnd, msg, wParam, lParam, InputMessageSource::WndProc);
+        if (msg == WM_NCDESTROY && hwnd == _state.InputHwnd)
+            ClearInputWindowLocked();
     }
 
     if (unicodeNoCharProbe)
@@ -748,10 +797,11 @@ LRESULT CALLBACK OptiInputWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
     if (handled)
         return 0;
 
-    if (originalWndProc != nullptr)
-        return CallWindowProcW(originalWndProc, hwnd, msg, wParam, lParam);
-
-    return DefWindowProcW(hwnd, msg, wParam, lParam);
+    const LRESULT result = originalWndProc != nullptr && originalWndProc != OptiInputWndProc
+                               ? CallWindowProcW(originalWndProc, hwnd, msg, wParam, lParam)
+                               : DefWindowProcW(hwnd, msg, wParam, lParam);
+    if (msg == WM_NCDESTROY) RemovePropW(hwnd, OriginalWndProcProperty);
+    return result;
 }
 
 bool ProcessRemovedMessage(MSG* msg)

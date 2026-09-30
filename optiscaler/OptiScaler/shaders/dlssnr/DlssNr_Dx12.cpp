@@ -2955,6 +2955,7 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
         };
 
         static ComposeReport loggedCompose {};
+        static ULONGLONG lastComposeReport = 0;
 
         // Quantised to the precision it is printed at. Comparing raw floats logged 2376 lines in one
         // Enshrouded session, because a measured white point drifts continuously and every drift was a
@@ -2972,16 +2973,21 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
                                          g_nr.workHeight,
                                          effectivePasses };
 
-        if (!loggedCompose.valid || loggedCompose.whitePoint != composeNow.whitePoint ||
+        const bool composeChanged = !loggedCompose.valid || loggedCompose.whitePoint != composeNow.whitePoint ||
             loggedCompose.transfer != composeNow.transfer || loggedCompose.colour != composeNow.colour ||
             loggedCompose.maxRatio != composeNow.maxRatio ||
             loggedCompose.passthrough != composeNow.passthrough ||
             loggedCompose.debugView != composeNow.debugView ||
             loggedCompose.compareMode != composeNow.compareMode ||
             loggedCompose.residual != composeNow.residual || loggedCompose.workW != composeNow.workW ||
-            loggedCompose.workH != composeNow.workH || loggedCompose.passes != composeNow.passes)
+            loggedCompose.workH != composeNow.workH || loggedCompose.passes != composeNow.passes;
+        // Dynamic exposure and interleaved views can change every frame. Retain
+        // first effective state, then at most one composition summary per minute.
+        const auto composeTime = GetTickCount64();
+        if (composeChanged && (!loggedCompose.valid || composeTime - lastComposeReport >= 60000))
         {
             loggedCompose = composeNow;
+            lastComposeReport = composeTime;
             LOG_INFO("DLSS-NR composition: paper white {:.2f}x, detail {:.2f}, colour {:.2f}, guard "
                      "{:.1f}x, colour transform {}, transfer {}, model {}x{}, passes {}, debug view {}, compare {}",
                      composeNow.whitePoint, composeNow.transfer, composeNow.colour, composeNow.maxRatio,

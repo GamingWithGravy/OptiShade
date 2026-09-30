@@ -1,64 +1,69 @@
-# RTX 40 MFG unlocker (optional)
+# Optional RTXMFG integration
 
-This fork can leave frame generation to [Dashdogy's RTX40MFG-Unlock](https://github.com/dashdogy/RTX40MFG-Unlock).
-The unlocker is separate, MIT-licensed work by Michael Robles. Its source is pinned as a git submodule
-at `4e776d068f91b4a665425542bb005dd57cc3d891`. No NVIDIA FG binary is bundled or patched on disk by us.
-This integration has been built, but has not been verified on RTX 40 hardware. It is not an RTX 30
-FG unlocker and does not add native DLSS FG to games which lack it.
+OptiShade integrates [Universal RTXMFG](https://github.com/dashdogy/RTX40MFG-Unlock),
+MIT-licensed work by Michael Robles / dashdogy. The maintained component is the
+single-DLL v1.3.3-hotfix.2 release, pinned to source commit
+`53e3311157140df7b72a6cf0c76fb4e93c44fc04`. The old split Core/ASI/ReShade panel
+instructions do not describe this component. See the installer component's
+`PROVENANCE.md` and unchanged upstream README/build/licence files for its origin.
 
-## Use with OptiScaler
+## Installation and hardware scope
 
-1. Back up your working setup. Close the game.
-2. Install the unlocker using its own README. Keep its loader separate from OptiScaler and ReShade.
-   Do not overwrite an existing `dxgi.dll`, `version.dll`, `dinput8.dll`, or other proxy owned by a mod.
-   The ASI must load before the first FG pipeline; use the upstream-recommended early ASI loader.
-   Do not rely on OptiScaler's late ASI-plugin loading for this.
-3. In `OptiScaler.ini`, set `[FrameGen] External=true`. Or select **External frame generation / MFG
-   unlocker** in the overlay, Save Settings, then restart.
-4. Enable native DLSS FG in the game. Select the multiplier in the unlocker/game, not OptiScaler.
-5. Start at 2x, then try 3x. Confirm the active provider and applied multiplier in the unlocker log,
-   not just the requested setting or an FPS counter.
+Automatic setup is restricted to MSFS 2020/2024 and a single detected NVIDIA
+RTX 40 GPU. It installs one verified `version.dll` only when there is no foreign
+loader conflict. An integrated AMD companion GPU is allowed. The game must
+already support a compatible Streamline/DLSS Frame Generation pipeline and load
+the proxy early. Do not replace working game/runtime DLLs with another game's
+Streamline files.
 
-External mode disables OptiScaler's Streamline interception, NVIDIA API overrides (including Reflex,
-flip metering and driver-preset interception), multiplier overrides and replacement FG routing.
-Streamline/FG DLL loads also pass through to the original loader. NR and NGX upscaling remain available.
-It is a startup option: switching ownership without restarting is unsafe. Your saved OptiScaler FG
-settings are retained and return on a later startup with `External=false`.
-Use the game's/driver's FPS limiter in this mode; OptiScaler does not own Reflex pacing.
-Do not use this mode when you need OptiScaler to replace DLSSG with FSR FG on an RTX 30 card.
+The first optional installation selects `[FrameGen] External=true` and disables
+OptiShade's competing Ada/Ampere unlock overrides. Repeated verified setup and
+repair of a missing owned DLL preserve the user's later frame-generation
+choices. Changing backend ownership is a startup operation; a restart is needed.
 
-Keep the game's working Streamline and NVIDIA runtime DLLs. Do not copy a second Streamline stack
-from another game's NR/FG package. Disable competing NR injectors when testing this fork.
+Upstream supports RTX 40 and very early experimental RTX 30 D3D12 paths. The
+latter depends on validated native caches and provider contracts and is not
+validated or automatically deployed by OptiShade. RTX 20 is unsupported by this
+optional backend. RTX 50 continues to use native frame-generation handling;
+ordinary AMD image effects and supported performance paths are unchanged.
+Requested or accepted settings are not proof of generated frames. Available
+multipliers depend on the GPU, game/runtime and NVIDIA's per-game limits.
 
-For a frozen image above 2x, upstream documents FG Preset B as a reported workaround in some games;
-Cyberpunk recovery was not separately confirmed. See the upstream README for current limitations.
-No security exclusions or disabled antivirus are required. Use single-player games without anti-cheat.
+## Configuration and current preserved binary
 
-## Build the optional unlocker
+The v1.3.3 backend consumes `RTXMFG-Universal.json` beside the actual game EXE.
+`RTX_MFG_CONFIG_PATH`, when set, overrides that location. Preserve existing JSON
+keys and user preferences; do not overwrite another override target. Backend
+status and logs must be checked before reporting a setting as applied.
 
-Install VS 2022 C++ Build Tools and CMake 3.24+. From this repository:
+The current build retains the unmodified upstream DLL and its own
+first-launch/Backspace menu. OptiShade also exposes supported settings under
+Performance > Smoother motion, with verified loaded-backend status and protection
+against conflicting frame-generation controls. Its original separate-menu
+instructions remain accurate. This build does not claim that the upstream
+menu/hotkey has been removed.
 
-```powershell
-git submodule update --init external/RTX40MFG-Unlock
-.\build_mfg_unlocker.ps1
-```
+## Controls-only build held pending original inputs
 
-If CMake isn't on PATH, pass `-CMake 'C:\path\to\cmake.exe'`.
-This builds the core DLL and ASI into a separate `release/mfg-optional-*` folder. It does not install
-anything into a game or include the unlocker in normal OptiScaler releases.
-The core defaults to following the game. To build the optional ReShade control panel too, provide
-`-ReShadeRoot` and `-ImGuiRoot` pointing to matching source trees as described by upstream.
-Without the panel, use the game's multiplier or the upstream JSON configuration mechanism.
-For example, with the game closed, merge these keys into `RTX40MFG-Universal.json` beside the real
-game executable (preserve any other keys):
+The intended replacement exposes controls through OptiShade's Performance UI,
+with no secondary menu and no replacement hotkey. The local source patch is
+`installer/OptionalMFG/controls-only.patch` at the repository root. The guarded
+`build-controls-only.ps1` recipe applies it to the exact pinned archive and uses
+the supported `EnableOverlayMenuDraw=false` configuration. Unified GPU dispatch,
+validated native caches and backend behavior are retained.
 
-```json
-{"followGame": false, "mode": "fixed", "multiplier": 3, "dynamicTargetFrameRate": 0, "dynamicExperimental56": false}
-```
+A complete DLL build is currently blocked by missing original upstream native
+cache manifests/JSON contracts and matching kernel inputs, plus alignment of
+the hash-pinned SDK/toolchain inputs. The recipe fails without those inputs;
+it does not reconstruct contracts, bypass checks or force a GPU family.
+Native source tests verify disabled binding/key consumption and the guarded
+input/UI entry points. A rebuilt DLL still needs input-isolation and backend
+regression checks, followed by appropriate hardware testing for rendering.
 
-If the legacy CET `plugins/cyber_engine_tweaks/mods/RTX40MFG/init.lua` exists, the universal JSON
-lives in that mod's folder instead. `RTX40_MFG_CONFIG_PATH`, if set, overrides both locations.
-The unlocker may limit the request to a supported multiplier; inspect its log.
-
-For a report, include the GPU, driver, game and unlocker versions, loader filenames, `OptiScaler.ini`,
-`OptiScaler.log` and `%TEMP%\MfgUnlock-<PID>.log`. Remove personal paths before posting publicly.
+The future controls-only replacement must pass `verify-controls-only.ps1` with
+a reviewed receipt matching the new DLL and patch. Compilation alone does not
+create that approval receipt. The preserved official DLL is not a controls-only
+build and is rejected by that check; current packaging retains its original
+hash pin instead. All original licence,
+copyright, attribution and third-party notices remain required for the modified
+build; OptiShade claims only its integration changes.

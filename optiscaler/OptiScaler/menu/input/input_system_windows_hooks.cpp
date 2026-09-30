@@ -301,6 +301,8 @@ bool ShouldBlockWindowsKeyboardHookCallbackLocked(WindowsHookSlot& slot, int cod
 
     int vk = 0;
     bool released = false;
+    unsigned scan = 0;
+    bool e0 = false;
 
     if (slot.HookType == WH_KEYBOARD_LL)
     {
@@ -311,17 +313,21 @@ bool ShouldBlockWindowsKeyboardHookCallbackLocked(WindowsHookSlot& slot, int cod
 
         vk = static_cast<int>(keyboard->vkCode);
         released = (keyboard->flags & LLKHF_UP) != 0;
+        scan = keyboard->scanCode;
+        e0 = (keyboard->flags & LLKHF_EXTENDED) != 0;
     }
     else
     {
         vk = static_cast<int>(wParam);
         released = (static_cast<ULONG_PTR>(lParam) & 0x80000000UL) != 0;
+        scan = (static_cast<ULONG_PTR>(lParam) >> 16) & 0xff;
+        e0 = (static_cast<ULONG_PTR>(lParam) & (1UL << 24)) != 0;
     }
 
     if (vk <= 0 || vk >= 256)
         return ShouldBlockKeyboardInputLocked();
 
-    if (IsReservedMenuKeyLocked(vk)) return true;
+    if (IsReservedMenuEventLocked(vk, scan, e0)) return true;
     if (!ShouldBlockKeyboardInputLocked()) return false;
 
     if (!released)

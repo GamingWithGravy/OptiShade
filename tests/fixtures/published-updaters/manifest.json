@@ -1,0 +1,42 @@
+[
+  {
+    "Version": "0.20.12",
+    "Commit": "3b0e9e7e4ce0b2481b069de62a15fcaf9f5e5f15",
+    "Fixture": "v0.20.12.ps1",
+    "UpdatesSourceSHA256": "C6125362A1D8CBE838CBF6B9FFCF1D9B154496D929F90D406782A8A174FD5EC1",
+    "SourceURL": "https://github.com/GamingWithGravy/OptiShade/blob/3b0e9e7e4ce0b2481b069de62a15fcaf9f5e5f15/installer/updates.ps1",
+    "FixtureNormalizedSHA256": "A09250739FE6DDBA1FEBFDE9601E9F6A1E3883E4AEA86E085380CA8BB82D00EA"
+  },
+  {
+    "Version": "0.21.2",
+    "Commit": "d212ebea17a53646f94ccf8c9a6a36d00c4135fa",
+    "Fixture": "v0.21.2.ps1",
+    "UpdatesSourceSHA256": "9D4281950E09618EFC6ABBB319677D1C6D7DE53B933E686EDBB601C36B0D1ED1",
+    "SourceURL": "https://github.com/GamingWithGravy/OptiShade/blob/d212ebea17a53646f94ccf8c9a6a36d00c4135fa/installer/updates.ps1",
+    "FixtureNormalizedSHA256": "E69B8A6586C6F8037B9FDACB8ADB5412D234FFF20BB9D901837902DAD4AB40BE"
+  },
+  {
+    "Version": "0.21.3",
+    "Commit": "bbf2bcb2815ce0655225e8f939c97645cf1ce23d",
+    "Fixture": "v0.21.3.ps1",
+    "UpdatesSourceSHA256": "A0BD82B0303E979600D9FCF12F9AB5E30CCFAB55EF9F606392FAD32880C2E61D",
+    "SourceURL": "https://github.com/GamingWithGravy/OptiShade/blob/bbf2bcb2815ce0655225e8f939c97645cf1ce23d/installer/updates.ps1",
+    "FixtureNormalizedSHA256": "D7FE811F6C006ECE1870BE6171FC7A83D0DC676207D7997F1B2E9E996C78088A"
+  },
+  {
+    "Version": "0.21.3-beta.3",
+    "Commit": "8702305cf7c05f39c1af90e872cf7b8947010217",
+    "Fixture": "v0.21.3-beta.3.ps1",
+    "UpdatesSourceSHA256": "95E072398F296AA14A64B9E712D56CEB01E23B8DBFEC5E76E12C22E60C8F6550",
+    "SourceURL": "https://github.com/GamingWithGravy/OptiShade/blob/8702305cf7c05f39c1af90e872cf7b8947010217/installer/updates.ps1",
+    "FixtureNormalizedSHA256": "EFBFDF7D7B69574F81564EAE6021EA9048C5A6633079C39E5DC62D360419DF85"
+  },
+  {
+    "Version": "0.21.3-beta.4",
+    "Commit": "63df60aa40ce547b7969c88333da202617d5510c",
+    "Fixture": "v0.21.3-beta.4.ps1",
+    "UpdatesSourceSHA256": "66018CAAD2D189D07B03EF89A443B73EB819773C565263602112D6B67C6C46C7",
+    "SourceURL": "https://github.com/GamingWithGravy/OptiShade/blob/63df60aa40ce547b7969c88333da202617d5510c/installer/updates.ps1",
+    "FixtureNormalizedSHA256": "8D76B8294EA12BB0FDD112C889B0199F8188345CB5C1A4C3E791262D2260D21A"
+  }
+]

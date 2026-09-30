@@ -1,10 +1,12 @@
+**OptiShade 0.21.4 Stable.**
+
 <div align="center">
   <img src="docs/images/optishade.png" width="160" alt="Optishade OS logo">
   <h1>Optishade</h1>
   <p><strong>Microsoft Flight Simulator 2024 · Microsoft Flight Simulator 2020</strong></p>
   <p>Created by gravy · Powered by Fusion Engine</p>
   <p>
-    <img src="https://img.shields.io/badge/Version-0.21.3-9755E9?style=flat-square" alt="Version 0.21.3">
+    <img src="https://img.shields.io/badge/Version-0.21.4-9755E9?style=flat-square" alt="Version 0.21.4 stable">
     <img src="https://img.shields.io/badge/Windows-x64-272133?style=flat-square" alt="Windows x64">
     <img src="https://img.shields.io/badge/Graphics-NVIDIA%20%2B%20AMD-9755E9?style=flat-square" alt="NVIDIA and AMD graphics">
   </p>
@@ -18,7 +20,15 @@
 
 Optishade brings image effects, saved looks and optional NVIDIA neural rendering together in one custom in-game menu. This edition supports **Microsoft Flight Simulator 2024 and 2020**, with image effects and supported performance options on NVIDIA and AMD graphics cards, with automatic Steam and Xbox detection.
 
-### OptiShade 0.21.3 Stable
+### OptiShade 0.21.4 Stable
+
+- Fixed menu size and position saving, Print Screen SnapShot binding, and improved controller/hotkey recovery.
+- MFG controls are now available inside the OptiShade UI.
+- Improved missing-effects messages, restore handling, diagnostics and antivirus-related installer errors.
+- Improved old EXE cleanup between channels. Beta stays on beta; Return to stable finds the latest stable release.
+- The published 0.21.3 updater can find 0.21.4. See the [full patch notes](installer/Help/Release-notes.txt).
+
+### Included features
 
 - SnapShot saves one PNG in the game's **Optishade Snapshots** folder, with a notification after saving and a Browse screenshots button.
 - In-game **Settings & status** exposes UI sizing up to 200% for 4K displays and matching FPS overlay controls.
@@ -64,7 +74,7 @@ Search your FX shaders, switch effects on, adjust their settings and save a name
 
 Neural rendering always starts **off**, even with older saved settings. Your tuning
 values are retained; enable neural rendering manually for each game session.
-Experimental TAA and Vulkan NR are disabled in 0.21.2. Supported DLSS-based NR remains available, with additional memory-pressure protection.
+Experimental TAA and Vulkan NR remain beta-only. Supported DLSS-based NR remains available, with additional memory-pressure protection.
 
 Choose **Yes or No** when setup asks about DLSS 5. Neural rendering requires compatible RTX hardware, a matching model and a supported game connection. Installing files does not automatically enable it or prove it is rendering. Extra effects and neural passes can reduce frame rate.
 

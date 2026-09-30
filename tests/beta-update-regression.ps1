@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference='Stop'
+$ErrorActionPreference='Stop'
 . "$PSScriptRoot/../installer/updates.ps1"
 $env:OPTISHADE_STORE=Join-Path $env:TEMP ('OptiShade-channel-'+[guid]::NewGuid().ToString('N'))
 if((GetOptiShadeUpdateChannel) -ne 'stable'){throw 'Must default to stable'}
@@ -16,8 +16,9 @@ $script:releases+=@($invalid)
 if((GetOptiShadeUpdate -Current '0.22-beta2' -ReportErrors).Version -ne '0.22-beta10'){throw 'Invalid newer asset hides valid update'}
 SetOptiShadeUpdateChannel $false
 $script:releases=@((Release '0.21.1' $false),(Release '0.22-beta10'))
-$return=GetOptiShadeUpdate -Current '0.22-beta10' -ReportErrors
-if($return.Version -ne '0.21.1' -or -not $return.Rollback -or $return.Channel -ne 'stable'){throw 'Opt out did not offer stable return'}
+if(GetOptiShadeUpdate -Current '0.22-beta10' -ReportErrors){throw 'Background check offered stable to a running beta'}
+$return=@(GetOptiShadePreviousReleases -Current '0.22-beta10' | Sort-Object {[version]$_.Version} -Descending)[0]
+if($return.Version -ne '0.21.1' -or -not $return.Rollback){throw 'Explicit stable return did not offer stable'}
 if(GetOptiShadeUpdate -Current '0.21.1' -InstalledChannel stable -ReportErrors){throw 'Stable same build offered again'}
 if($return.ReleaseUrl -ne 'https://github.com/GamingWithGravy/OptiShade/releases/tag/v0.21.1'){throw 'Portable stable link points to wrong release'}
 if(Test-Path (Join-Path $env:OPTISHADE_STORE 'beta-updates.txt')){throw 'Opt out did not persist'}
@@ -59,3 +60,40 @@ $script:releases=@((Release '0.21.2' $false),(Release '0.21.4' $false),(Release 
 $latest=@(GetOptiShadePreviousReleases | Sort-Object {[version]$_.Version} -Descending)
 if($latest[0].Version -ne '0.21.4' -or @($latest|Where-Object Version -match 'beta').Count){throw 'Stable return is pinned or includes beta'}
 'PASS: normalised asset filename and dynamically newest stable return'
+# Exercise real startup wiring: a manually downloaded beta with no saved preference.
+$env:OPTISHADE_STORE=Join-Path $env:TEMP ('OptiShade-fresh-beta-'+[guid]::NewGuid().ToString('N'))
+InitializeOptiShadeUpdateChannel -InstalledChannel stable
+if((GetOptiShadeUpdateChannel) -ne 'stable'){throw 'Stable startup opted into beta'}
+InitializeOptiShadeUpdateChannel -InstalledChannel beta
+if((GetOptiShadeUpdateChannel) -ne 'beta'){throw 'Fresh beta did not select beta'}
+$script:releases=@((Release '0.21.3' $false),(Release '0.12.3' $false),(Release '0.99.0' $false),(Release '0.21.3-beta.6'))
+$offer=GetOptiShadeUpdate -Current '0.21.3-beta.5' -ReportErrors
+if($offer.Version -ne '0.21.3-beta.6' -or (GetOptiShadeUpdateLabel $offer) -ne 'Beta update available - 0.21.3 beta'){throw 'Fresh beta offer/label incorrect'}
+SetOptiShadeUpdateChannel $false
+InitializeOptiShadeUpdateChannel -InstalledChannel beta
+if((GetOptiShadeUpdateChannel) -ne 'stable'){throw 'Explicit opt-out overwritten on restart'}
+if(GetOptiShadeUpdate -Current '0.21.3-beta.5' -ReportErrors){throw 'Opted-out beta detected a stable update'}
+$stable=@(GetOptiShadePreviousReleases|Sort-Object {[version]$_.Version} -Descending)[0]
+if($stable.Version -ne '0.99.0' -or (GetOptiShadeUpdateLabel $stable) -ne 'Return to stable - 0.99.0'){throw 'Explicit return must select current latest stable'}
+SetOptiShadeUpdateChannel $true
+$script:releases=@((Release '0.99.0' $false))
+if(GetOptiShadeUpdate -Current '0.21.3-beta.5' -ReportErrors){throw 'Beta-only checks fell back to stable when no beta was available'}
+$script:releases=@((Release '0.21.3-beta.5'),(Release '0.99.0' $false))
+if(GetOptiShadeUpdate -Current '0.21.3-beta.5' -ReportErrors){throw 'Current beta should have no newer beta update'}
+'PASS: fresh beta startup, beta-only update labels, persisted opt-out, explicit stable return, no stable fallback'
+
+# Unnumbered beta versions use a single channel label in the desktop filename.
+if((GetOptiShadeManagerName '0.21.5-beta' beta) -cne 'Optishade 0.21.5 beta.exe'){throw 'Unnumbered beta filename mismatch'}
+if((GetOptiShadeManagerName '0.21.3-beta.5' beta) -cne 'Optishade 0.21.3 beta.exe'){throw 'Legacy beta desktop name was not simplified'}
+if(-not(TestOptiShadeChannelChange 'P0.21.4' 'P0.21.5-beta') -or -not(TestOptiShadeChannelChange 'P0.21.5-beta' 'P0.21.4')){throw 'Unnumbered beta channel change not recognized'}
+SetOptiShadeUpdateChannel $true
+$plain=Release '0.21.5-beta'
+$plain.assets[0].name='Optishade.0.21.5.beta.exe'
+$plain.assets[0].browser_download_url='https://github.com/GamingWithGravy/OptiShade/releases/download/v0.21.5-beta/Optishade.0.21.5.beta.exe'
+$script:releases=@((Release '0.99.0' $false),$plain)
+if((GetOptiShadeUpdate -Current '0.21.4' -InstalledChannel stable -ReportErrors).Version -cne '0.21.5-beta'){throw 'Stable opt-in did not find unnumbered beta'}
+if((GetOptiShadeUpdate -Current '0.21.3-beta.5' -InstalledChannel beta -ReportErrors).Version -cne '0.21.5-beta'){throw 'Legacy beta did not find unnumbered beta'}
+if(GetOptiShadeUpdate -Current '0.21.5-beta' -InstalledChannel beta -ReportErrors){throw 'Unnumbered beta offered itself or stable'}
+SetOptiShadeUpdateChannel $false
+if(GetOptiShadeUpdate -Current '0.21.5-beta' -InstalledChannel beta -ReportErrors){throw 'Opted-out unnumbered beta offered stable automatically'}
+'PASS: unnumbered beta discovery, desktop name, both channel switches and no stable fallback'

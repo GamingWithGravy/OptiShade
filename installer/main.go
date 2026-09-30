@@ -29,6 +29,9 @@ func managerStore(executable, localAppData string) (string, bool) {
 }
 
 func main() {
+ if len(os.Args) == 3 && os.Args[1] == "--verify-package" {
+  if err := extractVerifiedPackage(os.Args[2]); err != nil { os.Exit(1) }; return
+ }
  updating:=len(os.Args)>1&&(os.Args[1]=="--apply-update"||os.Args[1]=="--check-update")
  original, err := os.Executable(); if err != nil { os.Exit(1) }
  store, portable := managerStore(original, os.Getenv("LOCALAPPDATA"))

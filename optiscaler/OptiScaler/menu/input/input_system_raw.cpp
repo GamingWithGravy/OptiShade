@@ -256,7 +256,8 @@ void ResetRawInputSanitizeCacheLocked()
 
 RawSanitizeAction GetRawKeyboardSanitizeActionLocked(const RAWKEYBOARD& keyboard)
 {
-    if (IsReservedMenuKeyLocked(NormalizeRawKeyboardVirtualKey(keyboard)))
+    if (IsReservedMenuEventLocked(NormalizeRawKeyboardVirtualKey(keyboard), keyboard.MakeCode,
+                                 (keyboard.Flags & RI_KEY_E0) != 0, (keyboard.Flags & RI_KEY_E1) != 0))
         return RawSanitizeAction::SanitizeAll;
     if (!_state.MenuVisible || !_state.BlockKeyboard)
         return RawSanitizeAction::Pass;
@@ -629,12 +630,17 @@ void UpdateStateFromRawKeyboardLocked(const RAWKEYBOARD& keyboard)
         return;
 
     const bool released = (keyboard.Flags & RI_KEY_BREAK) != 0;
-    const DWORD time = GetTickCount();
+    // Use the queued event time for Print Screen so a later raw/WM duplicate
+    // correlates even when the game drains its input queue slowly.
+    const DWORD time = vk == VK_SNAPSHOT ? static_cast<DWORD>(GetMessageTime()) : GetTickCount();
+
+    ObserveMenuKeyLocked(vk, keyboard.MakeCode, (keyboard.Flags & RI_KEY_E0) != 0,
+                         (keyboard.Flags & RI_KEY_E1) != 0, released, PhysicalKeySource::Raw);
 
     if (released)
-        SetKeyUpStateOnly(vk, GetTickCount());
+        SetKeyUpStateOnly(vk, time);
     else
-        SetKeyDown(vk, GetTickCount(), _state.BlockKeyboard);
+        SetKeyDown(vk, time, _state.BlockKeyboard);
 }
 
 void UpdateStateFromRawInputLocked(const RAWINPUT& input)

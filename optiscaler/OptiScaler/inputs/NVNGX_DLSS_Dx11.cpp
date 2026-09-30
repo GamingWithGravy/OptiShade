@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "../../../shared/UpscalerFailureNotice.h"
 
 #include "Config.h"
 #include "Util.h"
@@ -645,6 +646,7 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D11_ReleaseFeature(NVSDK_NGX_Handle* 
         Dx11Contexts[handleId].feature.reset();
         auto it = std::find_if(Dx11Contexts.begin(), Dx11Contexts.end(),
                                [&handleId](const auto& p) { return p.first == handleId; });
+        optishade::UpscalerFailureNotices().Retire(optishade::UpscalerFailureKey(optishade::UpscalerApi::Dx11, handleId));
         Dx11Contexts.erase(it);
 
         if (!shutdown && Config::Instance()->Dx11DelayedInit.value_or_default())
@@ -794,11 +796,21 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D11_EvaluateFeature(ID3D11DeviceConte
     }
 
     auto upscaler = deviceContext->GetUpscalerType();
+    if (upscaleResult)
+        optishade::UpscalerFailureNotices().Retire(optishade::UpscalerFailureKey(optishade::UpscalerApi::Dx11, handleId));
     if (!upscaleResult && !deviceContext->IsInited() &&
         (upscaler == Upscaler::XeSS || upscaler == Upscaler::XeSS_on12 || upscaler == Upscaler::DLSS ||
          upscaler == Upscaler::FFX_on12))
     {
-        ImGui::InsertNotification({ ImGuiToastType::Error, 10000, "Upscaler failed to run!" });
+        const auto failureNotice = optishade::UpscalerFailureNotices().Observe(
+            optishade::UpscalerFailureKey(optishade::UpscalerApi::Dx11, handleId), false, GetTickCount64());
+        if (failureNotice.notify)
+        {
+            LOG_ERROR("Feature evaluation failed for '{}'; DX11 handle={} failures={} aggregateOverflow={}; repeated notices limited",
+                      deviceContext->Name(), handleId, failureNotice.failures, failureNotice.overflow);
+            ImGui::InsertNotification({ ImGuiToastType::Error, 10000,
+                                       "Upscaler failed to run: %s. See diagnostics for details.", deviceContext->Name().c_str() });
+        }
         state.newBackend = Upscaler::FSR22;
         state.changeBackend[handleId] = true;
     }

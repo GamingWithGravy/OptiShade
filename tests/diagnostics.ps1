@@ -18,7 +18,7 @@ $report=GetDetailedSupportReport $game ''
 Check ($report.Windows.Version -eq '10.0.26100' -and $report.Windows.Build -eq '26100') 'Installed OS metadata replaces misleading compatibility version'
 Check ($report.LogTails.'OptiShadeData/ReShade.log' -match 'Managed effects log fixture') 'Managed effects log is included alongside legacy root logs'
 $json=$report|ConvertTo-Json -Depth 10
-Check ($report.SchemaVersion -eq 5 -and $report.ReportId -match '^[0-9a-f]{32}$') 'Versioned report has anonymous unique ID'
+Check ($report.SchemaVersion -eq 7 -and $report.ReportId -match '^[0-9a-f]{32}$') 'Versioned report has anonymous unique ID'
 Check ($report.FeatureSettings.'Menu.ShortcutKey' -eq '45' -and -not $json.Contains('do-not-export')) 'Settings whitelist excludes unrelated credentials'
 Check (-not $json.Contains(($game|ConvertTo-Json -Compress).Trim('"')) -and $report.GameFolder -eq '<GAME>' -and $report.LogTails.'OptiShadeData/Performance.log'.Contains('<USERPROFILE>')) 'Game and profile paths redacted from logs and events'
 Check ($report.RecentCrashEvents.Count -eq 1 -and $report.GameExecutable.Name -eq 'FlightSimulator2024.exe') 'Crash metadata and game executable metadata present'
@@ -32,7 +32,7 @@ $zipBytes=ExportDiagnosticReport $report $archive 'zip'
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $zip=[IO.Compression.ZipFile]::OpenRead($archive)
 try{
- Check ($zip.GetEntry('Report.txt') -and $zip.GetEntry('Reproduction-notes.txt') -and @($zip.Entries|Where-Object FullName -like 'Logs/*').Count -eq 6) 'Discord ZIP contains report, reproduction checklist and six log tails'
+ Check ($zip.GetEntry('Report.txt') -and $zip.GetEntry('Reproduction-notes.txt') -and @($zip.Entries|Where-Object FullName -like 'Logs/*').Count -eq @($report.LogTails.PSObject.Properties).Count) 'Discord ZIP contains report, reproduction checklist and every collected log tail'
  foreach($entry in $zip.Entries){$reader=[IO.StreamReader]::new($entry.Open());try{$contents=$reader.ReadToEnd();Check (-not $contents.Contains($game) -and -not $contents.Contains($env:USERPROFILE)) ('Redacted ZIP entry '+$entry.FullName)}finally{$reader.Dispose()}}
 }finally{$zip.Dispose()}
 Check ($zipBytes -lt 4MB) 'ZIP size remains bounded for fixture'

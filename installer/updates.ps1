@@ -3,7 +3,7 @@ function GetOptiShadeReleaseAsset($Release,[string]$Version){
  $channel=if($Release.prerelease){'beta'}else{'stable'}
  $readable=GetOptiShadeManagerName $Version $channel
  # GitHub normalises spaces in uploaded asset filenames to periods.
- foreach($name in @($readable,$readable.Replace(' ','.'),"OptiShade_Version_$Version.exe")){
+ foreach($name in (GetOptiShadeReleaseAssetNames $Version $channel)){
   $assets=@($Release.assets|Where-Object {$_.name -ceq $name -and $_.digest -match '^sha256:[a-fA-F0-9]{64}$'})
   if($assets.Count -ne 1){continue}
   $url=[uri]$assets[0].browser_download_url
@@ -17,22 +17,36 @@ function GetOptiShadeUpdateChannel {
 function SetOptiShadeUpdateChannel([bool]$Beta){
  $root=if($env:OPTISHADE_STORE){$env:OPTISHADE_STORE}else{Join-Path $env:LOCALAPPDATA 'OptiShade'}
  $marker=Join-Path $root 'beta-updates.txt'
- if($Beta){[void][IO.Directory]::CreateDirectory($root);[IO.File]::WriteAllText($marker,'Opted into prerelease update offers')}
- elseif(Test-Path -LiteralPath $marker){Remove-Item -LiteralPath $marker -Force}
+ $stable=Join-Path $root 'stable-updates.txt'
+ [void][IO.Directory]::CreateDirectory($root)
+ if($Beta){[IO.File]::WriteAllText($marker,'Opted into prerelease update offers');if(Test-Path -LiteralPath $stable){Remove-Item -LiteralPath $stable -Force}}
+ else{[IO.File]::WriteAllText($stable,'Explicitly selected stable updates');if(Test-Path -LiteralPath $marker){Remove-Item -LiteralPath $marker -Force}}
+}
+function InitializeOptiShadeUpdateChannel([ValidateSet('stable','beta')][string]$InstalledChannel){
+ $root=if($env:OPTISHADE_STORE){$env:OPTISHADE_STORE}else{Join-Path $env:LOCALAPPDATA 'OptiShade'}
+ # Opening a beta EXE is an explicit beta choice. Absence of a preference is not opt-out.
+ if($InstalledChannel -eq 'beta' -and -not(Test-Path -LiteralPath (Join-Path $root 'beta-updates.txt')) -and -not(Test-Path -LiteralPath (Join-Path $root 'stable-updates.txt'))){SetOptiShadeUpdateChannel $true}
+}
+function GetOptiShadeUpdateLabel($Update){
+ if($Update.Rollback){return 'Return to stable - '+$Update.Version}
+ if($Update.Prerelease -or $Update.Channel -eq 'beta'){return 'Beta update available - '+(GetOptiShadeDisplayVersion $Update.Version)}
+ return 'Update available - '+$Update.Version
 }
 function GetBetaVersionKey([string]$Value){
- if($Value -notmatch '^v?(\d+\.\d+(?:\.\d+){0,2})(?:-(alpha|beta|rc)[.-]?(\d*))?$'){return $null}
+ if($Value -notmatch '^v?(\d+\.\d+(?:\.\d+){0,2})(?:-(alpha|beta|rc)(?:[.-]?(\d+))?)?$'){return $null}
  $stage=if($Matches[2]){@{alpha=0;beta=1;rc=2}[$Matches[2]]}else{3}
  $revision=if($Matches[3]){[int]$Matches[3]}else{0}
  [pscustomobject]@{Numeric=[version]$Matches[1];Stage=$stage;Revision=$revision}
 }
 # The persisted setting selects release assets, never source-code branch archives.
-function GetOptiShadeUpdate([string]$Current='0.21.3',[switch]$ReportErrors,[ValidateSet('stable','beta')][string]$InstalledChannel='stable'){
+function GetOptiShadeUpdate([string]$Current='0.21.4',[switch]$ReportErrors,[ValidateSet('stable','beta')][string]$InstalledChannel='stable'){
  [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
  try{
   $channel=GetOptiShadeUpdateChannel
   $currentKey=GetBetaVersionKey $Current
   if(-not $currentKey){throw 'Invalid current version'}
+  if(-not $PSBoundParameters.ContainsKey('InstalledChannel')){$InstalledChannel=if($currentKey.Stage -lt 3){'beta'}else{'stable'}}
+  if($InstalledChannel -eq 'beta' -and $channel -eq 'stable'){return $null}
   $releases=@(Invoke-RestMethod 'https://api.github.com/repos/GamingWithGravy/OptiShade/releases?per_page=100' -Headers @{'User-Agent'='OptiShade-beta-update-check'} -TimeoutSec 12 | ForEach-Object { $_ })
   $candidates=@(foreach($release in $releases){
    if($release.draft -or ([bool]$release.prerelease -ne ($channel -eq 'beta'))){continue}
@@ -47,7 +61,7 @@ function GetOptiShadeUpdate([string]$Current='0.21.3',[switch]$ReportErrors,[Val
   $candidates|Sort-Object Numeric,Stage,Revision -Descending|Select-Object -First 1
  }catch{if($ReportErrors){throw 'Could not check the selected update channel on GitHub. Check your connection and try again.'};return $null}
 }
-function GetOptiShadePreviousReleases([string]$Current='0.21.3'){
+function GetOptiShadePreviousReleases([string]$Current='0.21.4'){
  [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
  $releases=Invoke-RestMethod 'https://api.github.com/repos/GamingWithGravy/OptiShade/releases?per_page=100' -Headers @{'User-Agent'='OptiShade-revert'} -TimeoutSec 12
  foreach($release in $releases){
@@ -57,10 +71,10 @@ function GetOptiShadePreviousReleases([string]$Current='0.21.3'){
   if($assets.Count -ne 1){continue}
   $url=[uri]$assets[0].browser_download_url
   if($url.Scheme -ne 'https' -or $url.Host -ne 'github.com' -or $url.AbsolutePath -cnotmatch '^/GamingWithGravy/OptiShade/releases/download/'){continue}
-  [pscustomobject]@{Version=$version;Url=$url.AbsoluteUri;SHA256=$assets[0].digest.Substring(7);Notes=[string]$release.body;Rollback=$true;ReleaseUrl="https://github.com/GamingWithGravy/OptiShade/releases/tag/$($release.tag_name)"}
+  [pscustomobject]@{Version=$version;Url=$url.AbsoluteUri;SHA256=$assets[0].digest.Substring(7);Notes=[string]$release.body;Rollback=$true;Channel='stable';Prerelease=$false;ReleaseUrl="https://github.com/GamingWithGravy/OptiShade/releases/tag/$($release.tag_name)"}
  }
 }
-function ShowOptiShadeRevert($Owner,[string]$Current='0.21.3'){
+function ShowOptiShadeRevert($Owner,[string]$Current='0.21.4'){
  [xml]$markup=@'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="Revert update" Width="650" Height="520" WindowStartupLocation="CenterOwner" WindowStyle="None" AllowsTransparency="True" Background="Transparent" Foreground="#F3EFFB" FontFamily="Segoe UI" ResizeMode="NoResize">
  <Border CornerRadius="20" Background="#171020" BorderBrush="#40314F" BorderThickness="1" Padding="28"><Grid>

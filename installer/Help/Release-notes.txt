@@ -1,43 +1,16 @@
-﻿# OptiShade 0.21.3 Stable
+OptiShade 0.21.4 Stable
 
-**NEW FEATURE - SNAPSHOT**
-- Set a SnapShot key in the manager's Keybinds page or the in-game Keybinds page.
-- Captures the rendered game image to a PNG in the game's "Optishade Snapshots" folder. The notification appears after saving.
-- Browse screenshots opens that folder. The old ReShade screenshot triggers are disabled to avoid duplicate captures.
+**Stable**
+- Fixed menu size and position not being remembered.
+- Improved controller support and hotkey recovery. Added an option to separate keypad navigation keys.
+- Fixed Print Screen binding for SnapShot. Added clearer key labels, conflict messages and Num Lock guidance.
+- Improved preset import status when effects are missing or fail to load.
+- Fixed restore being blocked by changed logs and improved repeat MFG installation.
+- MFG controls are now available inside the OptiShade UI.
+- Improved old installer cleanup when switching between stable and beta. Update downloads remain compatible with 0.21.3.
+- Beta updates stay on beta. Return to stable checks for the latest stable release.
+- Reduced repeated upscaler error pop-ups and improved diagnostics.
+- Clearer installer errors when antivirus removes or blocks a file.
 
-**FIXES**
-- Added on-demand downloads for three older Barbatos shader filenames used by Vapory presets, with pinned original sources and integrity checks.
-- Restore/uninstall now preserves changed, recorded shader source files in %LOCALAPPDATA%/OptiShade-Recovery before removing them from the game. Changed DLLs still require review.
-- Fixed in-game INI/ZIP imports failing when MSFS is launched through its WindowsApps link. Imports resolve the physical game folder; unsafe archive paths and linked shader folders remain blocked.
-- Fixed conflicting optional-MFG ownership records that could prevent restoring version.dll. Original backed-up files are preserved.
-- Added a check for a missing upscaler backend before evaluation. The reported MSFS crashes remain under investigation; this is not a confirmed fix for every crash.
-- Improved the missing/damaged installer-file message with recovery steps. Damaged or missing DLLs still fail verification.
-
-**IMPROVEMENTS**
-- FPS overlay controls are now visible in Settings & status, with matching OptiShade switches: visibility, position, detail, text size, opacity and theme colours.
-- In-game Settings & status now includes UI size: Auto or 100–200%. Text and controls scale together; Auto uses 200% at native 4K. Save settings keeps the choice per game.
-- Retry NR after a memory-pressure pause without restarting the simulator.
-- Added a memory-pressure override beside Apply the model. It is off by default and lasts only for the current game session. Low VRAM can still cause stutters or crashes; device-loss checks remain active.
-- Compatible RTX 40 installations automatically receive the bundled MFG component. Native DLSS Frame Generation must still be enabled in game; Backspace opens its menu. Supported multipliers vary. Existing conflicting loaders are not overwritten by automatic MFG setup.
-- Other GPU families retain their supported options; this build does not install an unvalidated RTX 40 component on RTX 20/30/50, AMD or Intel.
-- Beta opt-in and uninstall choices now use purple toggle switches.
-- SnapShot and preset hotswap use the same keybind controls as the other actions.
-- Missing custom FX warn without blocking preset installation; known catalogue dependencies still download. Long import instructions are no longer truncated.
-- Successful updates place the new manager on the Desktop and remove the unchanged previous EXE. Returning to stable resets beta opt-in. Presets and configuration are preserved.
-
-**STABLE AND BETA**
-- This stable build supports MSFS 2020 and 2024. XP12, TAA NR and Vulkan NR remain beta-only.
-- Beta installers are built from the beta branch and published as prereleases. They are only offered after enabling beta in Settings. Stable users are offered stable releases only; nothing installs until you choose it.
-- Return to stable always checks the current published releases and defaults to the latest stable build. Successful return turns beta opt-in off.
-
-**INSTALLING**
-- Download this update manually from GitHub if 0.21.2 reports no update. Its release-list parsing issue is fixed in this version; subsequent update checks and channel switches use the corrected code.
-- Updates started by this manager save the new EXE to Desktop and remove the unchanged old EXE after success. The first update started by 0.21.2 still uses that older updater and may retain its previous EXE.
-- Close your simulators and update normally; a restore/reinstall is normally unnecessary. Repair continues to use files from the matching manager version.
-- If installer verification reports a missing or damaged file, download a fresh official EXE and check antivirus protection history. Do not replace individual DLLs from unrelated websites.
-
-**ANTIVIRUS UPDATE**
-- Bitdefender reviewed the submitted OptiShade sample and confirmed it is clean and no longer detected by its engines.
-- Other antivirus reports remain under investigation. If you still see a warning, include the app version, affected filename and detection name with your diagnostic ZIP.
-
-Please send diagnostic ZIPs, with a description of the issue, to the **diagnostic zips** channel in **BlackBox Discord**: https://discord.gg/6hjR9cSsy7
+**Antivirus update**
+- Bitdefender confirmed the submitted sample was clean. I am investigating the newer Windows Defender reports.

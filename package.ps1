@@ -1,5 +1,11 @@
-﻿$ErrorActionPreference='Stop'
+$ErrorActionPreference='Stop'
 $root=$PSScriptRoot;$payload=Join-Path $root 'installer/PayloadFusion'
+. "$root/build-identity.ps1"
+# This test build retains the pinned upstream MFG DLL and its Backspace menu.
+# A future controls-only replacement requires its separate verification receipt.
+$native=AssertOptiShadeCandidateBuild $root
+[void][IO.Directory]::CreateDirectory($payload)
+$buildVersion='0.21.4';$buildChannel='stable'
 Copy-Item -LiteralPath "$root/optiscaler/x64/Release/OptiScaler.dll" -Destination "$payload/winmm.dll" -Force
 Copy-Item -LiteralPath "$root/reshade/bin/x64/Release/ReShade64.dll" -Destination "$payload/ReShade64.dll" -Force
 if((Get-FileHash "$root/installer/OptionalMFG/RTXMFG.dll").Hash -ne 'E9CA3587854EEB723E0579F7DDF6CFB1E6CF4BED79B0D75BC716003ED98FE040'){throw 'Pinned RTXMFG payload hash mismatch'}
@@ -88,6 +94,7 @@ foreach($relative in @('OptiShadeData/Vulkan','OptiShadeData/Shaders/OptiShadeTa
 # Fail closed on local evidence accidentally left in the embedded payload.
 $private=@(Get-ChildItem -LiteralPath $payload -File -Recurse|Where-Object {$_.Name -match '(?i)(diagnostics-|Import-result-|\.dmp$|\.log$|Codex_|Licensing-review-|Ownership-licensing-audit|Release-.*draft|test-results|test-notes)'})
 if($private.Count){throw ('Private/debug files found in package staging: '+($private.Name -join ', '))}
+@{Version=$buildVersion;Channel=$buildChannel;SourceHead=$native.SourceHead;SourceSHA256=$native.SourceSHA256;BuiltUtc=$native.BuiltUtc;NativeBinaries=$native.Binaries}|ConvertTo-Json -Depth 5|Set-Content -LiteralPath "$payload/OptiShadeData/BuildIdentity.json" -Encoding UTF8
 $files=@(Get-ChildItem $payload -File -Recurse|Where-Object {$_.FullName -ne (Join-Path $payload 'files.json')}|ForEach-Object {[pscustomobject]@{Path=$_.FullName.Substring($payload.Length+1);Hash=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash}})
 $files|ConvertTo-Json|Set-Content "$payload/files.json" -Encoding UTF8
 $preview=Join-Path $root 'dist'
@@ -96,9 +103,10 @@ Push-Location "$root/installer"
 try{
  & go test -count=1 -v .
  if($LASTEXITCODE){throw 'Embedded payload verification failed. Installer was not built.'}
- & go build -trimpath -ldflags '-H=windowsgui -s -w' -o "$preview/Optishade 0.21.3 stable.exe" .
+ & go build -trimpath -ldflags '-H=windowsgui -s -w' -o "$preview/OptiShade_Version_0.21.4.exe" .
  if($LASTEXITCODE){throw 'Installer build failed.'}
 }finally{Pop-Location}
+TestOptiShadeFinalPackage "$preview/OptiShade_Version_0.21.4.exe" $root $buildChannel $buildVersion
 Write-Output "Built: $preview"
 
 
