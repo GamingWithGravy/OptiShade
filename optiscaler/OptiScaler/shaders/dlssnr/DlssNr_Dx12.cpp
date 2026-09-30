@@ -41,6 +41,7 @@
 #include "DlssNr_ResidualPair.h"
 #include "../output_scaling/OS_Dx12.h"
 #include "../../../../shared/TaaBridge.h"
+#include "../../../../shared/DeferredSrQuality.h"
 
 static std::atomic<ULONGLONG> g_lastNativeNrInput { 0 };
 
@@ -1934,10 +1935,23 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
     if (!std::isfinite(workScale))
         workScale = 1.0f;
     workScale = workScale < 0.25f ? 0.25f : (workScale > 2.0f ? 2.0f : workScale);
-    const auto workWidth = (unsigned int) (width * workScale + 0.5f);
-    const auto workHeight = (unsigned int) (height * workScale + 0.5f);
+    auto workWidth = (unsigned int) (width * workScale + 0.5f);
+    auto workHeight = (unsigned int) (height * workScale + 0.5f);
+    if (frame.EstimatedTaaGuides)
+    {
+        const auto taaWork = optishade::taa::TaaWorkingExtent(width, height);
+        if (!frame.FinishedPicture || !frame.IndependentCommands || !taaWork.valid())
+        {
+            ReportSkipOnce("invalid bounded TAA working extent or command contract");
+            device->Release();
+            return;
+        }
+        workWidth = taaWork.width;
+        workHeight = taaWork.height;
+        workScale = static_cast<float>(workWidth) / width;
+    }
     const bool reduced = workWidth != width || workHeight != height;
-    const unsigned int configuredPasses =
+    const unsigned int configuredPasses = frame.EstimatedTaaGuides ? 1u :
         std::clamp(cfg.DlssNrPasses.value_or_default(),
                    1u, cfg.DlssNrUnlockPasses.value_or_default() ? DlssNr::MaxPassCount
                                                                : DlssNr::DefaultMaxPassCount);
@@ -2920,7 +2934,9 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
         resolveParams.ColourStrength = cfg.DlssNrColourStrength.value_or_default();
         resolveParams.DebugView = cfg.DlssNrDebugView.value_or_default();
         resolveParams.MaxRatio = cfg.DlssNrMaxRatio.value_or_default();
-        resolveParams.Transfer = cfg.DlssNrTransfer.value_or_default();
+        // Carry only the model's change back to the native ultrawide picture.
+        // Classic transfer would interpret the input downsample's blur as an edit.
+        resolveParams.Transfer = frame.EstimatedTaaGuides && reduced ? 1u : cfg.DlssNrTransfer.value_or_default();
         resolveParams.DebugScale = cfg.DlssNrWhitePointScale.value_or_default();
         resolveParams.Passthrough = isHdrBuffer ? 0u : 1u;
         resolveParams.ReversibleMode = cfg.DlssNrReversibleMode.value_or_default();
@@ -2955,6 +2971,7 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
         };
 
         static ComposeReport loggedCompose {};
+        static ULONGLONG lastComposeReport = 0;
 
         // Quantised to the precision it is printed at. Comparing raw floats logged 2376 lines in one
         // Enshrouded session, because a measured white point drifts continuously and every drift was a
@@ -2972,16 +2989,21 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
                                          g_nr.workHeight,
                                          effectivePasses };
 
-        if (!loggedCompose.valid || loggedCompose.whitePoint != composeNow.whitePoint ||
+        const bool composeChanged = !loggedCompose.valid || loggedCompose.whitePoint != composeNow.whitePoint ||
             loggedCompose.transfer != composeNow.transfer || loggedCompose.colour != composeNow.colour ||
             loggedCompose.maxRatio != composeNow.maxRatio ||
             loggedCompose.passthrough != composeNow.passthrough ||
             loggedCompose.debugView != composeNow.debugView ||
             loggedCompose.compareMode != composeNow.compareMode ||
             loggedCompose.residual != composeNow.residual || loggedCompose.workW != composeNow.workW ||
-            loggedCompose.workH != composeNow.workH || loggedCompose.passes != composeNow.passes)
+            loggedCompose.workH != composeNow.workH || loggedCompose.passes != composeNow.passes;
+        // Dynamic exposure and interleaved views can change every frame. Retain
+        // first effective state, then at most one composition summary per minute.
+        const auto composeTime = GetTickCount64();
+        if (composeChanged && (!loggedCompose.valid || composeTime - lastComposeReport >= 60000))
         {
             loggedCompose = composeNow;
+            lastComposeReport = composeTime;
             LOG_INFO("DLSS-NR composition: paper white {:.2f}x, detail {:.2f}, colour {:.2f}, guard "
                      "{:.1f}x, colour transform {}, transfer {}, model {}x{}, passes {}, debug view {}, compare {}",
                      composeNow.whitePoint, composeNow.transfer, composeNow.colour, composeNow.maxRatio,
@@ -4100,13 +4122,7 @@ extern "C" __declspec(dllexport) void OptiShadeTaaSubmit(const ostaa::Frame* fra
 {
     if (!OptiShadeTaaRequested()) return;
     std::lock_guard<std::recursive_mutex> guard(g_nrMutex);
-    auto* cfg=Config::Instance();
-    const auto scale=cfg->DlssNrWorkingScale;
-    const auto passes=cfg->DlssNrPasses;
-    // Full-resolution model input avoids the shadow shimmer seen in reduced-resolution tests.
-    cfg->DlssNrWorkingScale=1.0f;cfg->DlssNrPasses=1u;
     DlssNr::Taa::Submit(frame);
-    cfg->DlssNrWorkingScale=scale;cfg->DlssNrPasses=passes;
 }
 
 // Read-only diagnostics for the OptiShade hardware test.

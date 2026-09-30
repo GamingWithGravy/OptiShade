@@ -98,6 +98,10 @@ struct DlssNrFrameInfo
     uint32_t OutputArrivalState = 0;
     float WhitePointOverride = 0.0f;
     bool IndependentCommands = false; // owned command list, no game root signature to restore
+    // ReShade's estimated TAA guides use a single, bounded finished-picture pass.
+    // This route contract overrides working size only for that caller; it never
+    // edits the user's stored working-scale or pass-count settings.
+    bool EstimatedTaaGuides = false;
     // Reset temporal history when switching between ordinary SR and Ray Reconstruction.
     bool RayReconstruction = false;
 

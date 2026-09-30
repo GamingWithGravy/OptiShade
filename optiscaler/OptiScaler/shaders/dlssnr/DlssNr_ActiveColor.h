@@ -2,6 +2,7 @@
 
 #include <d3d12.h>
 #include <optional>
+#include "../../../../shared/NrAdmission.h"
 
 namespace DlssNr
 {
@@ -11,17 +12,25 @@ struct ColorExtent
     unsigned int height;
 };
 
+inline const char* PreSrColorExtentReason(const D3D12_RESOURCE_DESC& allocation,
+                                         unsigned int renderWidth, unsigned int renderHeight,
+                                         unsigned int baseX = 0, unsigned int baseY = 0)
+{
+    if (const auto* reason=optishade::nr_admission::Texture2DReason(allocation)) return reason;
+    if (baseX || baseY) return "non-zero colour origin needs explicit guide/colour mapping";
+    if (!renderWidth && !renderHeight) return nullptr;
+    if (!renderWidth || !renderHeight) return "only one active dimension was supplied";
+    if (renderWidth>allocation.Width || renderHeight>allocation.Height) return "active extent exceeds texture allocation";
+    return nullptr;
+}
+
 // NGX reports the active image separately from the allocation. No preset names or standard
 // resolutions belong here. Non-zero origins still need a separate guide/colour-offset integration.
 inline std::optional<ColorExtent> PreSrColorExtent(const D3D12_RESOURCE_DESC& allocation,
                                                   unsigned int renderWidth, unsigned int renderHeight,
                                                   unsigned int baseX = 0, unsigned int baseY = 0)
 {
-    if (allocation.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE2D ||
-        allocation.SampleDesc.Count != 1 || allocation.DepthOrArraySize != 1 ||
-        allocation.Width == 0 || allocation.Width > D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION ||
-        allocation.Height == 0 || allocation.Height > D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION ||
-        baseX != 0 || baseY != 0)
+    if (PreSrColorExtentReason(allocation,renderWidth,renderHeight,baseX,baseY))
         return std::nullopt;
 
     if (renderWidth == 0 && renderHeight == 0)

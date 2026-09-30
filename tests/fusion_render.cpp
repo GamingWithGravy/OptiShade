@@ -57,7 +57,8 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,LPWSTR args,int){
         auto finish=[&](){Check(queue->Signal(fence.Get(),++serial));Check(fence->SetEventOnCompletion(serial,event));if(WaitForSingleObject(event,5000)!=WAIT_OBJECT_0)throw std::runtime_error("Host GPU timeout");};
         auto submit=[&](){Check(cmd->Close());ID3D12CommandList* list[]={cmd.Get()};queue->ExecuteCommandLists(1,list);finish();};
         ComPtr<IDXGISwapChain1> secondary;HWND secondWindow=nullptr;uint64_t ownerGeneration=0;
-        for(int tick=0;!quitting&&(!automatic||tick<900);tick++){
+        const bool presetValidation=wcsstr(args,L"--preset-validation")!=nullptr;
+        for(int tick=0;!quitting&&(!automatic||tick<(presetValidation?1020:900));tick++){
             read(&snapshot,sizeof(snapshot)); // Request a fresh published snapshot, as the menu does.
             MSG msg;while(PeekMessageW(&msg,nullptr,0,0,PM_REMOVE)){TranslateMessage(&msg);DispatchMessageW(&msg);}
             if(automatic&&wcsstr(args,L"--multi")){
@@ -70,7 +71,7 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,LPWSTR args,int){
                 if(secondary){Check(secondary->Present(0,0));if(tick==65)Check(secondary->ResizeBuffers(3,450,320,DXGI_FORMAT_UNKNOWN,0));}
                 if(tick==550){finish();secondary.Reset();DestroyWindow(secondWindow);if(snapshot.generation!=ownerGeneration)throw std::runtime_error("Secondary runtime stole the effects controls");fprintf(report,"Secondary Present, resize and teardown keep primary effects owner: PASS\n");}
             }
-            if(automatic&&tick==180){bool range=false;for(uint32_t i=0;i<snapshot.uniforms;i++){auto& u=snapshot.uniform[i];if(!strcmp(u.effect,"OptiShade_Test.fx")&&!strcmp(u.name,"Gain"))range=u.hasRange&&u.minimum==0.f&&u.maximum==4.f;}if(!range)throw std::runtime_error("Shader slider range was not published");fprintf(report,"Shader-authored slider limits reach the UI: PASS\n");}
+            if(automatic&&tick==180){bool range=false;for(uint32_t i=0;i<snapshot.uniforms;i++){auto& u=snapshot.uniform[i];if(!strcmp(u.effect,"OptiShade_Test.fx")&&!strcmp(u.name,"Gain"))range=u.hasRange&&u.minimum==0.f&&u.maximum==4.f;}if(!range)throw std::runtime_error("Shader slider range was not published");fprintf(report,"Shader-authored slider limits reach the UI: PASS\n");if(presetValidation&&(snapshot.presetState!=1||!snapshot.presetApplied))throw std::runtime_error("Valid preset did not report compiled technique success");}
             if(automatic&&(tick==200||tick==320||tick==360)){
                 if(!read(&snapshot,sizeof(snapshot)))throw std::runtime_error("Effects runtime not connected");
                 osfx::Command c{};c.version=osfx::Version;c.generation=snapshot.generation;
@@ -120,6 +121,16 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,LPWSTR args,int){
             }
             if(automatic&&tick==790){read(&snapshot,sizeof(snapshot));if(!snapshot.performanceMode||snapshot.loading||!snapshot.compileOK)throw std::runtime_error("Performance mode did not compile successfully");fprintf(report,"Performance Mode enabled and compiled: PASS\n");}
             if(automatic&&tick==880){read(&snapshot,sizeof(snapshot));if(snapshot.performanceMode||snapshot.loading||!snapshot.compileOK)throw std::runtime_error("Performance mode did not return to editable mode");fprintf(report,"Performance Mode disabled and compiled: PASS\n");}
+            if(automatic&&presetValidation&&tick==890){
+                auto preset=std::filesystem::absolute(L"OptiShadeData/Presets/Partial test.ini");
+                FILE* fixture=nullptr;_wfopen_s(&fixture,preset.c_str(),L"wb");if(!fixture)throw std::runtime_error("Could not create partial preset fixture");
+                fputs("Techniques=OptiShade_Test@OptiShade_Test.fx,MissingTechnique@OptiShade_Test.fx\n[OptiShade_Test.fx]\nGain=1.5\n",fixture);fclose(fixture);
+                osfx::Command c{};c.version=osfx::Version;c.generation=snapshot.generation;c.kind=osfx::Preset;auto path=preset.u8string();strcpy_s(c.path,path.c_str());if(!send(&c,sizeof(c)))throw std::runtime_error("Partial preset test request rejected");
+            }
+            if(automatic&&presetValidation&&tick==1000){
+                if(snapshot.loading||snapshot.presetState!=2||snapshot.presetApplied!=1||snapshot.presetMissing!=1||!strstr(snapshot.presetReport,"MissingTechnique@OptiShade_Test.fx"))throw std::runtime_error("Compiled missing-technique status did not reach effects bridge");
+                fprintf(report,"PASS: compiled valid-plus-missing techniques report partial application with exact missing identity\n");
+            }
             if(automatic&&tick==24){
                 finish();
                 const HRESULT nullQueues=swap->ResizeBuffers1(3,960,640,DXGI_FORMAT_UNKNOWN,0,nullptr,nullptr);

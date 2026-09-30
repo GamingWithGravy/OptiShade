@@ -10,5 +10,5 @@ struct Frame {
     uint64_t color = 0, colorView = 0, depth = 0, depthView = 0, motion = 0, motionView = 0;
     uint32_t width = 0, height = 0;
 };
-using Submit = int (*)(const Frame*); // -1 refused/failed, 0 warm-up, 1 composed
+using Submit = int (*)(const Frame*); // -2 unsupported/not requested, -1 fatal model/submission failure, 0 warm-up, 1 composed
 }

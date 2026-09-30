@@ -651,12 +651,13 @@ std::optional<double> LastGpuTimeVk() { return g_vk.lastGpuTime; }
 
 static void EvaluateAtSeamVk(VkCommandBuffer cmdBuffer, NVSDK_NGX_Parameter* params, VkInstance instance,
                              VkPhysicalDevice physicalDevice, VkDevice device, bool beforeSr, bool rayReconstruction,
-                             bool& applied, bool* handled = nullptr)
+                             bool& applied, bool* handled = nullptr,
+                             const optishade::vknr::GuideOptions* guideOptions = nullptr)
 {
     applied = false;
     auto& cfg = *Config::Instance();
 
-    if (cfg.DlssNrDeferredDlss.value_or_default() && !rayReconstruction)
+    if (!guideOptions && cfg.DlssNrDeferredDlss.value_or_default() && !rayReconstruction)
     {
         static bool warnedDeferred = false;
         if (!warnedDeferred)
@@ -668,7 +669,7 @@ static void EvaluateAtSeamVk(VkCommandBuffer cmdBuffer, NVSDK_NGX_Parameter* par
         return;
     }
 
-    if (cfg.DlssNrFinishedPicture.value_or_default())
+    if (!guideOptions && cfg.DlssNrFinishedPicture.value_or_default())
         return; // finished-picture composition requires a native D3D12 swapchain
 
     if (!cfg.DlssNrEnabled.value_or_default())
@@ -841,12 +842,12 @@ static void EvaluateAtSeamVk(VkCommandBuffer cmdBuffer, NVSDK_NGX_Parameter* par
     // reduced path below never runs, so the default is byte-for-byte what it was.
     // Above 1 the model supersamples (up to 2x): the proxy is enlarged, the model runs above native,
     // and superDown averages the answer back. Vulkan matches the D3D12 cap.
-    float workScale = cfg.DlssNrWorkingScale.value_or_default();
+    float workScale = guideOptions ? guideOptions->workingScale : cfg.DlssNrWorkingScale.value_or_default();
     workScale = std::isfinite(workScale) ? std::clamp(workScale, 0.25f, 2.0f) : 1.0f;
     const uint32_t workWidth = std::max(1u, (uint32_t) (width * workScale + 0.5f));
     const uint32_t workHeight = std::max(1u, (uint32_t) (height * workScale + 0.5f));
     const bool reduced = workWidth != width || workHeight != height;
-    const unsigned int passes = std::clamp(cfg.DlssNrPasses.value_or_default(),
+    const unsigned int passes = guideOptions ? guideOptions->passes : std::clamp(cfg.DlssNrPasses.value_or_default(),
                                            1u, cfg.DlssNrUnlockPasses.value_or_default() ? DlssNr::MaxPassCount
                                                                                        : DlssNr::DefaultMaxPassCount);
 
@@ -873,8 +874,10 @@ static void EvaluateAtSeamVk(VkCommandBuffer cmdBuffer, NVSDK_NGX_Parameter* par
     {
         // A second NGX evaluate need not mean the previous command buffer was submitted.
         // Poll the GPU marker without waiting; repeated calls during warm-up stay clean.
-        if (vkGetEventStatus(device, g_vk.creationReady) != VK_EVENT_SET)
+        const auto marker=vkGetEventStatus(device,g_vk.creationReady);
+        if (marker == VK_EVENT_RESET)
             return;
+        if (marker != VK_EVENT_SET) { Fail("model creation GPU marker failed; restart required"); return; }
         g_vk.creationPending = false;
     }
 
@@ -1189,7 +1192,7 @@ static void EvaluateAtSeamVk(VkCommandBuffer cmdBuffer, NVSDK_NGX_Parameter* par
     encode.WhitePoint = whitePoint;
     encode.Passthrough = linearHdr ? 0u : 1u;
     encode.ReversibleMode = cfg.DlssNrReversibleMode.value_or_default();
-    encode.ApplyModel = cfg.DlssNrApplyModel.value_or_default() ? 1u : 0u;
+    encode.ApplyModel = (guideOptions ? guideOptions->applyModel : cfg.DlssNrApplyModel.value_or_default()) ? 1u : 0u;
     encode.DebugView = cfg.DlssNrDebugView.value_or_default();
     encode.CompareMode = std::min(cfg.DlssNrCompare.value_or_default(), 2u);
     encode.CompareSplit = std::clamp(cfg.DlssNrCompareSplit.value_or_default(), 0.0f, 1.0f);
@@ -1532,11 +1535,20 @@ void EvaluateAfterUpscaleVk(VkCommandBuffer cmd, NVSDK_NGX_Parameter* params, Vk
     EvaluateAtSeamVk(cmd, params, instance, pd, device, false, rayReconstruction, applied);
 }
 
-int EvaluateGuidesVk(const osvtaa::Frame& f, VkInstance instance, VkPhysicalDevice pd, VkDevice device)
+int EvaluateGuidesVk(const osvtaa::Frame& f, VkInstance instance, VkPhysicalDevice pd, VkDevice device,
+                    const optishade::vknr::GuideOptions& options)
 {
+    const auto working=optishade::vknr::working_extent(f.width,f.height,options);
+    static ULONGLONG lastOptionsReport=0;const auto optionTime=GetTickCount64();
+    if(!lastOptionsReport||optionTime-lastOptionsReport>=5000){
+        lastOptionsReport=optionTime;
+        LOG_INFO("XP12 Vulkan NR options: requested passes={} scale={} applyModel={}; working={}x{} accepted={}; route=estimated-guides post-effects-input (saved D3D12 route flags unchanged)",
+            options.passes,options.workingScale,options.applyModel,working.width,working.height,working.supported);
+    }
+    if(!working.supported)return -2;
     static ULONGLONG lastSubmission = 0;
     const auto now = GetTickCount64();
-    if (!lastSubmission || now - lastSubmission > 500) g_vk.reset = true;
+    if (!lastSubmission || now - lastSubmission > 500) ResetTaaHistoryVk();
     lastSubmission = now;
     const auto wrap = [&](uint64_t image, uint64_t view, VkFormat format, bool writable) {
         NVSDK_NGX_Resource_VK r{};
@@ -1565,12 +1577,12 @@ int EvaluateGuidesVk(const osvtaa::Frame& f, VkInstance instance, VkPhysicalDevi
     params.Set(NVSDK_NGX_Parameter_MV_Scale_Y, float(f.height));
     params.Set(NVSDK_NGX_Parameter_DLSS_Feature_Create_Flags, 0u);
     bool applied = false;
-    EvaluateAtSeamVk((VkCommandBuffer)f.commands, &params, instance, pd, device, false, false, applied);
+    EvaluateAtSeamVk((VkCommandBuffer)f.commands, &params, instance, pd, device, false, false, applied, nullptr, &options);
     // Sparse model readback belongs to diagnostics builds, not normal presentation.
     return applied ? 1 : (g_vk.failed ? -1 : 0);
 }
 
-void ResetTaaHistoryVk() { g_vk.reset = true; }
+void ResetTaaHistoryVk() { std::lock_guard<std::mutex> lock(g_vkMutex);g_vk.reset = true; }
 
 void ShutdownVk(bool deviceAlive)
 {

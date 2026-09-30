@@ -22,7 +22,7 @@ $window.FindName('Close').Add_Click({$window.Close()})
 $window.FindName('OpenLocation').Add_Click({try{Start-Process -FilePath (Join-Path $env:WINDIR 'explorer.exe') -ArgumentList ('/select,"'+$script:target+'"')}catch{$window.FindName('Status').Text='Saved to: '+$script:target+' (Explorer could not open.)'}})
 $window.FindName('DoneClose').Add_Click({$window.Close()})
 $window.FindName('DragHeader').Add_MouseLeftButtonDown({$window.DragMove()})
-$window.FindName('Version').Text=if($settings.Rollback){'Reverting to Version '+$settings.Version}else{'Updating to Version '+$settings.Version}
+$window.FindName('Version').Text=if($settings.Rollback){'Reverting to Version '+(GetOptiShadeDisplayVersion $settings.Version)}else{'Updating to Version '+(GetOptiShadeDisplayVersion $settings.Version)}
 $window.FindName('Notes').Text=$settings.Notes
 $script:started=$false;$script:updating=$true
 $script:rollbackLogs=@()
@@ -76,7 +76,7 @@ $window.Add_ContentRendered({
  try{
   $space=@{}
   $downloadStore=if($settings.Store){[string]$settings.Store}else{Join-Path $env:LOCALAPPDATA 'OptiShade'}
-  AssertOptiShadeDownloadChannel $channel $downloadStore
+  [void](AssertOptiShadeUpdateRequest $settings $downloadStore)
   foreach($requirement in @(@{Path=(Split-Path $Config);Bytes=1GB},@{Path=$desktop;Bytes=512MB})){
    $drive=[IO.Path]::GetPathRoot([IO.Path]::GetFullPath($requirement.Path));$space[$drive]+=$requirement.Bytes
   }
@@ -109,7 +109,7 @@ $window.Add_ContentRendered({
   $action=if($settings.Rollback){'Rollback'}else{'Update'}
   $store=if($settings.Store){[string]$settings.Store}else{Join-Path $env:LOCALAPPDATA 'OptiShade'}
   $window.FindName('Status').Text='Installation complete. Waiting for the previous manager to close before removing its EXE...'
-  $cleanup=CompleteOptiShadeManagerUpdate $previous $settings.PreviousHash $script:target $settings.SHA256 $store $channel { $window.Dispatcher.Invoke([Action]{},[Windows.Threading.DispatcherPriority]::Background) }
+  $cleanup=CompleteOptiShadeManagerUpdate $previous $settings.PreviousHash $script:target $settings.SHA256 $store $channel { $window.Dispatcher.Invoke([Action]{},[Windows.Threading.DispatcherPriority]::Background) } -Version $settings.Version
   $window.FindName('Status').Text="$action complete. The selected OptiShade EXE is on your Desktop:`n$script:target`nUse this EXE from now on.`n$cleanup"
   $window.FindName('OpenLocation').Visibility='Visible'
   Remove-Item -LiteralPath $download -Force

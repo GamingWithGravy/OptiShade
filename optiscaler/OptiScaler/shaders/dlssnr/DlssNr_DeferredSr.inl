@@ -29,9 +29,13 @@ struct HalfRate
 };
 struct Generation
 {
+    uint64_t identity = 0, providerRetryAt = 0;
     ID3D12Device* device = nullptr;
     ID3D12CommandQueue* queue = nullptr; // identity/reference only; no private submissions
     unsigned w = 0, h = 0, outW = 0, outH = 0, flags = 0;
+    NVSDK_NGX_PerfQuality_Value quality = NVSDK_NGX_PerfQuality_Value_MaxPerf;
+    bool qualityAuthoritative = false;
+    const NVSDK_NGX_Parameter* qualityCaller = nullptr; // borrowed identity only, never dereferenced
     DXGI_FORMAT inputFormat {}, outputFormat {};
     ID3D12Resource *edited = nullptr, *residualInput = nullptr, *residualOutput = nullptr, *clean = nullptr,
                    *composed = nullptr, *exposure = nullptr, *readback = nullptr;
@@ -101,6 +105,8 @@ struct Use
 std::unique_ptr<Generation> current;
 std::vector<std::unique_ptr<Generation>> retired;
 std::string status = "not started";
+optishade::nr_admission::Reasons statusReasons, contractReasons;
+uint64_t callerIdentity = 0, nextGenerationIdentity = 0;
 struct Pending
 {
     ID3D12GraphicsCommandList* cmd = nullptr;
@@ -114,9 +120,11 @@ struct Pending
 
 void Say(const std::string& text)
 {
-    if (status == text) return;
     status = text;
-    LOG_INFO("DLSS-NR deferred DLSS: {}", text);
+    uint64_t suppressed=0;
+    const auto generation=current?current->identity:0;
+    if(statusReasons.Permit(optishade::nr_admission::ReasonKey(text),callerIdentity,generation,GetTickCount64(),suppressed))
+        LOG_INFO("DLSS-NR deferred DLSS: {}; callerParameters={:X}, generation={}, repeated={}",text,callerIdentity,generation,suppressed);
 }
 void Cancel()
 {
@@ -139,6 +147,42 @@ float Float(NVSDK_NGX_Parameter* p, const char* key, float fallback)
     float value = fallback;
     p->Get(key, &value);
     return std::isfinite(value) ? value : fallback;
+}
+
+void Contract(const char* reason, ID3D12GraphicsCommandList* cmd, NVSDK_NGX_Parameter* source,
+              ID3D12Resource* color, ID3D12Resource* output, ID3D12Resource* depth, ID3D12Resource* motion,
+              unsigned long long epoch, bool privateJob, ID3D12CommandQueue* queue)
+{
+    uint64_t suppressed=0;
+    const auto generation=current?current->identity:0;
+    if(!contractReasons.Permit(optishade::nr_admission::ReasonKey(reason),callerIdentity,generation,GetTickCount64(),suppressed))return;
+    LOG_INFO("Deferred NR contract: {}; callerParameters={:X}; generation={}; epoch={}; commandType={}; privateJob={}; repeated={}; feature/view identity unavailable at this seam",
+        reason,callerIdentity,generation,epoch,cmd?(int)cmd->GetType():-1,privateJob,suppressed);
+    Microsoft::WRL::ComPtr<ID3D12Device> commandDevice,queueDevice;
+    if(cmd)cmd->GetDevice(IID_PPV_ARGS(&commandDevice));
+    if(queue)queue->GetDevice(IID_PPV_ARGS(&queueDevice));
+    const auto commandIdentity=optishade::ReShadeDeviceIdentity(commandDevice.Get());
+    const auto queueIdentity=optishade::ReShadeDeviceIdentity(queueDevice.Get());
+    LOG_INFO("Deferred NR ownership: command={:X}; queue={:X}; queueType={}; commandDevice={:X}; queueDevice={:X}; canonicalCommandDevice={:X}; canonicalQueueDevice={:X}",
+        (uintptr_t)cmd,(uintptr_t)queue,queue?(int)queue->GetDesc().Type:-1,(uintptr_t)commandDevice.Get(),(uintptr_t)queueDevice.Get(),(uintptr_t)commandIdentity.Get(),(uintptr_t)queueIdentity.Get());
+    if(source)LOG_INFO("Deferred NR requested contract: active={}x{}; quality={}; flags={:X}; aliasedColourOutput={}; colourArrivalOverride={}; preSR={}; deferred={}; finishedPicture={}",
+        UInt(source,NVSDK_NGX_Parameter_DLSS_Render_Subrect_Dimensions_Width),UInt(source,NVSDK_NGX_Parameter_DLSS_Render_Subrect_Dimensions_Height),
+        UInt(source,NVSDK_NGX_Parameter_PerfQualityValue,0xFFFFFFFFu),UInt(source,NVSDK_NGX_Parameter_DLSS_Feature_Create_Flags),color==output,
+        Config::Instance()->ColorResourceBarrier.value_or(-1),Config::Instance()->DlssNrRunBeforeSr.value_or_default(),
+        Config::Instance()->DlssNrDeferredDlss.value_or_default(),Config::Instance()->DlssNrFinishedPicture.value_or_default());
+    const char* names[]={"colour","output","depth","motion"};unsigned index=0;
+    for(auto* resource:{color,output,depth,motion}){
+        const char* name=names[index++];if(!resource){LOG_INFO("Deferred NR {}: absent",name);continue;}
+        const auto desc=resource->GetDesc();Microsoft::WRL::ComPtr<ID3D12Device> owner;resource->GetDevice(IID_PPV_ARGS(&owner));
+        const auto identity=optishade::ReShadeDeviceIdentity(owner.Get());
+        LOG_INFO("Deferred NR {}: resource={:X}; allocation={}x{}; dimension={}; format={}; mip={}; samples={}/{}; array={}; subresource=0; canonicalDevice={:X}",
+            name,(uintptr_t)resource,desc.Width,desc.Height,(int)desc.Dimension,(int)desc.Format,desc.MipLevels,desc.SampleDesc.Count,desc.SampleDesc.Quality,desc.DepthOrArraySize,(uintptr_t)identity.Get());
+    }
+    if(source)LOG_INFO("Deferred NR subrect origins: colour={},{} depth={},{} motion={},{} output={},{}",
+        UInt(source,NVSDK_NGX_Parameter_DLSS_Input_Color_Subrect_Base_X),UInt(source,NVSDK_NGX_Parameter_DLSS_Input_Color_Subrect_Base_Y),
+        UInt(source,NVSDK_NGX_Parameter_DLSS_Input_Depth_Subrect_Base_X),UInt(source,NVSDK_NGX_Parameter_DLSS_Input_Depth_Subrect_Base_Y),
+        UInt(source,NVSDK_NGX_Parameter_DLSS_Input_MV_SubrectBase_X),UInt(source,NVSDK_NGX_Parameter_DLSS_Input_MV_SubrectBase_Y),
+        UInt(source,NVSDK_NGX_Parameter_DLSS_Output_Subrect_Base_X),UInt(source,NVSDK_NGX_Parameter_DLSS_Output_Subrect_Base_Y));
 }
 
 bool Allocate(Generation& g)
@@ -270,6 +314,8 @@ void Before(ID3D12GraphicsCommandList* cmd, NVSDK_NGX_Parameter* source,
             unsigned long long epoch, unsigned long long submittedEpoch,
             ID3D12CommandQueue* queue, bool privateJob = false)
 {
+    callerIdentity=reinterpret_cast<uintptr_t>(source);
+    if(!cmd||!source){Cancel();Say("inactive: missing command list or NGX parameters");return;}
     if (pending.cmd && current)
     {
         LOG_DEBUG("DLSS-NR deferred: Before entry with a stale pending (previous After never ran) -> reset. epoch {}", epoch);
@@ -312,9 +358,14 @@ void Before(ID3D12GraphicsCommandList* cmd, NVSDK_NGX_Parameter* source,
     const bool wantsHalf = cfg.DlssNrResidualFg.value_or_default() && !privateJob &&
                            !cfg.DlssNrFinishedPicture.value_or_default();
     const bool sampleAndHold = wantsHalf && motion == nullptr;
+    auto* ownerQueue = queue ? queue : (ID3D12CommandQueue*)State::Instance().currentCommandQueue;
+    auto rejectContract=[&](const char* reason){
+        Say(std::string("inactive: ")+reason);
+        Contract(reason,cmd,source,color,output,depth,motion,epoch,privateJob,ownerQueue);
+    };
     if (!color || !output || !depth || (!motion && !sampleAndHold) || color == output)
     {
-        Say("inactive: distinct Color/Output, depth and motion are required");
+        rejectContract("distinct Color/Output, depth and motion are required");
         return;
     }
     for (const char* key : { NVSDK_NGX_Parameter_DLSS_Input_Color_Subrect_Base_X,
@@ -322,52 +373,80 @@ void Before(ID3D12GraphicsCommandList* cmd, NVSDK_NGX_Parameter* source,
          NVSDK_NGX_Parameter_DLSS_Input_Depth_Subrect_Base_Y, NVSDK_NGX_Parameter_DLSS_Input_MV_SubrectBase_X,
          NVSDK_NGX_Parameter_DLSS_Input_MV_SubrectBase_Y, NVSDK_NGX_Parameter_DLSS_Output_Subrect_Base_X,
          NVSDK_NGX_Parameter_DLSS_Output_Subrect_Base_Y })
-        if (UInt(source, key) != 0) { Say("inactive: non-zero colour/guide/output offsets"); return; }
+        if (UInt(source, key) != 0) { rejectContract("non-zero colour/guide/output offsets"); return; }
     const auto inDesc = color->GetDesc(), outDesc = output->GetDesc();
+    const auto activeWidth=UInt(source,NVSDK_NGX_Parameter_DLSS_Render_Subrect_Dimensions_Width);
+    const auto activeHeight=UInt(source,NVSDK_NGX_Parameter_DLSS_Render_Subrect_Dimensions_Height);
+    if(const auto* reason=PreSrColorExtentReason(inDesc,activeWidth,activeHeight)){rejectContract(reason);return;}
+    if(const auto* reason=PreSrColorExtentReason(outDesc,0,0)){rejectContract(reason);return;}
     const auto active = PreSrColorExtent(inDesc,
-        UInt(source, NVSDK_NGX_Parameter_DLSS_Render_Subrect_Dimensions_Width),
-        UInt(source, NVSDK_NGX_Parameter_DLSS_Render_Subrect_Dimensions_Height));
-    if (!active || !PreSrColorExtent(outDesc, 0, 0) || inDesc.MipLevels != 1 || outDesc.MipLevels != 1 ||
-        active->width > outDesc.Width || active->height > outDesc.Height)
-    {
-        Say("inactive: unsupported active input/output dimensions");
-        return;
-    }
+        activeWidth,activeHeight);
+    if(inDesc.MipLevels!=1||outDesc.MipLevels!=1){rejectContract("deferred colour/output requires one mip");return;}
+    if(!active||active->width>outDesc.Width||active->height>outDesc.Height){rejectContract("active input exceeds output allocation");return;}
+    unsigned sourceQuality = optishade::deferred_quality::Unknown;
+    if (source->Get(NVSDK_NGX_Parameter_PerfQualityValue, &sourceQuality) != NVSDK_NGX_Result_Success)
+        sourceQuality = optishade::deferred_quality::Unknown;
+    else if (sourceQuality > static_cast<unsigned>(NVSDK_NGX_PerfQuality_Value_DLAA))
+    { rejectContract("invalid supplied DLSS quality value"); return; }
     ID3D12Device* device = nullptr;
-    if (FAILED(cmd->GetDevice(IID_PPV_ARGS(&device)))) return;
-    auto* ownerQueue = queue ? queue : (ID3D12CommandQueue*)State::Instance().currentCommandQueue;
+    if (FAILED(cmd->GetDevice(IID_PPV_ARGS(&device)))) {rejectContract("command-list device unavailable");return;}
+    // Compare canonical logical device identities through the explicit ReShade
+    // unwrapping contract. Keep the actual wrapper for recording/allocation.
+    const auto deviceIdentity=optishade::ReShadeDeviceIdentity(device);
     ID3D12Device* queueDevice = nullptr;
-    if (!ownerQueue || ownerQueue->GetDesc().Type != D3D12_COMMAND_LIST_TYPE_DIRECT ||
-        FAILED(ownerQueue->GetDevice(IID_PPV_ARGS(&queueDevice))) || queueDevice != device)
+    const char* queueFailure = !ownerQueue ? "direct queue is missing" :
+        ownerQueue->GetDesc().Type!=D3D12_COMMAND_LIST_TYPE_DIRECT ? "queue command type is not direct" :
+        FAILED(ownerQueue->GetDevice(IID_PPV_ARGS(&queueDevice))) ? "queue device query failed" :
+        !deviceIdentity ? "command-list canonical device identity is unavailable" :
+        optishade::ReShadeDeviceIdentity(queueDevice)!=deviceIdentity ? "queue belongs to a different logical device" : nullptr;
+    if (queueFailure)
     {
         if (queueDevice) queueDevice->Release();
         device->Release();
-        Say("waiting for a same-device direct queue identity");
+        rejectContract(queueFailure);
         return;
     }
     queueDevice->Release();
+    for(auto* resource:{color,output,depth,motion}){
+        if(!resource)continue;
+        Microsoft::WRL::ComPtr<ID3D12Device> owner;
+        if(FAILED(resource->GetDevice(IID_PPV_ARGS(&owner)))||optishade::ReShadeDeviceIdentity(owner.Get())!=deviceIdentity){
+            device->Release();rejectContract("colour/output/guide resource belongs to a different logical device");return;
+        }
+    }
     unsigned flags = UInt(source, NVSDK_NGX_Parameter_DLSS_Feature_Create_Flags) &
         (NVSDK_NGX_DLSS_Feature_Flags_DepthInverted | NVSDK_NGX_DLSS_Feature_Flags_MVLowRes |
          NVSDK_NGX_DLSS_Feature_Flags_MVJittered);
     if (sampleAndHold)
         flags = (flags & NVSDK_NGX_DLSS_Feature_Flags_DepthInverted) | NVSDK_NGX_DLSS_Feature_Flags_MVLowRes;
-    if (current && (current->device != device || current->queue != ownerQueue || current->w != active->width ||
-        current->h != active->height || current->outW != outDesc.Width || current->outH != outDesc.Height ||
-        current->inputFormat != inDesc.Format || current->outputFormat != outDesc.Format || current->flags != flags ||
-        current->halfRequested != wantsHalf ||
-        current->sampleAndHold != sampleAndHold ||
-        current->approximateCamera != cfg.DlssNrResidualFgApproxCamera.value_or_default()))
+    const bool sameGenerationContract = current &&
+        optishade::ReShadeDeviceIdentity(current->device) == deviceIdentity && current->queue == ownerQueue &&
+        current->w == active->width && current->h == active->height &&
+        current->outW == outDesc.Width && current->outH == outDesc.Height &&
+        current->inputFormat == inDesc.Format && current->outputFormat == outDesc.Format && current->flags == flags &&
+        current->halfRequested == wantsHalf && current->sampleAndHold == sampleAndHold &&
+        current->approximateCamera == cfg.DlssNrResidualFgApproxCamera.value_or_default();
+    const auto retainedQuality = sameGenerationContract && current->qualityAuthoritative && current->qualityCaller == source
+        ? std::optional<NVSDK_NGX_PerfQuality_Value>(current->quality) : std::nullopt;
+    const auto privateQuality = optishade::deferred_quality::Resolve(sourceQuality,
+        active->width, active->height, (unsigned)outDesc.Width, outDesc.Height, retainedQuality);
+    if (!privateQuality) { device->Release(); rejectContract("invalid private DLSS quality/extent contract"); return; }
+    if (current && (!sameGenerationContract || current->quality != *privateQuality))
         retired.push_back(std::move(current));
     if (!current)
     {
         if (retired.size() >= 4) { device->Release(); Say("waiting for retired GPU work; clean SR frame retained"); return; }
         current = std::make_unique<Generation>();
+        current->identity=++nextGenerationIdentity;
         current->device = device; // take the GetDevice reference
         current->queue = ownerQueue;
         ownerQueue->AddRef();
         current->w = active->width; current->h = active->height;
         current->outW = (unsigned)outDesc.Width; current->outH = outDesc.Height;
         current->inputFormat = inDesc.Format; current->outputFormat = outDesc.Format; current->flags = flags;
+        current->quality = *privateQuality;
+        current->qualityAuthoritative = sourceQuality != optishade::deferred_quality::Unknown;
+        current->qualityCaller = current->qualityAuthoritative ? source : nullptr;
         current->halfRequested = wantsHalf;
         current->sampleAndHold = sampleAndHold;
         current->approximateCamera = cfg.DlssNrResidualFgApproxCamera.value_or_default();
@@ -375,29 +454,44 @@ void Before(ID3D12GraphicsCommandList* cmd, NVSDK_NGX_Parameter* source,
     }
     else device->Release();
     auto& g = *current;
-    if (g.failed) return;
+    if (sourceQuality != optishade::deferred_quality::Unknown)
+    {
+        g.qualityAuthoritative = true;
+        g.qualityCaller = source;
+    }
+    else if (!retainedQuality)
+    {
+        g.qualityAuthoritative = false;
+        g.qualityCaller = nullptr;
+    }
+    if (g.failed) {Say("generation is stopped after a resource/runtime failure; clean SR frame retained");return;}
     // Native seams have a logical per-evaluate identity. Bridges retain the submitted epoch
     // so a second upscale in the same bridge submission is still rejected.
     if (g.began && g.lastBeginEpoch == epoch)
-    { g.reset = true; Say("inactive: more than one upscale in a submission epoch"); return; }
+    { g.reset = true; rejectContract("more than one upscale in a submission epoch; separate view histories unsupported"); return; }
     g.began = true;
     g.lastBeginEpoch = epoch;
     Use use(g, cmd);
     if (!use.valid) { Say("waiting for GPU completion slots; clean SR frame retained"); return; }
     if (!g.feature)
     {
+        if(GetTickCount64()<g.providerRetryAt)return;
         ScopedNrStateEnvelope envelope(cmd);
         if (!NVNGXProxy::InitDx12(g.device) || !NVNGXProxy::D3D12_AllocateParameters() ||
             !NVNGXProxy::D3D12_DestroyParameters() || !NVNGXProxy::D3D12_CreateFeature() ||
-            !NVNGXProxy::D3D12_EvaluateFeature() || !NVNGXProxy::D3D12_ReleaseFeature() ||
-            NVNGXProxy::D3D12_AllocateParameters()(&g.parameters) != NVSDK_NGX_Result_Success || !g.parameters)
-        { g.failed = true; Say("NVIDIA DLSS SR runtime unavailable; no alternative upscaler used"); return; }
+            !NVNGXProxy::D3D12_EvaluateFeature() || !NVNGXProxy::D3D12_ReleaseFeature())
+        { g.providerRetryAt=GetTickCount64()+5000;Say("waiting for NVIDIA DLSS SR runtime; retry in five seconds; clean SR retained");return; }
+        g.providerRetryAt=0;
+        if(NVNGXProxy::D3D12_AllocateParameters()(&g.parameters)!=NVSDK_NGX_Result_Success||!g.parameters)
+        {g.failed=true;Say("private NVIDIA parameter allocation failed; clean SR retained");return;}
+        Contract("private DLSS creation request",cmd,source,color,output,depth,motion,epoch,privateJob,ownerQueue);
         auto* p = g.parameters;
         p->Set(NVSDK_NGX_Parameter_Width, g.w); p->Set(NVSDK_NGX_Parameter_Height, g.h);
         p->Set(NVSDK_NGX_Parameter_OutWidth, g.outW); p->Set(NVSDK_NGX_Parameter_OutHeight, g.outH);
         p->Set(NVSDK_NGX_Parameter_CreationNodeMask, 1u); p->Set(NVSDK_NGX_Parameter_VisibilityNodeMask, 1u);
-        p->Set(NVSDK_NGX_Parameter_PerfQualityValue, (int)UInt(source, NVSDK_NGX_Parameter_PerfQualityValue,
-                                                           NVSDK_NGX_PerfQuality_Value_MaxPerf));
+        p->Set(NVSDK_NGX_Parameter_PerfQualityValue, (int)g.quality);
+        LOG_INFO("Deferred NR private feature mode: sourceQuality={}, effectiveQuality={}, input={}x{}, output={}x{}, generation={}; game feature unchanged",
+            sourceQuality, (unsigned)g.quality, g.w, g.h, g.outW, g.outH, g.identity);
         // LDR biased carrier, constant unit exposure, no auto-exposure/sharpening. No main-game presets
         // or feature handle are overwritten. NGX is called directly, bypassing OptiScaler's NR hooks.
         p->Set(NVSDK_NGX_Parameter_DLSS_Feature_Create_Flags, g.flags);

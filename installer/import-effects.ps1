@@ -78,6 +78,37 @@ function GetMissingPresetShaders([string]$Preset,[string]$Game){
  $installed=@(Get-ChildItem -LiteralPath (Join-Path $Game 'OptiShadeData/Shaders') -Filter '*.fx' -Recurse -File -ErrorAction SilentlyContinue|ForEach-Object Name)
  @(GetPresetShaderNames $Preset|Where-Object {$_ -notin $installed})
 }
+function GetPresetTechniqueWarnings([string]$Preset,[string]$Game){
+ # This is an offline advisory only. Macros/includes can declare techniques;
+ # the live compiled-identity check is authoritative after loading the preset.
+ $text=[IO.File]::ReadAllText($Preset)
+ $active=[regex]::Match($text,'(?im)^\s*Techniques\s*=([^\r\n]*)').Groups[1].Value
+ $data=ResolveImportRoot (Join-Path $Game 'OptiShadeData')
+ $files=@(Get-ChildItem -LiteralPath (Join-Path $data 'Shaders') -Filter '*.fx' -Recurse -File -ErrorAction SilentlyContinue)
+ foreach($identity in @($active -split ','|ForEach-Object {$_.Trim()}|Where-Object {$_}|Select-Object -Unique)){
+  if($identity -notmatch '^(?<technique>[^@,;\[\]\r\n/\\]+)@(?<effect>[^@,;\[\]\r\n/\\]+\.fx)$'){continue}
+  $name=$Matches.technique;$effect=$Matches.effect
+  $matches=@($files|Where-Object Name -eq $effect)
+  if($matches.Count -gt 1){"$identity (multiple installed files share this FX name)";continue}
+  if($matches.Count -ne 1){continue}
+  $safe=ImportSafePath $data $matches[0].FullName.Substring($data.Length+1)
+  if($matches[0].Length -gt 4MB){continue}
+  $source=[IO.File]::ReadAllText($safe) -replace '(?s)/\*.*?\*/','' -replace '(?m)//[^\r\n]*',''
+  $declared=@([regex]::Matches($source,'\btechnique(?:10|11)?\s+([A-Za-z_][A-Za-z_0-9]*)\b')|ForEach-Object {$_.Groups[1].Value})
+  if($declared.Count -and $name -cnotin $declared){"$identity (this FX declares $($declared -join ', '); compiled validation is required)"}
+ }
+}
+function GetPresetImportWarning([string]$Preset,[string]$Game){
+ $missing=@(GetMissingPresetShaders $Preset $Game)
+ $techniques=@(GetPresetTechniqueWarnings $Preset $Game)
+ $legacy=[IO.File]::ReadAllText($Preset) -match '(?im)^\s*Techniques\s*=\s*[^\s@,]+\s*$'
+ if(-not($missing.Count -or $techniques.Count -or $legacy)){return}
+ $details=@()
+ if($missing.Count){$details+='Unable to find a verified download for: '+($missing -join ', ')+'.'}
+ if($techniques.Count){$details+='Techniques requiring review: '+($techniques -join '; ')+'.'}
+ if($legacy){$details+='This preset does not identify its shader filenames.'}
+ return ('The preset has been installed, but please check for possible missing FX files or techniques. '+($details -join ' ')+' Please check the ZIP for custom FX files and follow the preset author''s installation instructions. Your preset is unchanged; check the in-game compiled technique status before relying on the look.')
+}
 function GetPresetPackages([string[]]$Missing,[string]$Catalogue,[switch]$AllowMissing){
  $packages=@();$current=$null
  foreach($line in Get-Content -LiteralPath $Catalogue){if($line -match '^\[(.+)\]$'){$current=@{Id=$Matches[1]};$packages+=,$current}elseif($current -and $line -match '^([^=]+)=(.*)$'){$current[$Matches[1]]=$Matches[2]}}
@@ -92,8 +123,7 @@ function GetPresetPackages([string[]]$Missing,[string]$Catalogue,[switch]$AllowM
 function InstallPresetDependencies([string]$Preset,[string]$Game,[string]$Catalogue){
  $missing=@(GetMissingPresetShaders $Preset $Game)
  if(-not $missing.Count){
-  if([IO.File]::ReadAllText($Preset) -match '(?im)^\s*Techniques\s*=\s*[^\s@,]+\s*$'){return "The preset has been installed, but please check for possible missing FX files. This preset does not identify its shader filenames. Please check the ZIP for custom FX files and follow the preset author's installation instructions."}
-  return
+  return GetPresetImportWarning $Preset $Game
  }
  $selected=GetPresetPackages $missing $Catalogue -AllowMissing
  [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
@@ -124,8 +154,7 @@ function InstallPresetDependencies([string]$Preset,[string]$Game,[string]$Catalo
     [IO.File]::Copy($source,$target,$false)
    }
   }
-  $remaining=@(GetMissingPresetShaders $Preset $Game)
-  if($remaining.Count){return ("The preset has been installed, but please check for possible missing FX files. Unable to find a verified download for: "+($remaining -join ', ')+". Please check the ZIP for custom FX files and follow the preset author's installation instructions. The look may differ until these files are installed.")}
+  return GetPresetImportWarning $Preset $Game
  }finally{
   # Only delete transport files created inside this invocation's verified folder.
   foreach($file in Get-ChildItem -LiteralPath $downloads -File){Remove-Item -LiteralPath (ImportSafePath $downloads $file.Name) -Force}

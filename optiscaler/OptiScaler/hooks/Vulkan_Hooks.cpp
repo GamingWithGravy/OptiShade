@@ -45,30 +45,22 @@ extern "C" __declspec(dllexport) void OptiShadeVulkanNrReset()
 
 extern "C" __declspec(dllexport) int OptiShadeVulkanNrSubmit(const osvtaa::Frame* frame)
 {
-    if (!OptiShadeVulkanNrRequested()) return -1;
+    if (!OptiShadeVulkanNrRequested()) return -2;
     if (!frame || frame->version != 1 || frame->size != sizeof(*frame) ||
         frame->device != (uint64_t)_device || !_instance || !_PD || !frame->commands ||
         !frame->color || !frame->colorView || !frame->depth || !frame->depthView ||
         !frame->motion || !frame->motionView || frame->width < 64 || frame->height < 64 ||
-        frame->width > 3840 || frame->height > 2160) return -1;
+        frame->width > 3840 || frame->height > 2160) {
+        static ULONGLONG lastReport=0;const auto now=GetTickCount64();
+        if(!lastReport||now-lastReport>=5000){lastReport=now;LOG_WARN("XP12 Vulkan NR request rejected: frame version/device/handle/extent contract; normal picture preserved");}
+        return -2;
+    }
     auto* cfg = Config::Instance();
-    const auto finished = cfg->DlssNrFinishedPicture;
-    const auto deferred = cfg->DlssNrDeferredDlss;
-    const auto scale = cfg->DlssNrWorkingScale;
-    const auto passes = cfg->DlssNrPasses;
-    const auto apply = cfg->DlssNrApplyModel;
-    cfg->DlssNrFinishedPicture = false;
-    cfg->DlssNrDeferredDlss = false;
-    cfg->DlssNrWorkingScale = 1.0f;
-    cfg->DlssNrPasses = 1u;
-    cfg->DlssNrApplyModel = true;
-    const int result = DlssNr::EvaluateGuidesVk(*frame, _instance, _PD, _device);
-    cfg->DlssNrFinishedPicture = finished;
-    cfg->DlssNrDeferredDlss = deferred;
-    cfg->DlssNrWorkingScale = scale;
-    cfg->DlssNrPasses = passes;
-    cfg->DlssNrApplyModel = apply;
-    return result;
+    // Snapshot the route's controls once. Never temporarily overwrite shared
+    // configuration while another renderer/menu may read it.
+    const optishade::vknr::GuideOptions options{cfg->DlssNrWorkingScale.value_or_default(),
+        cfg->DlssNrPasses.value_or_default(),cfg->DlssNrApplyModel.value_or_default()};
+    return DlssNr::EvaluateGuidesVk(*frame, _instance, _PD, _device, options);
 }
 static std::mutex _vkPresentMutex;
 

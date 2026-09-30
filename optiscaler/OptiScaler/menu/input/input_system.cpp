@@ -58,7 +58,7 @@ DirectInputDeviceRelease_t o_DirectInputDeviceRelease = nullptr;
 
 thread_local int bypassHookDepth = 0;
 
-bool ShouldApplyBlockingPolicyLocked() { return bypassHookDepth == 0 && _state.MenuVisible; }
+bool ShouldApplyBlockingPolicyLocked() { return bypassHookDepth == 0 && _state.Initialized && _state.Focused && _state.MenuVisible; }
 
 bool PreserveFlightControllerInput()
 {
@@ -76,7 +76,29 @@ bool IsReservedMenuKeyLocked(int vk)
 {
     return bypassHookDepth == 0 && _state.Initialized && _state.Focused &&
            PreserveFlightControllerInput() && vk > 0 && vk < 256 &&
-           vk == Config::Instance()->ShortcutKey.value_or_default();
+           vk == Config::Instance()->ShortcutKey.value_or_default() && !IsPhysicalMenuBindingLocked();
+}
+
+bool IsPhysicalMenuBindingLocked()
+{
+    return Config::Instance()->MenuPhysicalNavigationKey.value_or_default() &&
+           NavigationMakeCode(Config::Instance()->ShortcutKey.value_or_default()) != 0;
+}
+
+bool IsReservedMenuEventLocked(int vk, unsigned scan, bool e0, bool e1)
+{
+    if (!IsPhysicalMenuBindingLocked()) return IsReservedMenuKeyLocked(vk);
+    const int binding = Config::Instance()->ShortcutKey.value_or_default();
+    return bypassHookDepth == 0 && _state.Initialized && _state.Focused && PreserveFlightControllerInput() &&
+           vk == binding && scan == NavigationMakeCode(binding) && e0 && !e1;
+}
+
+void ObserveMenuKeyLocked(int vk, unsigned scan, bool e0, bool e1, bool released, PhysicalKeySource source)
+{
+    const int binding = IsPhysicalMenuBindingLocked() ? Config::Instance()->ShortcutKey.value_or_default() : 0;
+    _state.PhysicalMenu.Configure(binding);
+    if (_state.Initialized && _state.Focused && bypassHookDepth == 0)
+        _state.PhysicalMenu.Observe(vk, scan, e0, e1, released, source);
 }
 
 bool ShouldBlockKeyboardInputLocked() { return ShouldApplyBlockingPolicyLocked() && _state.BlockKeyboard; }
@@ -206,6 +228,10 @@ void LogInputHealthSnapshotLocked(const char* origin)
 
     if (shouldLogHealth)
     {
+        LOG_DEBUG("input maintenance: HID tracked:{} capacity:{} overflowTotal:{}; menuPhysical:{} source:{} "
+                  "(0=unavailable,1=window,2=raw,3=DirectInput; logical polling is not used for physical mode)",
+                  _state.HidTrackedHandleCount, MaxTrackedHidHandles, _state.HidTrackingOverflowCount,
+                  IsPhysicalMenuBindingLocked(), static_cast<int>(_state.PhysicalMenu.Source));
 #if OPTIINPUT_VERBOSE_LOGGING
         LOG_DEBUG(
             "{} health frame:{} mode:{} target:{} targetPid:{} input:{} inputPid:{} explicitInput:{} externalTarget:{} "
@@ -713,9 +739,9 @@ void ApplyMenuVisibilityChangeLocked(bool visible)
     const bool wasMenuVisible = _state.MenuVisible;
 
     _state.MenuVisible = visible;
-    _state.BlockMouse = visible;
-    _state.BlockKeyboard = visible;
-    _state.BlockCursor = visible;
+    _state.BlockMouse = visible && _state.Focused;
+    _state.BlockKeyboard = visible && _state.Focused;
+    _state.BlockCursor = visible && _state.Focused;
 
     if (wasMenuVisible != visible)
     {
@@ -730,7 +756,7 @@ void ApplyMenuVisibilityChangeLocked(bool visible)
     if (!visible && _state.ImGuiMouseDrawCursorForced && ImGui::GetCurrentContext() != nullptr)
         UpdateImGuiMouseDrawCursorLocked(ImGui::GetIO());
 
-    if (!wasMenuVisible && visible)
+    if (!wasMenuVisible && visible && _state.Focused)
     {
         POINT blockedCursorPos {};
         if (o_GetCursorPos != nullptr && o_GetCursorPos(&blockedCursorPos))
@@ -909,6 +935,7 @@ void ResetStateAfterShutdown()
     _state.RawMouseCaptureMouse = false;
 
     _state.Keys = {};
+    _state.PrintScreen = {};
     _state.MouseButtons = {};
 
     _state.MouseClientPos = {};
@@ -1033,6 +1060,9 @@ void ResetStateAfterShutdown()
     _state.HidOtherHandleSeen = false;
     _state.HidCreateFileCallCount = 0;
     _state.HidTrackedHandleCount = 0;
+    _state.HidTrackingOverflowCount = 0;
+    _state.HidLastOverflowWarning = 0;
+    _state.PhysicalMenu = {};
     _state.HidReadFileCallCount = 0;
     _state.HidReadFileBlockedCount = 0;
     _state.HidReadFilePassedCount = 0;
@@ -1316,6 +1346,24 @@ bool IsKeyPressed(int vk)
     return _state.Keys[vk].Pressed;
 }
 
+bool IsMenuKeyPressed()
+{
+    std::unique_lock lock(_state.Mutex);
+    const int binding = Config::Instance()->ShortcutKey.value_or_default();
+    _state.PhysicalMenu.Configure(IsPhysicalMenuBindingLocked() ? binding : 0);
+    return _state.Focused && (IsPhysicalMenuBindingLocked() ? _state.PhysicalMenu.Pressed :
+                             (binding > 0 && binding < 256 && _state.Keys[binding].Pressed));
+}
+
+bool IsMenuKeyReleased()
+{
+    std::unique_lock lock(_state.Mutex);
+    const int binding = Config::Instance()->ShortcutKey.value_or_default();
+    _state.PhysicalMenu.Configure(IsPhysicalMenuBindingLocked() ? binding : 0);
+    return _state.Focused && (IsPhysicalMenuBindingLocked() ? _state.PhysicalMenu.Released :
+                             (binding > 0 && binding < 256 && _state.Keys[binding].Released));
+}
+
 bool IsKeyReleased(int vk)
 {
     std::unique_lock lock(_state.Mutex);
@@ -1533,6 +1581,7 @@ DebugState GetDebugState()
     state.HidOtherHandleSeen = _state.HidOtherHandleSeen;
     state.HidCreateFileCallCount = _state.HidCreateFileCallCount;
     state.HidTrackedHandleCount = _state.HidTrackedHandleCount;
+    state.HidTrackingOverflowCount = _state.HidTrackingOverflowCount;
     state.HidReadFileCallCount = _state.HidReadFileCallCount;
     state.HidReadFileBlockedCount = _state.HidReadFileBlockedCount;
     state.HidReadFilePassedCount = _state.HidReadFilePassedCount;

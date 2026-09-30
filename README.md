@@ -1,4 +1,4 @@
-**Beta branch — OptiShade 0.21.3-beta.4.** The beta installer is built from this branch and published as a GitHub prerelease. Enable beta versions in Settings to receive it. Stable users are offered stable releases only.
+**Beta branch — OptiShade 0.21.5 beta.** Beta installers use this branch and GitHub prereleases. Enable beta versions in Settings to receive it. Stable users are offered stable releases only.
 
 <div align="center">
   <img src="docs/images/optishade.png" width="160" alt="Optishade OS logo">
@@ -6,11 +6,11 @@
   <p><strong>Microsoft Flight Simulator 2024 · Microsoft Flight Simulator 2020 · X-Plane 12 (experimental)</strong></p>
   <p>Created by gravy · Powered by Fusion Engine</p>
   <p>
-    <img src="https://img.shields.io/badge/Version-0.21.3--beta.4-9755E9?style=flat-square" alt="Version 0.21.3-beta.4">
+    <img src="https://img.shields.io/badge/Version-0.21.5--beta-9755E9?style=flat-square" alt="Version 0.21.5 beta">
     <img src="https://img.shields.io/badge/Windows-x64-272133?style=flat-square" alt="Windows x64">
     <img src="https://img.shields.io/badge/Graphics-NVIDIA%20%2B%20AMD-9755E9?style=flat-square" alt="NVIDIA and AMD graphics">
   </p>
-  <p><a href="https://github.com/GamingWithGravy/OptiShade/releases/latest"><strong>Download OptiShade Manager</strong></a> · <a href="docs/Tutorial.txt">Getting started</a> · <a href="docs/Features.txt">Features</a> · <a href="BUILDING.md">Build from source</a></p>
+  <p><a href="https://github.com/GamingWithGravy/OptiShade/releases/tag/v0.21.5-beta.1"><strong>Download OptiShade Beta Manager</strong></a> · <a href="docs/Tutorial.txt">Getting started</a> · <a href="docs/Features.txt">Features</a> · <a href="BUILDING.md">Build from source</a></p>
 </div>
 
 <p align="center"><a href="https://buymeacoffee.com/GamingWithGravy"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support%20OptiShade-8650C8?style=for-the-badge" alt="Buy Me a Coffee — optional support for OptiShade"></a></p>
@@ -21,7 +21,15 @@
 
 Optishade brings image effects, saved looks and optional NVIDIA neural rendering together in one custom in-game menu. This edition supports **Microsoft Flight Simulator 2024 and 2020, plus experimental X-Plane 12**, with image effects and supported performance options on NVIDIA and AMD graphics cards, with automatic Steam and Xbox detection.
 
-### New in 0.21 XP12
+### OptiShade 0.21.5 beta
+
+- Includes the shared menu, input, SnapShot, MFG controls, preset, restore, diagnostics and updater fixes from 0.21.4 Stable.
+- Attempted fix for XP12 neural rendering stopping after changing presets or settings.
+- Attempted fix for DLAA neural rendering failing to start or recover.
+- Attempted fix for TAA neural rendering at 5120 x 1440 ultrawide.
+- These renderer fixes still need in-game testing. See the [full patch notes](installer/Help/Release-notes.txt).
+
+### Included experimental features
 
 - Experimental X-Plane 12 installation, Vulkan image effects and optional Neural Rendering.
 - Experimental native-TAA NR option for MSFS DirectX 12, with frame generation off.
@@ -71,7 +79,7 @@ Press **Insert** or **Ctrl+Shift+O** to open the menu. Shortcuts are configurabl
 
 ## Install in a few steps
 
-1. Download the EXE from [Releases](https://github.com/GamingWithGravy/OptiShade/releases/latest).
+1. Enable beta versions in the stable manager's Settings, or download the EXE from the [beta prerelease](https://github.com/GamingWithGravy/OptiShade/releases/tag/v0.21.5-beta.1).
 2. Close the simulator and open **Setup**.
 3. Select the detected Steam or Xbox installation.
 4. Click **Install Optishade** and choose whether to add the optional NVIDIA files.

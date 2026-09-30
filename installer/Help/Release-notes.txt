@@ -1,28 +1,24 @@
-﻿# OptiShade 0.21.3-beta.4 Beta
+OptiShade 0.21.5 beta
 
-**X-PLANE 12 VULKAN STARTUP FIX**
-- Fixed the packaged Vulkan layer's Windows DLL path. Forward-slash relative paths could fail to load ReShade64.dll and surface as VK_ERROR_OUT_OF_HOST_MEMORY during vkCreateInstance.
-- Verified the failure and corrected startup with the actual packaged DLLs in an isolated Vulkan instance test. A full cockpit test on affected systems is still needed.
-- Play now validates the layer JSON, resolved DLL and recorded component hashes before launching. Invalid installations produce a repair/update message instead of forcing a broken layer.
-- Preserves inherited Vulkan layer paths and other requested layers, removes duplicate entries, and handles existing VK_LAYER_PATH overrides correctly.
-- All launch environment changes stay inside the child process. No driver changes or system-wide Vulkan registration.
-- Play explains when administrator mode prevents local Vulkan layer discovery. Reopen the manager normally before launching X-Plane.
-- X-Plane launch diagnostics now record validation, sanitized layer configuration and component hashes.
+**Stable**
+- Fixed menu size and position not being remembered.
+- Improved controller support and hotkey recovery. Added an option to separate keypad navigation keys.
+- Fixed Print Screen binding for SnapShot. Added clearer key labels, conflict messages and Num Lock guidance.
+- Improved preset import status when effects are missing or fail to load.
+- Fixed restore being blocked by changed logs and improved repeat MFG installation.
+- MFG controls are now available inside the OptiShade UI.
+- Improved old installer cleanup when switching between stable and beta. Update downloads remain compatible with 0.21.3.
+- Beta updates stay on beta. Return to stable checks for the latest stable release.
+- Reduced repeated upscaler error pop-ups and improved diagnostics.
+- Clearer installer errors when antivirus removes or blocks a file.
 
-**BETA TO STABLE**
-- Increased the previous-manager cleanup wait from 2 to 30 seconds so a closing beta launcher can finish releasing its EXE. The update window remains responsive.
-- Only the exact unchanged previous EXE is removed. If another process still holds it open, the completion message shows its retained location.
-- This cleanup applies to switches started by Beta 4. Manually opening a separate stable installer does not remove other downloaded EXEs.
-- Return to stable continues to select the latest published stable release and turns beta opt-in off after success.
+**Antivirus update**
+- Bitdefender confirmed the submitted sample was clean. I am investigating the newer Windows Defender reports.
 
-**INSTALLING**
-- Close your simulators, enable beta versions in Settings, then Check for updates.
-- If updating manually, run Beta 4 and update the recorded X-Plane installation in Setup before Play. Repair is for installations already on the matching version.
-- Presets and configuration are preserved. MSFS functionality and stable 0.21.3 are unchanged.
-- The existing dxgi.dll bridge remains required for the XP12 menu and experimental NR integration. Do not delete it manually; Restore uses ownership records and backups.
-- Use Play in the manager for X-Plane. TAA NR, Vulkan and XP12 remain experimental beta features.
+**Beta**
+Includes all the stable fixes above, plus:
+- Attempted fix for XP12 neural rendering stopping after changing presets or settings.
+- Attempted fix for DLAA neural rendering failing to start or recover.
+- Attempted fix for TAA neural rendering at 5120 x 1440 ultrawide.
 
-**DOWNLOADS**
-- One beta EXE and one portable ZIP. Choose one; portable users should preserve their Data folder when extracting the new version.
-
-Please post diagnostic ZIPs in the **diagnostic zips** channel in **BlackBox Discord**, including the simulator selected in Setup and what happened: https://discord.gg/6hjR9cSsy7
+XP12, Vulkan NR and TAA NR remain beta features. The attempted fixes still need in-game testing.

@@ -16,7 +16,10 @@ def extract(file, name):
     return text[start:end]
 
 functions = '\n'.join(extract(file, name) for file, name in [
+    ('input_system.cpp', 'IsPhysicalMenuBindingLocked'),
     ('input_system.cpp', 'IsReservedMenuKeyLocked'),
+    ('input_system.cpp', 'IsReservedMenuEventLocked'),
+    ('input_system.cpp', 'ObserveMenuKeyLocked'),
     ('input_system.cpp', 'ShouldBlockVirtualKey'),
     ('input_system_messages.cpp', 'hkGetKeyboardState'),
     ('input_system_raw.cpp', 'NormalizeRawKeyboardVirtualKey'),
@@ -35,16 +38,20 @@ prefix = r'''
 #include <cassert>
 #include <cstdio>
 #include <cstring>
+#include "../optiscaler/OptiScaler/menu/input/menu_physical_key.h"
+using namespace OptiInput;
+bool IsReservedMenuEventLocked(int,unsigned,bool,bool=false);
 #define OPTIINPUT_LOG_VERBOSE(...) ((void)0)
 struct Key {bool Down=false, Blocked=false;};
 struct State {
  std::mutex Mutex; bool Initialized=true,Focused=true,MenuVisible=false,BlockKeyboard=false,BlockMouse=false;
+ MenuPhysicalKey PhysicalMenu;
  Key Keys[256]; bool RawKeyboardBlockedDown[256]{},WindowsHookKeyboardBlockedDown[256]{};
  unsigned GetKeyboardStateFilteredCount=0;std::vector<wchar_t> TextInput;
 } _state;
 int bypassHookDepth=0;bool preserve=true;
 struct Option {int value=VK_INSERT;int value_or_default(){return value;}};
-struct Config {Option ShortcutKey;static Config* Instance(){static Config c;return &c;}};
+struct Config {Option ShortcutKey;Option MenuPhysicalNavigationKey{0};static Config* Instance(){static Config c;return &c;}};
 bool PreserveFlightControllerInput(){return preserve;}
 bool ShouldApplyBlockingPolicyLocked(){return bypassHookDepth==0&&_state.MenuVisible;}
 bool ShouldBlockKeyboardInputLocked(){return ShouldApplyBlockingPolicyLocked()&&_state.BlockKeyboard;}
@@ -96,6 +103,25 @@ int main(){
  BYTE data[256];memset(data,0x55,256);keyboardResult=FALSE;
  assert(!hkGetKeyboardState(data)&&data[VK_F7]==0x55);
  preserve=false;assert(!IsReservedMenuKeyLocked(VK_F7));
+ preserve=true;_state.Focused=true;_state.MenuVisible=false;_state.BlockKeyboard=false;
+ Config::Instance()->MenuPhysicalNavigationKey.value=1;
+ for(int key:{int(VK_INSERT),int(VK_HOME),int(VK_END),int(VK_DELETE)}){
+  Config::Instance()->ShortcutKey.value=key;_state.Keys[key]={};
+  auto scan=NavigationMakeCode(key);LPARAM dedicated=LPARAM(scan)<<16|1UL<<24;LPARAM keypad=LPARAM(scan)<<16;
+  assert(!KeyboardMessage(WM_KEYDOWN,key,keypad));assert(!KeyboardMessage(WM_KEYUP,key,keypad));
+  assert(!_state.PhysicalMenu.Pressed);assert(!ShouldBlockVirtualKey(key));
+  assert(KeyboardMessage(WM_KEYDOWN,key,dedicated));assert(_state.PhysicalMenu.Pressed);
+  assert(KeyboardMessage(WM_KEYUP,key,dedicated));assert(_state.PhysicalMenu.Released);
+  RAWKEYBOARD raw{};raw.VKey=key;raw.MakeCode=USHORT(scan);
+  assert(GetRawKeyboardSanitizeActionLocked(raw)==RawSanitizeAction::Pass);
+  raw.Flags=RI_KEY_E0;assert(GetRawKeyboardSanitizeActionLocked(raw)==RawSanitizeAction::SanitizeAll);
+  raw.Flags=RI_KEY_E0|RI_KEY_BREAK;assert(GetRawKeyboardSanitizeActionLocked(raw)==RawSanitizeAction::SanitizeAll);
+  WindowsHookSlot slot;KBDLLHOOKSTRUCT event{};event.vkCode=key;event.scanCode=scan;
+  assert(!ShouldBlockWindowsKeyboardHookCallbackLocked(slot,0,0,reinterpret_cast<LPARAM>(&event)));
+  event.flags=LLKHF_EXTENDED;assert(ShouldBlockWindowsKeyboardHookCallbackLocked(slot,0,0,reinterpret_cast<LPARAM>(&event)));
+  event.flags|=LLKHF_UP;assert(ShouldBlockWindowsKeyboardHookCallbackLocked(slot,0,0,reinterpret_cast<LPARAM>(&event)));
+  _state.PhysicalMenu={};
+ }
  puts("PASS: custom/rebound menu key down/up, polling, raw input, hooks and text are reserved; overlay sees input; unrelated held-key release and errors preserved");
 }
 '''

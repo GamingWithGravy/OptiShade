@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "DlssNrFeature_Vk.h"
 #include "DlssNrFeature_Dx12.h"
 
@@ -134,7 +134,7 @@ void RenderMenu(Config* config, float menuResScale)
         ImGui::TextDisabled("Tuning is saved; neural rendering always starts off.");
         const bool xp12 = _wcsicmp(Util::ExePath().filename().c_str(), L"X-Plane.exe") == 0;
         if (xp12)
-            ImGui::TextWrapped("X-Plane 12 Vulkan NR (experimental): enable Image effects and the TAA neural guides technique. No DLSS option is required. SDR only, up to 3840 x 2160, full-resolution model and one pass. NR starts off each launch. Restart the game after a GPU/NR failure.");
+            ImGui::TextWrapped("X-Plane 12 Vulkan NR (experimental): no DLSS option is required. Estimated guide prerequisites are prepared while NR is requested. SDR only; model working extent up to 3840 x 2160 and 1-3 passes. Unsupported scale/pass requests are reported. NR starts off each launch. Restart after an actual GPU/NR submission failure.");
         bool taaFallback = config->DlssNrTaaFallback.value_or_default();
         if (!xp12) {
         if(ImGui::Checkbox("TAA neural rendering (experimental)", &taaFallback))config->DlssNrTaaFallback=taaFallback;

@@ -72,8 +72,10 @@ std::wstring AnsiToWide(LPCSTR text)
     if (length <= 1)
         return {};
 
-    std::wstring result(static_cast<std::size_t>(length - 1), L'\0');
-    MultiByteToWideChar(CP_ACP, 0, text, -1, &result[0], length);
+    std::wstring result(static_cast<std::size_t>(length), L'\0');
+    if (MultiByteToWideChar(CP_ACP, 0, text, -1, &result[0], length) != length)
+        return {};
+    result.resize(static_cast<std::size_t>(length - 1));
     return result;
 }
 
@@ -220,10 +222,20 @@ void TrackHidHandleLocked(HANDLE handle, const std::wstring& path)
 
     if (slot == nullptr)
     {
-        LOG_WARN("HID handle tracking table is full handle:{}", static_cast<void*>(handle));
+        ++_state.HidTrackingOverflowCount;
+        const ULONGLONG now = GetTickCount64();
+        if (_state.HidTrackingOverflowCount == 1 || now - _state.HidLastOverflowWarning >= 60000)
+        {
+            _state.HidLastOverflowWarning = now;
+            LOG_WARN("HID tracking capacity reached; input passes through for untracked handles. "
+                     "tracked:{} capacity:{} overflowTotal:{} (not proof of an OS handle leak)",
+                     _state.HidTrackedHandleCount, MaxTrackedHidHandles, _state.HidTrackingOverflowCount);
+        }
         return;
     }
 
+    // A successful open may reuse a value while an older close hook is finishing.
+    slot->Generation = ++_state.HidNextGeneration;
     slot->UsagePage = usagePage;
     slot->Usage = usage;
     slot->Kind = hasUsage ? HidKindFromUsage(usagePage, usage) : HidDeviceKind::Other;
@@ -290,13 +302,16 @@ HANDLE WINAPI hkCreateFileW(LPCWSTR fileName, DWORD desiredAccess, DWORD shareMo
 {
     HANDLE handle = o_CreateFileW(fileName, desiredAccess, shareMode, securityAttributes, creationDisposition,
                                   flagsAndAttributes, templateFile);
+    const DWORD error = GetLastError();
 
-    if (handle != nullptr && handle != INVALID_HANDLE_VALUE && fileName != nullptr)
+    if (bypassHookDepth == 0 && handle != nullptr && handle != INVALID_HANDLE_VALUE && fileName != nullptr)
     {
+        ScopedHookBypass bypass;
         std::unique_lock lock(_state.Mutex);
         TrackHidHandleLocked(handle, fileName);
     }
 
+    SetLastError(error);
     return handle;
 }
 
@@ -306,15 +321,18 @@ HANDLE WINAPI hkCreateFileA(LPCSTR fileName, DWORD desiredAccess, DWORD shareMod
 {
     HANDLE handle = o_CreateFileA(fileName, desiredAccess, shareMode, securityAttributes, creationDisposition,
                                   flagsAndAttributes, templateFile);
+    const DWORD error = GetLastError();
 
-    if (handle != nullptr && handle != INVALID_HANDLE_VALUE && fileName != nullptr)
+    if (bypassHookDepth == 0 && handle != nullptr && handle != INVALID_HANDLE_VALUE && fileName != nullptr)
     {
+        ScopedHookBypass bypass;
         const std::wstring widePath = AnsiToWide(fileName);
 
         std::unique_lock lock(_state.Mutex);
         TrackHidHandleLocked(handle, widePath);
     }
 
+    SetLastError(error);
     return handle;
 }
 
@@ -322,9 +340,10 @@ BOOL WINAPI hkReadFile(HANDLE file, LPVOID buffer, DWORD bytesToRead, LPDWORD by
 {
     const BOOL result = o_ReadFile(file, buffer, bytesToRead, bytesRead, overlapped);
 
-    if (!result)
+    if (!result || bypassHookDepth != 0)
         return result;
 
+    const DWORD error = GetLastError();
     bool shouldZero = false;
     DWORD bytesToZero = bytesRead != nullptr ? *bytesRead : bytesToRead;
 
@@ -350,6 +369,7 @@ BOOL WINAPI hkReadFile(HANDLE file, LPVOID buffer, DWORD bytesToRead, LPDWORD by
     if (shouldZero)
         ZeroReadBuffer(buffer, bytesToZero, bytesRead);
 
+    SetLastError(error);
     return result;
 }
 
@@ -359,9 +379,10 @@ BOOL WINAPI hkDeviceIoControl(HANDLE device, DWORD controlCode, LPVOID inBuffer,
     const BOOL result = o_DeviceIoControl(device, controlCode, inBuffer, inBufferSize, outBuffer, outBufferSize,
                                           bytesReturned, overlapped);
 
-    if (!result)
+    if (!result || bypassHookDepth != 0)
         return result;
 
+    const DWORD error = GetLastError();
     bool shouldZero = false;
     DWORD bytesToZero = bytesReturned != nullptr ? *bytesReturned : outBufferSize;
 
@@ -387,17 +408,35 @@ BOOL WINAPI hkDeviceIoControl(HANDLE device, DWORD controlCode, LPVOID inBuffer,
     if (shouldZero)
         ZeroReadBuffer(outBuffer, bytesToZero, bytesReturned);
 
+    SetLastError(error);
     return result;
 }
 
 BOOL WINAPI hkCloseHandle(HANDLE handle)
 {
+    // Retirement is bookkeeping, not input interception. It must also run for
+    // a tracked handle closed inside another original API's bypass scope. The
+    // recursive state mutex permits that scope without leaking its slot.
+    std::uint64_t generation = 0;
     {
         std::unique_lock lock(_state.Mutex);
-        ClearHidHandleLocked(handle);
+        if (const auto slot = FindHidHandleSlotLocked(handle))
+            generation = slot->Generation;
     }
 
-    return o_CloseHandle(handle);
+    // No input mutex is held across the OS call. Failed closes must keep their
+    // live tracking slot; successful retirement must not remove a reused handle.
+    const BOOL result = o_CloseHandle(handle);
+    const DWORD error = GetLastError();
+    if (result && generation != 0)
+    {
+        std::unique_lock lock(_state.Mutex);
+        const auto slot = FindHidHandleSlotLocked(handle);
+        if (slot != nullptr && slot->Generation == generation)
+            ClearHidHandleLocked(handle);
+    }
+    SetLastError(error);
+    return result;
 }
 
 } // namespace OptiInput

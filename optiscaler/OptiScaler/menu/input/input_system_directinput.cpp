@@ -705,17 +705,20 @@ HRESULT WINAPI hkDirectInputCreateDeviceW(void* directInput, REFGUID guid, void*
 bool IsReservedDirectInputKeyLocked(DWORD scan)
 {
     const UINT winScan = (scan & 0x7f) | ((scan & 0x80) ? 0xe000 : 0);
-    return scan < 256 && IsReservedMenuKeyLocked(MapVirtualKeyW(winScan, MAPVK_VSC_TO_VK_EX));
+    return scan < 256 && IsReservedMenuEventLocked(MapVirtualKeyW(winScan, MAPVK_VSC_TO_VK_EX),
+                                                  scan & 0x7f, (scan & 0x80) != 0);
 }
 
 HRESULT WINAPI hkDirectInputGetDeviceState(void* device, DWORD dataSize, LPVOID data)
 {
+    bool physicalKeyboard = false;
     {
         std::unique_lock lock(_state.Mutex);
         const DirectInputDeviceKind kind = GetDirectInputDeviceKindLocked(device);
         _state.DirectInputGetDeviceStateCallCount++;
+        physicalKeyboard = kind == DirectInputDeviceKind::Keyboard && IsPhysicalMenuBindingLocked();
 
-        if (ShouldBlockDirectInputDeviceLocked(kind))
+        if (ShouldBlockDirectInputDeviceLocked(kind) && !physicalKeyboard)
         {
             if (data != nullptr && dataSize > 0)
                 std::memset(data, 0, dataSize);
@@ -738,8 +741,25 @@ HRESULT WINAPI hkDirectInputGetDeviceState(void* device, DWORD dataSize, LPVOID 
     {
         std::unique_lock lock(_state.Mutex);
         if (GetDirectInputDeviceKindLocked(device) == DirectInputDeviceKind::Keyboard && dataSize == 256)
+        {
             for (DWORD scan = 0; scan < 256; ++scan)
+            {
+                if (physicalKeyboard)
+                {
+                    const UINT winScan = (scan & 0x7f) | ((scan & 0x80) ? 0xe000 : 0);
+                    ObserveMenuKeyLocked(MapVirtualKeyW(winScan, MAPVK_VSC_TO_VK_EX), scan & 0x7f,
+                                         (scan & 0x80) != 0, false, (static_cast<BYTE*>(data)[scan] & 0x80) == 0,
+                                         PhysicalKeySource::DirectInput);
+                }
                 if (IsReservedDirectInputKeyLocked(scan)) static_cast<BYTE*>(data)[scan] = 0;
+            }
+            if (physicalKeyboard && ShouldBlockKeyboardInputLocked())
+            {
+                std::memset(data, 0, dataSize);
+                --_state.DirectInputGetDeviceStatePassedCount;
+                ++_state.DirectInputGetDeviceStateBlockedCount;
+            }
+        }
     }
     return result;
 }
@@ -747,12 +767,14 @@ HRESULT WINAPI hkDirectInputGetDeviceState(void* device, DWORD dataSize, LPVOID 
 HRESULT WINAPI hkDirectInputGetDeviceData(void* device, DWORD objectDataSize, LPDIDEVICEOBJECTDATA data, LPDWORD inOut,
                                           DWORD flags)
 {
+    bool physicalKeyboard = false;
     {
         std::unique_lock lock(_state.Mutex);
         const DirectInputDeviceKind kind = GetDirectInputDeviceKindLocked(device);
         _state.DirectInputGetDeviceDataCallCount++;
+        physicalKeyboard = kind == DirectInputDeviceKind::Keyboard && IsPhysicalMenuBindingLocked();
 
-        if (ShouldBlockDirectInputDeviceLocked(kind))
+        if (ShouldBlockDirectInputDeviceLocked(kind) && !physicalKeyboard)
         {
             if (inOut != nullptr)
                 *inOut = 0;
@@ -783,10 +805,24 @@ HRESULT WINAPI hkDirectInputGetDeviceData(void* device, DWORD objectDataSize, LP
             for (DWORD i = 0; i < *inOut; ++i)
             {
                 DWORD scan; std::memcpy(&scan, bytes + size_t(i) * objectDataSize, sizeof(scan));
+                if (physicalKeyboard && scan < 256 && objectDataSize >= 2 * sizeof(DWORD))
+                {
+                    DWORD value; std::memcpy(&value, bytes + size_t(i) * objectDataSize + sizeof(DWORD), sizeof(value));
+                    const UINT winScan = (scan & 0x7f) | ((scan & 0x80) ? 0xe000 : 0);
+                    ObserveMenuKeyLocked(MapVirtualKeyW(winScan, MAPVK_VSC_TO_VK_EX), scan & 0x7f,
+                                         (scan & 0x80) != 0, false, (value & 0x80) == 0,
+                                         PhysicalKeySource::DirectInput);
+                }
                 if (IsReservedDirectInputKeyLocked(scan)) continue;
                 std::memmove(bytes + size_t(kept++) * objectDataSize, bytes + size_t(i) * objectDataSize, objectDataSize);
             }
-            *inOut = kept;
+            const bool captured = physicalKeyboard && ShouldBlockKeyboardInputLocked();
+            *inOut = captured ? 0 : kept;
+            if (captured)
+            {
+                --_state.DirectInputGetDeviceDataPassedCount;
+                ++_state.DirectInputGetDeviceDataBlockedCount;
+            }
         }
     }
     return result;

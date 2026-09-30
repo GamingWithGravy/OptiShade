@@ -17,6 +17,7 @@ $ErrorActionPreference='Stop'
 Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase,System.Windows.Forms
 Add-Type -TypeDefinition 'public class FusionGameCard { public string Name {get;set;} public string Folder {get;set;} public string Launcher {get;set;} public string State {get;set;} public string InstallFolder {get;set;} public string Label {get;set;} public string Artwork {get;set;} public System.Windows.Media.ImageSource Thumbnail {get;set;} }' -ReferencedAssemblies @([Windows.Media.ImageSource].Assembly.Location,[Windows.Threading.DispatcherObject].Assembly.Location)
 $store=if($env:OPTISHADE_STORE){$env:OPTISHADE_STORE}else{Join-Path $env:LOCALAPPDATA 'OptiShade'}
+InitializeOptiShadeUpdateChannel -InstalledChannel beta
 $script:cachePath=Join-Path $store 'msfs-2020-2024-cache.json'
 [xml]$xaml=Get-Content "$PSScriptRoot/manager.xaml" -Raw -Encoding UTF8
 $form=[Windows.Markup.XamlReader]::Load((New-Object Xml.XmlNodeReader $xaml))
@@ -62,13 +63,16 @@ $form.FindName('Minimize').Add_Click({$form.WindowState='Minimized'})
 $script:busy=$false
 $form.FindName('RevertUpdate').Add_Click({
  if($script:busy){return}
- try{$selected=ShowOptiShadeRevert $form;if($selected){StartManagerUpdate $selected}}
+ try{$selected=ShowOptiShadeRevert $form;if($selected){StartManagerUpdate $selected -ReturnToStable}}
  catch{$status.Text=$_.Exception.Message;$status.Foreground='#FFBE83'}
 })
 $form.FindName('UpdateAvailable').Add_Click({StartManagerUpdate $script:availableUpdate})
-function StartManagerUpdate($Update){
+function StartManagerUpdate($Update,[switch]$ReturnToStable){
  if($script:busy -or -not $Update){return}
- if($Update.Channel -and $Update.Channel -ne (GetOptiShadeUpdateChannel)){$status.Text='The download channel changed. Check for updates again.';return}
+ $installedChannel=if((GetBundledOptiShadeVersion) -match '-(?:alpha|beta|rc)'){'beta'}else{'stable'}
+ $Update|Add-Member -NotePropertyName InstalledChannel -NotePropertyValue $installedChannel -Force
+ $Update|Add-Member -NotePropertyName ExplicitReturnToStable -NotePropertyValue ([bool]$ReturnToStable) -Force
+ try{[void](AssertOptiShadeUpdateRequest $Update $store)}catch{$status.Text=$_.Exception.Message;return}
  if($env:OPTISHADE_PORTABLE -eq '1'){
   if($Update.Rollback){
    $status.Text='Portable version change: download the selected portable ZIP into a separate folder. Keep your Data folder as a backup; installed game files are not changed automatically.'
@@ -101,6 +105,12 @@ function StartManagerUpdate($Update){
  try{Start-Process -FilePath $hostExe -ArgumentList @('--update-worker',('"'+$config+'"')) -WindowStyle Hidden -Verb RunAs;$form.Close()}
  catch{$status.Text='The updater could not start or administrator access was cancelled. No update was applied. '+$_.Exception.Message}
 }
+function CompleteManualManagerInstall([string]$ManifestPath,$PreviousManifest){
+ try{
+  $cleanup=CompleteOptiShadeManualInstall $ManifestPath $Installer (GetBundledOptiShadeVersion) $store $PreviousManifest { $form.Dispatcher.Invoke([Action]{},[Windows.Threading.DispatcherPriority]::Background) }
+  if($cleanup){$status.Text+=' '+$cleanup}
+ }catch{$status.Text+=' The installation completed, but manager cleanup was stopped: '+$_.Exception.Message}
+}
 function RunAction([scriptblock]$action){
  if($script:startupResult -and -not $script:startupResult.IsCompleted){$status.Text='Finishing the hardware check. Please try again in a moment.';return}
  if($script:busy){return};$script:busy=$true
@@ -132,14 +142,14 @@ $form.FindName('ApplyFxChoice').Add_Click({RunAction {
 $form.FindName('Install').Add_Click({RunAction {
  if((GetFusionInstallState $store $path.Text) -match '^Installed'){
   $mp=ManifestPath $store $path.Text;$previous=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json
-  if(-not(TestBundledUpdateVersion $previous)){throw 'This manager does not contain a newer version. Use the manager matching the installed version for Repair.'}
+  if(-not(TestBundledUpdateVersion $previous) -and -not(TestOptiShadeChannelChange $previous.Version (GetBundledOptiShadeVersion))){throw 'This manager does not contain a newer version. Use the manager matching the installed version for Repair.'}
   if([Windows.MessageBox]::Show($form,'Update this installation using the files in this manager? Saved presets, settings and original backups are kept. Close the simulator first.','Update OptiShade','YesNo','Question','No') -ne 'Yes'){return}
   $proxy=@($previous.Files|Where-Object SourcePath -eq 'winmm.dll'|Select-Object -First 1).Path
   if(-not $proxy){throw 'The recorded loader is unknown. Update stopped.'}
   $mp=InstallFusion $path.Text $Payload $store $Installer $proxy @(FindFusionConflicts $path.Text) -ReplaceExisting $true -PreserveConfiguration $true
   $updated=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json
   foreach($key in @('LaunchExe','Downloads','OptionalDlss','FxPresetRelative')){if($previous.PSObject.Properties[$key]){$updated|Add-Member -NotePropertyName $key -NotePropertyValue $previous.$key -Force}}
-  WriteState $updated $mp;$status.Text='OptiShade updated from this manager. Settings and presets kept. No Restore is required.';return
+  WriteState $updated $mp;$status.Text='OptiShade updated from this manager. Settings and presets kept. No Restore is required.';CompleteManualManagerInstall $mp $previous;return
  }
  if((GetFusionInstallState $store $path.Text) -match '^Installation incomplete'){throw 'An incomplete installation was found. Repair using the matching manager first.'}
  if($form.FindName('OwnIniMode').IsChecked){TestOwnPreset $script:ownIni $path.Text (Join-Path $PSScriptRoot 'EffectPackages.ini')}
@@ -163,11 +173,13 @@ $form.FindName('Install').Add_Click({RunAction {
   $message="ReShade / OptiShade files detected. Remove conflicting files from the game folder, then install OptiShade? Replaced files will be included in the restore backup. Saved INI files are kept.`n`n"+$message
   if([Windows.MessageBox]::Show($form,$message,'Reinstall or replace graphics mods','YesNo','Question','No') -ne 'Yes'){return}
  }
+ $manualPrevious=$null;$manualRecord=ManifestPath $store $path.Text;if(Test-Path -LiteralPath $manualRecord){$manualPrevious=Get-Content -LiteralPath $manualRecord -Raw|ConvertFrom-Json}
  $script:manifest=InstallFusion $path.Text $Payload $store $Installer $proxy $replace -ReplaceExisting $existing -IncludeEffects ([bool]$form.FindName('IncludeEffects').IsChecked)
  $m=Get-Content $script:manifest -Raw|ConvertFrom-Json;$m|Add-Member -NotePropertyName LaunchExe -NotePropertyValue $exe -Force;$m|Add-Member -NotePropertyName Downloads -NotePropertyValue 'Pending' -Force;$m|Add-Member -NotePropertyName OptionalDlss -NotePropertyValue ([bool]$optionalDlss) -Force;WriteState $m $script:manifest
  SaveFusionCompatibility $path.Text $plan
  if($form.FindName('OwnIniMode').IsChecked){$relative=SaveOwnPreset $script:ownIni $path.Text (Join-Path $PSScriptRoot 'EffectPackages.ini');$m|Add-Member -NotePropertyName FxPresetRelative -NotePropertyValue $relative -Force;WriteState $m $script:manifest}
  FinishOptionalDownloads $m $plan
+ CompleteManualManagerInstall $script:manifest $manualPrevious
 }})
 $form.FindName('Restore').Add_Click({RunAction {$m=ManifestPath $store $path.Text;if(-not(Test-Path $m)){throw 'No recorded installation for this game.'};RestoreFusion $m;$status.Text='Game restored. Original files are back and OptiShade game files are removed.';$restored=Get-Content -LiteralPath $m -Raw|ConvertFrom-Json;if($restored.RecoveredShaders){$status.Text+=' Edited shaders saved in: '+$restored.RecoveredShaders}}})
 $form.FindName('PrepareMfg').Add_Click({RunAction {
@@ -275,9 +287,9 @@ function RefreshHomeState{
  try{if($path.Text){$mfgRecord=Get-Content -LiteralPath (ManifestPath $store $path.Text) -Raw|ConvertFrom-Json;if($mfgRecord.AutomaticMfgStatus){$form.FindName('MfgStatus').Text=$mfgRecord.AutomaticMfgStatus}elseif($mfgRecord.OptionalMfg){$form.FindName('MfgStatus').Text='RTX 40 MFG component installed. Enable native DLSS Frame Generation in game; Backspace opens its menu. Multipliers depend on the game and GPU.'}}}catch{}
  try{$state=if($path.Text){GetFusionInstallState $store $path.Text}else{'Not installed'}}catch{$state='Invalid path'}
  $installed=$state -match '^Installed';$incomplete=$state -match '^Installation incomplete'
- $upgrade=$false
- if($installed){try{$record=Get-Content -LiteralPath (ManifestPath $store $path.Text) -Raw|ConvertFrom-Json;$upgrade=TestBundledUpdateVersion $record}catch{}}
- $install=$form.FindName('Install');$install.Content=if($upgrade){'Update OptiShade'}elseif($installed){'Already installed'}elseif($incomplete){'Repair required'}else{'Install OptiShade'}
+ $upgrade=$false;$channelChange=$false
+ if($installed){try{$record=Get-Content -LiteralPath (ManifestPath $store $path.Text) -Raw|ConvertFrom-Json;$channelChange=TestOptiShadeChannelChange $record.Version (GetBundledOptiShadeVersion);$upgrade=(TestBundledUpdateVersion $record) -or $channelChange}catch{}}
+ $install=$form.FindName('Install');$install.Content=if($channelChange){if((GetBundledOptiShadeVersion) -match '-(?:alpha|beta|rc)'){'Switch to beta'}else{'Switch to stable'}}elseif($upgrade){'Update OptiShade'}elseif($installed){'Already installed'}elseif($incomplete){'Repair required'}else{'Install OptiShade'}
  $install.IsEnabled=(-not $script:busy -and (-not $installed -or $upgrade) -and -not $incomplete -and $state -ne 'Invalid path' -and -not [string]::IsNullOrWhiteSpace($path.Text))
  $form.FindName('ApplyFxChoice').Visibility=if($installed){'Visible'}else{'Collapsed'}
  $title=GetMsfsTitle $path.Text
@@ -399,7 +411,7 @@ $script:startupTimer.Add_Tick({
    $form.FindName('IntroStatus').Text='Your setup is ready.'
    $form.FindName('IntroProgress').IsIndeterminate=$false;$form.FindName('IntroProgress').Value=100
    $copies=@($result.Games)
-   if($result.Update -and $result.Update.Channel -eq (GetOptiShadeUpdateChannel)){$script:availableUpdate=$result.Update;$form.FindName('UpdateAvailable').Content='Update available - '+$result.Update.Version;$form.FindName('UpdateAvailable').Visibility='Visible'}
+   if($result.Update -and -not $result.Update.Rollback -and $result.Update.Channel -eq (GetOptiShadeUpdateChannel)){$script:availableUpdate=$result.Update;$form.FindName('UpdateAvailable').Content=GetOptiShadeUpdateLabel $result.Update;$form.FindName('UpdateAvailable').Visibility='Visible'}
    $form.FindName('MsfsCopies').ItemsSource=$copies
    if($copies.Count){$form.FindName('MsfsCopies').SelectedIndex=0}else{$path.Text=''}
    $status.Text='Simulator detection complete. Open Setup to install, play or restore.'
@@ -449,8 +461,8 @@ $form.FindName('ImportZip').Add_Click({RunAction {
 $form.FindName('CheckUpdates').Add_Click({RunAction {
  $status.Text='Checking GitHub releases...';$form.Dispatcher.Invoke([Action]{},[Windows.Threading.DispatcherPriority]::Background)
  $script:availableUpdate=GetOptiShadeUpdate -ReportErrors
- if($script:availableUpdate){$form.FindName('UpdateAvailable').Content='Update available - '+$script:availableUpdate.Version;$form.FindName('UpdateAvailable').Visibility='Visible';$status.Text='An update is available. Use the update button to install it.'}
- else{$form.FindName('UpdateAvailable').Visibility='Collapsed';$status.Text='No eligible release is available in the '+(GetOptiShadeUpdateChannel)+' channel.'}
+ if($script:availableUpdate){$form.FindName('UpdateAvailable').Content=GetOptiShadeUpdateLabel $script:availableUpdate;$form.FindName('UpdateAvailable').Visibility='Visible';$status.Text=if($script:availableUpdate.Rollback){'Stable was selected. Use Return to stable to leave beta; this is a channel change, not a newer beta update.'}else{'An update is available. Use the update button to install it.'}}
+ else{$form.FindName('UpdateAvailable').Visibility='Collapsed';$status.Text=if((GetOptiShadeUpdateChannel) -eq 'beta'){'No newer beta release is available.'}else{'Beta updates are off. Use Return to stable to install the latest stable release.'}}
 }})
 
 function CancelSnapshotCapture {$script:capturingSnapshot=$false;$form.FindName('ChangeSnapshotKey').Content='Change'}
@@ -468,7 +480,7 @@ function RefreshMenuKeys {
  $form.FindName('HotSwapKey').Text=if($script:hotSwapCandidate -gt 0){([Windows.Forms.Keys]$script:hotSwapCandidate).ToString()}else{'Not set'}
  $script:menuKeyCandidate=[int]$keys.ShortcutKey
  $form.FindName('PrimaryMenuKey').Text=([Windows.Forms.Keys]$script:menuKeyCandidate).ToString()
- $form.FindName('KeyCaptureHint').Text='Click Change, press one key, then Save shortcuts. Escape cancels.'
+ $form.FindName('KeyCaptureHint').Text='Click Change, press one key, then Save shortcuts. Escape cancels. Turn Num Lock on for number-pad digits.'
  $form.FindName('BackupMenuHint').Text='Recovery shortcut: Ctrl+Shift+'+([Windows.Forms.Keys][int]$keys.BackupShortcutKey).ToString()+' (no Insert or numpad needed). Saving the primary key keeps this shortcut.'
 }
 function BeginMenuKeyCapture {
@@ -491,25 +503,35 @@ function CaptureMenuKey($event) {
 $form.FindName('ChangeMenuKey').Add_Click({BeginMenuKeyCapture})
 $form.Add_PreviewKeyDown({CaptureMenuKey $_})
 $form.Add_Deactivated({if($script:capturingMenuKey){$script:capturingMenuKey=$false;$form.FindName('ChangeMenuKey').Content='Change';$form.FindName('KeyCaptureHint').Text='Key capture cancelled when the manager lost focus.'}})
-$form.FindName('ChangeHotSwapKey').Add_Click({CancelSnapshotCapture;$script:capturingMenuKey=$false;$form.FindName('ChangeMenuKey').Content='Change';$script:capturingHotSwap=$true;$form.FindName('ChangeHotSwapKey').Content='Press a key...';$form.FindName('KeyCaptureHint').Text='Press a hotswap key. Escape cancels; Backspace clears. Then Save shortcuts.'})
+$form.FindName('ChangeHotSwapKey').Add_Click({CancelSnapshotCapture;$script:capturingMenuKey=$false;$form.FindName('ChangeMenuKey').Content='Change';$script:capturingHotSwap=$true;$form.FindName('ChangeHotSwapKey').Content='Press a key...';$form.FindName('KeyCaptureHint').Text='Press a hotswap key. Escape cancels; Backspace clears. Then Save shortcuts. Turn Num Lock on for number-pad digits.'})
 $form.FindName('ClearHotSwapKey').Add_Click({$script:capturingHotSwap=$false;$script:hotSwapCandidate=0;$form.FindName('HotSwapKey').Text='Not set';$form.FindName('ChangeHotSwapKey').Content='Change';$form.FindName('KeyCaptureHint').Text='Click Save shortcuts to keep this change.'})
-$form.Add_PreviewKeyDown({
- if(-not $script:capturingHotSwap){return};$_.Handled=$true;$key=$_.Key;if($key -eq [Windows.Input.Key]::System){$key=$_.SystemKey}
- if($key -eq [Windows.Input.Key]::Escape){$script:capturingHotSwap=$false;$form.FindName('ChangeHotSwapKey').Content='Change';return}
- $code=[Windows.Input.KeyInterop]::VirtualKeyFromKey($key)
- if($code -eq 8){$code=0}elseif([Windows.Input.Keyboard]::Modifiers -ne [Windows.Input.ModifierKeys]::None -or $code -notin (@(33..40)+@(45,46)+@(48..57)+@(65..90)+@(96..111)+@(112..123))){return}
- $script:hotSwapCandidate=$code;$script:capturingHotSwap=$false;$form.FindName('ChangeHotSwapKey').Content='Change';$form.FindName('HotSwapKey').Text=if($code){([Windows.Forms.Keys]$code).ToString()}else{'Not set'};$form.FindName('KeyCaptureHint').Text='Click Save shortcuts to keep this change.'
-})
 $form.Add_Deactivated({$script:capturingHotSwap=$false;$form.FindName('ChangeHotSwapKey').Content='Change'})
-$form.FindName('ChangeSnapshotKey').Add_Click({$script:capturingMenuKey=$false;$script:capturingHotSwap=$false;$form.FindName('ChangeMenuKey').Content='Change';$form.FindName('ChangeHotSwapKey').Content='Change';$script:capturingSnapshot=$true;$form.FindName('ChangeSnapshotKey').Content='Press a key...';$form.FindName('KeyCaptureHint').Text='Press a SnapShot key. Escape cancels; Backspace clears. Then Save shortcuts.'})
+$form.FindName('ChangeSnapshotKey').Add_Click({$script:capturingMenuKey=$false;$script:capturingHotSwap=$false;$form.FindName('ChangeMenuKey').Content='Change';$form.FindName('ChangeHotSwapKey').Content='Change';$script:capturingSnapshot=$true;$form.FindName('ChangeSnapshotKey').Content='Press a key...';$form.FindName('KeyCaptureHint').Text='Press a SnapShot key. Escape cancels; Backspace clears. Then Save shortcuts. Turn Num Lock on for number-pad digits.'})
 $form.FindName('ClearSnapshotKey').Add_Click({CancelSnapshotCapture;$script:snapshotCandidate=0;$form.FindName('SnapshotKey').Text='Not set'})
-$form.Add_PreviewKeyDown({
- if(-not $script:capturingSnapshot){return};$_.Handled=$true;$key=$_.Key;if($key -eq [Windows.Input.Key]::System){$key=$_.SystemKey}
- if($key -eq [Windows.Input.Key]::Escape){CancelSnapshotCapture;return}
+function CaptureActionKey($event,[bool]$KeyUp=$false) {
+ if(-not $script:capturingSnapshot -and -not $script:capturingHotSwap){return}
+ $key=$event.Key;if($key -eq [Windows.Input.Key]::System){$key=$event.SystemKey}
  $code=[Windows.Input.KeyInterop]::VirtualKeyFromKey($key)
- if($code -eq 8){$code=0}elseif([Windows.Input.Keyboard]::Modifiers -ne [Windows.Input.ModifierKeys]::None -or $code -notin (@(33..40)+@(45,46)+@(48..57)+@(65..90)+@(96..111)+@(112..123))){return}
- $script:snapshotCandidate=$code;CancelSnapshotCapture;$form.FindName('SnapshotKey').Text=if($code){([Windows.Forms.Keys]$code).ToString()}else{'Not set'};$form.FindName('KeyCaptureHint').Text='Click Save shortcuts to keep this change.'
-})
+ # Windows may send only key-up for Print Screen. A down that completed capture
+ # already clears the flag, so its later key-up cannot bind or trigger twice.
+ if($KeyUp -and $code -ne 44){return}
+ $event.Handled=$true
+ $isSnapshot=[bool]$script:capturingSnapshot
+ $button=if($isSnapshot){'ChangeSnapshotKey'}else{'ChangeHotSwapKey'}
+ $label=if($isSnapshot){'SnapshotKey'}else{'HotSwapKey'}
+ if($key -eq [Windows.Input.Key]::Escape){$script:capturingSnapshot=$false;$script:capturingHotSwap=$false;$form.FindName($button).Content='Change';$form.FindName('KeyCaptureHint').Text='Cancelled. The selected key is unchanged.';return}
+ if($code -eq 8){$code=0}
+ elseif([Windows.Input.Keyboard]::Modifiers -ne [Windows.Input.ModifierKeys]::None -or $code -notin (@(33..40)+@(44,45,46)+@(48..57)+@(65..90)+@(96..111)+@(112..123))){$form.FindName('KeyCaptureHint').Text='Unsupported key. Choose a letter, number, function, navigation or Print Screen key without modifiers. Turn Num Lock on for number-pad digits.';return}
+ $other=if($isSnapshot){$script:hotSwapCandidate}else{$script:snapshotCandidate}
+ try{$conflict=GetActionKeyConflict $path.Text $code $script:menuKeyCandidate $other}catch{$form.FindName('KeyCaptureHint').Text='Unable to check shortcuts: '+$_.Exception.Message;return}
+ if($conflict){$form.FindName('KeyCaptureHint').Text='That key is already assigned to '+$conflict+'. Choose another key. Turn Num Lock on for number-pad digits.';return}
+ if($isSnapshot){$script:snapshotCandidate=$code}else{$script:hotSwapCandidate=$code}
+ $script:capturingSnapshot=$false;$script:capturingHotSwap=$false;$form.FindName($button).Content='Change'
+ $form.FindName($label).Text=if($code -eq 44){'Print Screen'}elseif($code){([Windows.Forms.Keys]$code).ToString()}else{'Not set'}
+ $form.FindName('KeyCaptureHint').Text='Click Save shortcuts to keep this change. Turn Num Lock on for number-pad digits.'
+}
+$form.Add_PreviewKeyDown({CaptureActionKey $_})
+$form.Add_PreviewKeyUp({CaptureActionKey $_ $true})
 $form.Add_Deactivated({CancelSnapshotCapture})
 $form.FindName('BrowseSnapshots').Add_Click({RunAction {if([string]::IsNullOrWhiteSpace($path.Text)){throw 'Select your game in Setup first.'};$folder=OwnedPath $path.Text 'Optishade Snapshots';[IO.Directory]::CreateDirectory($folder)|Out-Null;Start-Process -FilePath (Join-Path $env:WINDIR 'explorer.exe') -ArgumentList ('"'+$folder+'"')}})
 $form.FindName('LoadMenuKeys').Add_Click({RunAction {RefreshMenuKeys;$status.Text='Showing shortcuts for the selected game folder.'}})

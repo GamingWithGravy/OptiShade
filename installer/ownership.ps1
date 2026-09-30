@@ -1,9 +1,9 @@
 ﻿$ErrorActionPreference='Stop'
-function GetBundledOptiShadeVersion { 'P0.21.3-beta.4' }
+function GetBundledOptiShadeVersion { 'P0.21.5-beta.1' }
 function TestBundledUpdateVersion($Manifest){
  try{
   $parse={param($text)
-   if($text -notmatch '^P?(\d+\.\d+(?:\.\d+){0,2})(?:-(alpha|beta|rc)[.-]?(\d+))?(?:-MSFS24)?$'){return $null}
+   if($text -notmatch '^P?(\d+\.\d+(?:\.\d+){0,2})(?:-(alpha|beta|rc)(?:[.-]?(\d+))?)?(?:-MSFS24)?$'){return $null}
    $rank=if($Matches[2]){@{alpha=0;beta=1;rc=2}[$Matches[2]]}else{3}
    $revision=if($Matches[3]){[int]$Matches[3]}else{0}
    [pscustomobject]@{Core=[version]$Matches[1];Rank=$rank;Revision=$revision}
@@ -18,11 +18,39 @@ function TestBundledUpdateVersion($Manifest){
 function AssertRepairVersion($Manifest){
     $bundled=GetBundledOptiShadeVersion
     if(-not $Manifest.Version -or $Manifest.Version -cne $bundled){
-        throw "Repair requires the installer matching the installed version ($($Manifest.Version)). This installer contains $bundled. Repair will not update or downgrade OptiShade."
+        $next=if(TestBundledUpdateVersion $Manifest){'Choose Update OptiShade in Setup to review and apply this newer build while keeping presets, settings and original backups.'}else{'Use the manager matching the installed version, or the separate update/return-to-stable workflow to change builds.'}
+        throw "Repair requires the installer matching the installed version ($($Manifest.Version)). This installer contains $bundled. Repair will not update or downgrade OptiShade. $next"
     }
 }
 function FullPath([string]$Path){[IO.Path]::GetFullPath($Path).TrimEnd('\','/')}
 function HashFile([string]$Path){if(Test-Path -LiteralPath $Path -PathType Leaf){(Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash}else{''}}
+function GetDefenderFileEvidence([string]$Path){
+    # Read only a bounded recent event window, and return evidence for this exact
+    # file. Detection/action events are not proof that quarantine succeeded.
+    try{
+        $wanted=FullPath $Path
+        $events=@(Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Windows Defender/Operational';Id=1116,1117;StartTime=(Get-Date).AddDays(-2)} -MaxEvents 128 -ErrorAction Stop)
+        foreach($event in $events){
+            [xml]$xml=$event.ToXml();$fields=@{}
+            foreach($data in $xml.Event.EventData.Data){$fields[[string]$data.Name]=[string]$data.'#text'}
+            $matched=$false
+            foreach($resource in ([string]$fields['Path'] -split ';')){
+                $candidate=$resource.Trim() -replace '^(?i:file:|containerfile:)',''
+                if($candidate -notmatch '^(?:[A-Za-z]:[\\/]|\\\\)'){continue}
+                if([string]::Equals((FullPath $candidate),$wanted,[StringComparison]::OrdinalIgnoreCase)){$matched=$true;break}
+            }
+            if(-not $matched){continue}
+            $threat=([string]$fields['Threat Name'] -replace '[\r\n\x00-\x1f]',' ').Trim()
+            # A detection label should not contain a filesystem path. Avoid
+            # echoing unrelated private paths from an unusual/malformed record.
+            if($threat -match '[A-Za-z]:[\\/]|\\\\'){$threat='unnamed detection'}
+            if(-not $threat){$threat='unnamed detection'}
+            if($threat.Length -gt 160){$threat=$threat.Substring(0,160)}
+            return " Windows Defender recorded $threat for this exact file within the last 48 hours. Open Windows Security > Protection history to check the action taken."
+        }
+    }catch{ }
+    return ' Check antivirus protection history for this file; no matching recent Defender event was available to confirm the cause.'
+}
 function OwnedPath([string]$Root,[string]$Relative){
     $base=FullPath $Root;$path=FullPath (Join-Path $base $Relative)
     if(-not $path.StartsWith($base+'\',[StringComparison]::OrdinalIgnoreCase)){throw 'Path is outside the installation folder.'}
@@ -117,7 +145,8 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
         $neuralGuides=$entry.Path -match '^OptiShadeData[\\/](Shaders[\\/]OptiShadeTaa[\\/]|Textures[\\/]vort_BlueNoise\.png$|Presets[\\/]X-Plane neural guides\.ini$)'
         if(-not $IncludeEffects -and $entry.Path -match '^OptiShadeData[\\/](Shaders|Textures|Presets)[\\/]' -and -not $bundledLook -and -not $neuralGuides){continue}
         $source=OwnedPath $Payload $entry.Path;$relative=if($entry.Path -eq 'winmm.dll'){$Proxy}else{$entry.Path};$dest=OwnedPath $Game $relative
-        if((HashFile $source) -ne $entry.Hash){throw "Installer verification failed for $($entry.Path). The extracted file is missing or differs from the packaged copy. No game files have been changed. Close the manager, download a fresh official EXE, and check antivirus protection history if this repeats. Do not replace the DLL from another website."}
+        $sourceHash=try{HashFile $source}catch{''}
+        if($sourceHash -ne $entry.Hash){throw ("Installer verification failed for $($entry.Path). The extracted file is missing or differs from the packaged copy. No game files have been changed."+(GetDefenderFileEvidence $source)+' Close the manager and download a fresh official installer. Do not replace the DLL from another website.')}
         # Keep download receipts on repair/reinstall; bundled defaults must not erase them.
         if($relative -match '^OptiShadeData[\\/]Effects-install\.json$' -and (Test-Path -LiteralPath $dest)){continue}
         # A returning user's saved default look is their preset, not disposable payload.
@@ -165,8 +194,12 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
             $snapshot=@($rollback|Where-Object Path -eq $entry.Path)[0]
             if((HashFile $dest) -ne $snapshot.Hash){throw 'An existing file changed during installation.'}
             if(-not $entry.SourcePath){if(Test-Path -LiteralPath $dest){Remove-Item -LiteralPath $dest -Force};continue}
-            Copy-Item -LiteralPath (OwnedPath $Payload $entry.SourcePath) -Destination $dest -Force
-            if((HashFile $dest) -ne $entry.Hash){throw 'Installed file verification failed.'}
+            try{
+                Copy-Item -LiteralPath (OwnedPath $Payload $entry.SourcePath) -Destination $dest -Force
+                if((HashFile $dest) -ne $entry.Hash){throw 'Copied file is missing or differs from the packaged copy.'}
+            }catch{
+                throw ("Installed file verification failed for $($entry.Path). The file could not be copied or verified."+(GetDefenderFileEvidence $dest))
+            }
         }
         if((Test-Path -LiteralPath (Join-Path $Game 'X-Plane.exe')) -and -not $PreserveConfiguration){
             $config=OwnedPath $Game 'ReShade.ini'
@@ -211,6 +244,22 @@ function RemoveRecordedOptiShadeLoaders($Manifest,[string]$ManifestPath){
     }
 }
 function GetShaderRecoveryRoot { Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'OptiShade-Recovery' }
+function TestLegacyMutableReShadeLog($Manifest,$Entry,[string]$File){
+    # Migrate only the old root-log receipt shapes. This is not a generic
+    # extension-based exception: unknown receipts and all DLL hashes still fail.
+    if($Entry.Path -cne 'ReShade.log' -or $Entry.Mutable -or $Manifest.Status -notin @('Installed','Installing')){return $false}
+    if($Manifest.Version -notmatch '^P0\.(?:20(?:\.\d{1,2})?(?:-MSFS24)?|21(?:\.[1-3])?(?:-beta\.[1-4])?(?:-MSFS24)?)$'){return $false}
+    if(@($Manifest.Files|Where-Object Path -eq 'ReShade.log').Count -ne 1){return $false}
+    if(-not @($Manifest.Files|Where-Object {$_.SourcePath -eq 'winmm.dll' -and $_.Hash -match '^[A-Fa-f0-9]{64}$'}).Count){return $false}
+    $packaged=$Entry.SourcePath -ceq 'ReShade.log' -and $Entry.Hash -match '^[A-Fa-f0-9]{64}$'
+    $displaced=-not $Entry.SourcePath -and -not $Entry.Hash -and $Entry.Backup -and $Entry.PreviousHash -match '^[A-Fa-f0-9]{64}$'
+    if(-not($packaged -or $displaced)){return $false}
+    # Confirm this is recognisable ReShade output, never arbitrary changed data.
+    # Read a bounded header even when a long session has produced a large log.
+    $stream=[IO.File]::OpenRead($File)
+    try{$bytes=New-Object byte[] 65536;$length=$stream.Read($bytes,0,$bytes.Length);$header=[Text.Encoding]::UTF8.GetString($bytes,0,$length)}finally{$stream.Dispose()}
+    return $header -match '(?m)^\d{2}:\d{2}:\d{2}:\d{3}\s+\[\s*\d+\s*\]\s+\|\s*INFO\s*\|\s*Initializing ReShade version\s'
+}
 function RestoreFusion([string]$ManifestPath,[bool]$KeepPresets=$true){
     $m=Get-Content -LiteralPath $ManifestPath -Raw|ConvertFrom-Json
     CleanModBackupReferences $m (Split-Path $ManifestPath)
@@ -236,13 +285,15 @@ function RestoreFusion([string]$ManifestPath,[bool]$KeepPresets=$true){
         try{$handle=[IO.File]::Open($file,[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None);$handle.Dispose()}
         catch{throw ('Restore has not changed any files. Close MSFS and any log viewers, then retry. File is locked or not writable: '+$file)}
     }}
-    $changedShaders=@()
+    $changedShaders=@();$changedLogs=@()
     foreach($f in $m.Files){
         $dest=OwnedPath $m.Game $f.Path;$actual=HashFile $dest
         # Older manifests incorrectly classified the installer-maintained FX receipt as immutable.
         $mutable=$f.Mutable -or ($f.Path -match '^OptiShadeData[\\/]Effects-install\.json$')
         if($actual -and -not $mutable -and $actual -ne $f.Hash -and $actual -ne $f.PreviousHash){
-            if($f.Path -match '^OptiShadeData[\\/]Shaders[\\/].+\.(fx|fxh|h|hlsl)$'){
+            if(TestLegacyMutableReShadeLog $m $f $dest){
+                $changedLogs+=@{Path=$f.Path;Hash=$actual}
+            }elseif($f.Path -match '^OptiShadeData[\\/]Shaders[\\/].+\.(fx|fxh|h|hlsl)$'){
                 $changedShaders+=@{Path=$f.Path;Hash=$actual}
             }else{throw "A file changed after installation: $($f.Path). Restore stopped before changing anything."}
         }
@@ -251,6 +302,20 @@ function RestoreFusion([string]$ManifestPath,[bool]$KeepPresets=$true){
     foreach($relative in $m.OwnedDirectories){
         $dir=OwnedPath $m.Game $relative
         if(Test-Path -LiteralPath $dir){if(Get-ChildItem -LiteralPath $dir -Force -Recurse|Where-Object {$_.Attributes -band [IO.FileAttributes]::ReparsePoint}){throw 'A linked item was found in OptiShade data. Cleanup stopped.'}}
+    }
+    # A legacy log exception is allowed only after a full verified preservation
+    # copy succeeds. Keep it outside the app store so Uninstall cannot delete it.
+    if($changedLogs.Count){
+        $recovery=OwnedPath (GetShaderRecoveryRoot) ('Logs-'+[guid]::NewGuid().ToString('N'))
+        foreach($log in $changedLogs){
+            $copy=OwnedPath $recovery $log.Path
+            New-Item -ItemType Directory -Path (Split-Path $copy) -Force|Out-Null
+            [IO.File]::Copy((OwnedPath $m.Game $log.Path),$copy,$false)
+            if((HashFile $copy) -ne $log.Hash){throw 'Log recovery copy failed verification. Game files have not been removed.'}
+        }
+        $m|Add-Member -NotePropertyName RecoveredLogs -NotePropertyValue $recovery -Force
+        WriteState $m $ManifestPath
+        Write-Warning ('Changed legacy ReShade log was preserved in: '+$recovery)
     }
     # Preserve edited, manifest-owned shader sources outside the game before cleanup.
     # Do not extend this exception to loaders or other executable content.

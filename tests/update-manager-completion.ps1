@@ -35,3 +35,13 @@ try{
  if($notice -or (Test-Path $old) -or $script:pumps -eq 0){throw 'Delayed previous-manager shutdown left the beta EXE behind'}
  'PASS: locked beta EXE is removed after delayed shutdown; progress callback remains active'
 }finally{Wait-Job $job -Timeout 10|Out-Null;Remove-Job $job -Force}
+
+# A matching file reached through a junction is not an owned deletion target.
+$physical=Join-Path $root 'Physical';$linked=Join-Path $root 'Linked'
+[void][IO.Directory]::CreateDirectory($physical)
+$protected=Join-Path $physical 'Protected.exe';Set-Content -LiteralPath $protected 'keep linked target'
+$protectedHash=(Get-FileHash -LiteralPath $protected).Hash
+New-Item -ItemType Junction -Path $linked -Target $physical|Out-Null
+$notice=CompleteOptiShadeManagerUpdate (Join-Path $linked 'Protected.exe') $protectedHash $new $newHash $store stable
+if(-not $notice -or (Get-FileHash -LiteralPath $protected).Hash -ne $protectedHash){throw 'Linked previous-manager ancestor was not protected'}
+'PASS: linked ancestor preserves a matching previous EXE'

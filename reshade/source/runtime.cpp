@@ -360,6 +360,7 @@ reshade::runtime::runtime(api::swapchain *swapchain, api::command_queue *graphic
 reshade::runtime::~runtime()
 {
     osfx_impl::Retire(this);
+    osvnr_impl::Retire(this);
 	assert(_worker_threads.empty());
 	assert(!_is_initialized && _techniques.empty() && _technique_sorting.empty());
 
@@ -631,6 +632,7 @@ exit_failure:
 }
 void reshade::runtime::on_reset()
 {
+    osvnr_impl::Changed(this, true);
 	if (_is_initialized)
 		// Update initialization state immediately, so that any effect loading still in progress can abort early
 		_is_initialized = false;
@@ -3740,6 +3742,7 @@ void reshade::runtime::update_effects()
 		// Finished loading effects, so apply preset to figure out which ones need compiling
 		load_current_preset();
 		osfx_impl::OnEffectsReloaded(this);
+		osvnr_impl::Changed(this);
 
 #if RESHADE_ADDON
 		invoke_addon_event<addon_event::reshade_set_current_preset_path>(this, _current_preset_path.u8string().c_str());
@@ -3825,10 +3828,19 @@ void reshade::runtime::render_effects(api::command_list *cmd_list, api::resource
 		return;
 	_effects_rendered_this_frame = true;
 
-	// Nothing to do here if effects are still loading or disabled globally
-	if (is_loading() || _techniques.empty())
+	// Compilation workers may be changing effect/technique metadata. Never look
+	// up guides or request a reload until those workers have finished.
+	if (is_loading())
+	{
+		osvnr_impl::Loading(this);
 		return;
-	if (!_effects_enabled && std::all_of(_effects.cbegin(), _effects.cend(), [](const effect &effect) { return !effect.addon; }))
+	}
+	const bool requiredNeuralGuides = osvnr_impl::RequiresGuides(this);
+	// Keep missing-guide recovery reachable after compilation, even if no
+	// techniques survived that compile. RequiresGuides can request a safe reload.
+	if (_techniques.empty())
+		return;
+	if (!requiredNeuralGuides && !_effects_enabled && std::all_of(_effects.cbegin(), _effects.cend(), [](const effect &effect) { return !effect.addon; }))
 		return;
 
 	// Lock input so it cannot be modified by other threads while we are reading it here
@@ -3843,7 +3855,8 @@ void reshade::runtime::render_effects(api::command_list *cmd_list, api::resource
 	// Update special uniform variables
 	for (effect &effect : _effects)
 	{
-		if (!effect.rendering || (!_effects_enabled && !effect.addon))
+		const bool neuralGuideEffect = requiredNeuralGuides && effect.source_file.filename() == L"OptiShade_TAA_Guides.fx";
+		if (!neuralGuideEffect && (!effect.rendering || (!_effects_enabled && !effect.addon)))
 			continue;
 
 		for (uniform &variable : effect.uniforms)
@@ -4049,9 +4062,23 @@ void reshade::runtime::render_effects(api::command_list *cmd_list, api::resource
 		technique &tech = _techniques[technique_index];
 
 		const size_t effect_index = tech.effect_index;
-
-		if (!tech.enabled || (_should_save_screenshot && !tech.enabled_in_screenshot) || (!_effects_enabled && !_effects[effect_index].addon))
+		// Run required guide work without changing saved technique states or presets.
+		const bool neuralGuide = requiredNeuralGuides && tech.name == "OptiShade_TAA_Guides" && _effects[effect_index].source_file.filename() == L"OptiShade_TAA_Guides.fx";
+		if (!neuralGuide && (!tech.enabled || (_should_save_screenshot && !tech.enabled_in_screenshot) || (!_effects_enabled && !_effects[effect_index].addon)))
 			continue;
+		if (neuralGuide && !_effects[effect_index].compiled)
+		{
+			osvnr_impl::GuideUnavailable(this);
+			continue;
+		}
+		if (neuralGuide && permutation_index < tech.permutations.size() && !tech.permutations[permutation_index].created && !_effects[effect_index].permutations[permutation_index].cso.empty())
+		{
+			const auto request = std::make_pair(effect_index, permutation_index);
+			if (std::find(_reload_create_queue.cbegin(), _reload_create_queue.cend(), request) == _reload_create_queue.cend())
+				_reload_create_queue.push_back(request);
+			osvnr_impl::Loading(this);
+			continue;
+		}
 
 		if (permutation_index >= tech.permutations.size() ||
 			(!tech.permutations[permutation_index].created && _effects[effect_index].permutations[permutation_index].cso.empty()))

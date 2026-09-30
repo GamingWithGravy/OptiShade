@@ -8,7 +8,9 @@ OptiShade 0.21 adds a guide-input route that does not require the simulator to e
 2. Enable Image effects and the **TAA neural guides (experimental)** technique. Keep it before look effects.
 3. In Neural rendering, select **TAA neural rendering (experimental)** and enable NR.
 
-This route uses one full-resolution model pass, supports up to 3840x2160 and starts off each launch. Compatible RTX hardware and its matching model are required. MSFS 2020 and 2024 were visually tested at native 4K on an RTX 5090, with completed GPU work and no shimmer reported in the final tests. These limited tests do not validate every GPU, aircraft or display configuration. Support remains experimental; performance and appearance vary by scene and GPU.
+This route uses one model pass and starts off each launch. Native sizes up to 3840x2160 retain full-resolution processing. The beta also has a narrow experimental 5120x1440 route: it processes the model at 3840x1080, keeps full-size depth and motion guides, then applies the model's change to the original 5120x1440 picture. Other sizes outside the native envelope remain guarded. Your stored working-scale and pass-count settings are preserved.
+
+Compatible RTX hardware and its matching model are required. MSFS 2020 and 2024 were visually tested at native 4K on an RTX 5090, with completed GPU work and no shimmer reported in those tests. The new ultrawide route has passed isolated GPU mapping and model-evaluation checks; it still needs an in-simulator check for appearance, shimmer and performance. These limited tests do not validate every GPU, aircraft or display configuration. Support remains experimental; performance and appearance vary by scene and GPU.
 
 ## X-Plane 12 Vulkan
 

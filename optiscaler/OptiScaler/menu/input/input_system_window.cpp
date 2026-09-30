@@ -71,7 +71,7 @@ void SetFocusStateLocked(bool focused, const char* reason, HWND foreground, DWOR
                          DWORD foregroundThreadId)
 {
     const bool oldFocused = _state.Focused;
-    _state.Focused = focused;
+    ReconcileInputFocusLocked(focused);
 
     if (oldFocused != focused)
     {
@@ -257,6 +257,9 @@ void ClearTargetWindowLocked()
 
 void ClearInputWindowLocked()
 {
+    ClearFocusInputStateLocked();
+    _state.Focused = false;
+    _state.BlockMouse = _state.BlockKeyboard = _state.BlockCursor = false;
     if (_state.InputHwnd != nullptr)
     {
         LOG_WARN("clearing input window hwnd:{} pid:{} tid:{} subclassed:{}", static_cast<void*>(_state.InputHwnd),
@@ -344,6 +347,10 @@ bool ValidateInputWindowLocked()
         LOG_DEBUG("input identity changed hwnd:{} root {} -> {} pid {} -> {} tid {} -> {}",
                   static_cast<void*>(_state.InputHwnd), static_cast<void*>(_state.InputRootHwnd),
                   static_cast<void*>(rootHwnd), _state.InputProcessId, processId, _state.InputThreadId, threadId);
+        // An HWND can be recycled. Do not carry an old chain/input state into
+        // another window lifetime even if its numeric handle is unchanged.
+        ClearInputWindowLocked();
+        return false;
     }
 
     _state.InputRootHwnd = rootHwnd;
@@ -355,6 +362,12 @@ bool ValidateInputWindowLocked()
 
 bool InstallWindowSubclass(HWND hwnd)
 {
+    DWORD processId = 0;
+    const DWORD threadId = GetWindowThreadProcessId(hwnd, &processId);
+    if (processId != GetCurrentProcessId() || threadId == 0 ||
+        processId != _state.InputProcessId || threadId != _state.InputThreadId)
+        return false;
+
     WNDPROC currentWndProc = nullptr;
 
     if (!TryGetWindowProc(hwnd, &currentWndProc))
@@ -367,12 +380,25 @@ bool InstallWindowSubclass(HWND hwnd)
 
     if (currentWndProc == OptiInputWndProc)
     {
+        _state.OriginalWndProc = reinterpret_cast<WNDPROC>(GetPropW(hwnd, OriginalWndProcProperty));
         _state.WndProcSubclassed = _state.OriginalWndProc != nullptr;
         LOG_DEBUG("InstallWindowSubclass found existing OptiInput WndProc hwnd:{} original:{} subclassed:{}",
                   static_cast<void*>(hwnd), reinterpret_cast<std::uintptr_t>(_state.OriginalWndProc),
                   _state.WndProcSubclassed ? 1 : 0);
         return _state.WndProcSubclassed;
     }
+
+    const auto preserved = reinterpret_cast<WNDPROC>(GetPropW(hwnd, OriginalWndProcProperty));
+    if (preserved != nullptr && currentWndProc != preserved)
+    {
+        // Another overlay can still call us through its saved callback. Never
+        // install ourselves above that wrapper and create an indirect cycle.
+        _state.OriginalWndProc = preserved;
+        _state.WndProcSubclassed = false;
+        return false;
+    }
+    if (!SetPropW(hwnd, OriginalWndProcProperty, reinterpret_cast<HANDLE>(currentWndProc)))
+        return false;
 
     SetLastError(0);
 
@@ -384,10 +410,12 @@ bool InstallWindowSubclass(HWND hwnd)
                  static_cast<void*>(hwnd), reinterpret_cast<std::uintptr_t>(currentWndProc), GetLastError());
         _state.WndProcSubclassed = false;
         _state.OriginalWndProc = nullptr;
+        RemovePropW(hwnd, OriginalWndProcProperty);
         return false;
     }
 
     _state.OriginalWndProc = reinterpret_cast<WNDPROC>(previous);
+    SetPropW(hwnd, OriginalWndProcProperty, reinterpret_cast<HANDLE>(previous));
     _state.WndProcSubclassed = true;
 
     LOG_INFO("subclass installed hwnd:{} previousWndProc:{} optiWndProc:{}", static_cast<void*>(hwnd),
@@ -482,6 +510,9 @@ void RemoveWindowSubclass()
         LOG_INFO("removing subclass input:{} restoringWndProc:{}", static_cast<void*>(_state.InputHwnd),
                  reinterpret_cast<std::uintptr_t>(_state.OriginalWndProc));
         SetWindowLongPtrW(_state.InputHwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(_state.OriginalWndProc));
+        WNDPROC restored = nullptr;
+        if (TryGetWindowProc(_state.InputHwnd, &restored) && restored == _state.OriginalWndProc)
+            RemovePropW(_state.InputHwnd, OriginalWndProcProperty);
     }
     else
     {

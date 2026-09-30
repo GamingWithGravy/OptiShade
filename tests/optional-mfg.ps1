@@ -24,6 +24,19 @@ $m=Get-Content $mp -Raw|ConvertFrom-Json
 Assert ($m.OptionalMfg -and (HashFile "$game/version.dll") -eq (HashFile "$payload/OptiShadeData/MFG/RTXMFG.dll")) 'Verified module installed and tracked'
 $ini=Get-Content "$game/OptiScaler.ini" -Raw
 Assert ($ini -match 'External=true' -and $ini -match 'AdaMfgUnlock=false' -and $ini -match 'AmpereMfgUnlock=false' -and $ini -match 'ShortcutKey=45') 'Exclusive FG ownership; menu settings retained'
+$receiptHash=HashFile $mp;$settingsHash=HashFile "$game/OptiScaler.ini"
+InstallOptionalMfg $mp $payload @('RTX 4070')
+Assert ((HashFile $mp) -eq $receiptHash -and (HashFile "$game/OptiScaler.ini") -eq $settingsHash) 'Repeated optional install verifies ownership and makes no changes'
+Remove-Item -LiteralPath "$game/version.dll"
+$edited=[IO.File]::ReadAllText("$game/OptiScaler.ini").Replace('External=true','External=false');[IO.File]::WriteAllText("$game/OptiScaler.ini",$edited);$settingsHash=HashFile "$game/OptiScaler.ini"
+InstallOptionalMfg $mp $payload @('RTX 4070')
+Assert ((HashFile "$game/version.dll") -eq (HashFile "$payload/OptiShadeData/MFG/RTXMFG.dll") -and @((Get-Content $mp -Raw|ConvertFrom-Json).Files|Where-Object Path -eq 'version.dll').Count -eq 1) 'Missing owned optional loader is repaired without duplicate receipts'
+Assert ((HashFile "$game/OptiScaler.ini") -eq $settingsHash) 'Missing-loader repair preserves later user settings exactly'
+[IO.File]::WriteAllText("$game/OptiScaler.ini",$ini)
+Set-Content "$game/version.dll" 'foreign changed loader'
+$blocked=$false;try{InstallOptionalMfg $mp $payload @('RTX 4070')}catch{$blocked=$true}
+Assert ($blocked -and (Get-Content "$game/version.dll") -eq 'foreign changed loader') 'Repeated optional install never overwrites a changed loader'
+Copy-Item "$payload/OptiShadeData/MFG/RTXMFG.dll" "$game/version.dll" -Force
 $mp=InstallFusion $game $payload $store "$root/NewManager.exe" 'winmm.dll' @(FindFusionConflicts $game) -ReplaceExisting $true -PreserveConfiguration $true
 $m=Get-Content $mp -Raw|ConvertFrom-Json
 Assert ($m.OptionalMfg -and (Test-Path "$game/version.dll") -and (Get-Content "$game/OptiScaler.ini" -Raw) -match 'External=true') 'Repair/update retains optional loader and FG configuration'

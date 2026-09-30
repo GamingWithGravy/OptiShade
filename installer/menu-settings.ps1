@@ -5,7 +5,7 @@
 }
 function SetMenuSettings([string]$Game,[int]$Primary,[int]$Backup,[int]$HotSwap=-2,[int]$Snapshot=-2){
  AssertClosed $Game
- if($Primary -notin (@(33..40)+@(45,46)+@(48..57)+@(65..90)+@(96..111)+@(112..123)) -or $Backup -notin @(65..90)){throw 'Choose a supported primary key and a backup letter.'}
+ if($Primary -notin (@(33..40)+@(44,45,46)+@(48..57)+@(65..90)+@(96..111)+@(112..123)) -or $Backup -notin @(65..90)){throw 'Choose a supported primary key and a backup letter.'}
  if($Primary -eq $Backup){throw 'Use different primary and backup keys to avoid overlapping shortcuts.'}
  $file=OwnedPath $Game 'OptiScaler.ini';if(-not(Test-Path -LiteralPath $file)){throw 'Install OptiShade first.'}
  # These actions use the same input dispatcher; a duplicate would toggle both.
@@ -17,10 +17,10 @@ function SetMenuSettings([string]$Game,[int]$Primary,[int]$Backup,[int]$HotSwap=
  }
  foreach($key in $otherKeys.Keys){if($Primary -eq $otherKeys[$key]){throw "That key is already assigned to $key. Choose a different menu key."}}
  if($HotSwap -eq -2){$HotSwap=[int](GetMenuSettings $Game).PresetHotSwapKey}
- if($HotSwap -ne 0 -and $HotSwap -ne -1 -and $HotSwap -notin (@(33..40)+@(45,46)+@(48..57)+@(65..90)+@(96..111)+@(112..123))){throw 'Choose a supported hotswap key or clear it.'}
+ if($HotSwap -ne 0 -and $HotSwap -ne -1 -and $HotSwap -notin (@(33..40)+@(44,45,46)+@(48..57)+@(65..90)+@(96..111)+@(112..123))){throw 'Choose a supported hotswap key or clear it.'}
  if($HotSwap -gt 0 -and ($HotSwap -eq $Primary -or $HotSwap -in $otherKeys.Values)){throw 'The hotswap key conflicts with another OptiShade shortcut.'}
  if($Snapshot -eq -2){$Snapshot=[int](GetMenuSettings $Game).SnapshotKey}
- if($Snapshot -lt -1 -or ($Snapshot -gt 0 -and ($Snapshot -notin (@(33..40)+@(45,46)+@(48..57)+@(65..90)+@(96..111)+@(112..123)) -or $Snapshot -eq $Primary -or $Snapshot -eq $HotSwap -or $Snapshot -in $otherKeys.Values))){throw 'Choose a supported SnapShot key that is not assigned to another OptiShade action.'}
+ if($Snapshot -lt -1 -or ($Snapshot -gt 0 -and ($Snapshot -notin (@(33..40)+@(44,45,46)+@(48..57)+@(65..90)+@(96..111)+@(112..123)) -or $Snapshot -eq $Primary -or $Snapshot -eq $HotSwap -or $Snapshot -in $otherKeys.Values))){throw 'Choose a supported SnapShot key that is not assigned to another OptiShade action.'}
  $settings=@{ShortcutKey=$Primary;BackupShortcutKey=$Backup;PresetHotSwapKey=$HotSwap;SnapshotKey=$Snapshot};$section='';$seen=@{};$lines=New-Object 'System.Collections.Generic.List[string]'
  foreach($line in [IO.File]::ReadAllLines($file)){
   if($line -match '^\s*\[([^]]+)\]'){
@@ -33,4 +33,22 @@ function SetMenuSettings([string]$Game,[int]$Primary,[int]$Backup,[int]$HotSwap=
  foreach($key in $settings.Keys){if(-not $seen[$key]){$lines.Add("$key=$($settings[$key])")}}
  $tmp=$file+'.keys-'+[guid]::NewGuid().ToString('N')
  try{[IO.File]::WriteAllLines($tmp,$lines,[Text.UTF8Encoding]::new($false));[IO.File]::Replace($tmp,$file,$tmp+'.backup');Remove-Item -LiteralPath ($tmp+'.backup')}finally{if(Test-Path -LiteralPath $tmp){Remove-Item -LiteralPath $tmp}}
+}
+
+# Read-only validation for capture feedback; Save shortcuts validates again.
+function GetActionKeyConflict([string]$Game,[int]$Code,[int]$Primary,[int]$OtherAction){
+ if($Code -le 0){return ''}
+ if($Code -eq $Primary){return 'the menu'}
+ if($Code -eq $OtherAction){return 'the other SnapShot or hotswap action'}
+ $keys=@{FpsShortcutKey=33;FpsCycleShortcutKey=34;FGShortcutKey=35;DlssNrToggleKey=-1}
+ if(-not [string]::IsNullOrWhiteSpace($Game)){
+  $file=OwnedPath $Game 'OptiScaler.ini'
+  if(Test-Path -LiteralPath $file){$section='';foreach($line in [IO.File]::ReadAllLines($file)){
+   if($line -match '^\s*\[([^]]+)\]'){$section=$Matches[1]}
+   elseif($section -eq 'Menu' -and $line -match '^\s*(FpsShortcutKey|FpsCycleShortcutKey|FGShortcutKey)\s*=\s*(-?\d+)\s*$'){$keys[$Matches[1]]=[int]$Matches[2]}
+   elseif($section -eq 'DlssNr' -and $line -match '^\s*ToggleKey\s*=\s*(-?\d+)\s*$'){$keys.DlssNrToggleKey=[int]$Matches[1]}
+  }}
+ }
+ foreach($name in $keys.Keys){if($Code -eq $keys[$name]){return $name}}
+ return ''
 }

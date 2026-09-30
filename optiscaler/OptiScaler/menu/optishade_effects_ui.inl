@@ -2,6 +2,7 @@
 #include "../../../shared/EffectsBridge.h"
 #include "../../../shared/PresetHotSwapPolicy.h"
 #include "../../../shared/PresetPathIdentity.h"
+#include "../../../shared/PresetTechniquePolicy.h"
 #include <cctype>
 #include <fstream>
 #include <set>
@@ -132,6 +133,20 @@ static void DrawEffects(){
 
  DrawDependencyPrompt();
  DrawPresetBrowser(root);
+ if(!fx.loading){
+  using optishade::preset::State;
+  switch(static_cast<State>(fx.presetState)){
+  case State::Applied:ImGui::TextWrapped("Saved look fully applied: %u requested techniques active.",fx.presetApplied);break;
+  case State::Partial:ImGui::TextWrapped("Saved look partially applied: %u of %u requested techniques active.",fx.presetApplied,fx.presetRequested);break;
+  case State::Failed:ImGui::TextWrapped("Saved look failed validation: no complete compiled technique match. Your preset file is unchanged.");break;
+  case State::Edited:ImGui::TextWrapped("Current look has unsaved changes; save to validate it against the preset.");break;
+  case State::Disabled:ImGui::TextWrapped("Image effects are off. The saved look is not currently applied.");break;
+  default:ImGui::TextWrapped("Saved look validation is not available yet.");break;
+  }
+  if(fx.presetMissing)ImGui::TextWrapped("Missing techniques: %s",fx.presetReport);
+  if(!fx.compileOK)ImGui::TextWrapped("Some FX failed to compile. Check the effects log for the shader error; installed files alone do not mean the look loaded.");
+  if(fx.presetMissing)ImGui::TextWrapped("Check the preset author's ZIP and installation instructions for the matching FX variant. OptiShade does not rename techniques or change your source preset.");
+ }
  if(zipProcess)ImGui::TextWrapped("Installing files in the background... You can keep flying; reopen Image effects to see the result.");
  ImGui::TextWrapped("Import INI / Install FX adds files. Saved looks below load an installed preset.");
  static char nextPreset[1024]="";static bool askSwitch=false,waitingSwitch=false;static uint64_t switchSaveSerial=0;

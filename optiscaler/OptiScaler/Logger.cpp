@@ -4,7 +4,7 @@
 #include <iostream>
 
 #include "spdlog/async.h"
-#include "spdlog/sinks/basic_file_sink.h"
+#include "../../shared/BoundedLogSink.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 #include "spdlog/sinks/callback_sink.h"
 #include <include/spdlog_sink/debug_sink.h>
@@ -114,8 +114,10 @@ void PrepareLogger()
 
             if (Config::Instance()->LogToFile.value_or_default())
             {
-                auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(
-                    Config::Instance()->LogFileName.value_or_default(), true);
+                const size_t logBytes = Config::Instance()->LogLevel.value_or_default() <= 1
+                                            ? 32 * 1024 * 1024 : 8 * 1024 * 1024;
+                auto file_sink = std::make_shared<OptiShadeLog::BoundedFileSink>(
+                    Config::Instance()->LogFileName.value_or_default(), logBytes);
                 file_sink->set_level(spdlog::level::level_enum::trace);
 #ifdef LOG_ASYNC
                 file_sink->set_pattern("%H:%M:%S.%f\t%L\t%v");

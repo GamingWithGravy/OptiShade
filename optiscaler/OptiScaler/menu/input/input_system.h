@@ -155,6 +155,7 @@ struct DebugState
     bool HidOtherHandleSeen = false;
     std::uint64_t HidCreateFileCallCount = 0;
     std::uint64_t HidTrackedHandleCount = 0;
+    std::uint64_t HidTrackingOverflowCount = 0;
     std::uint64_t HidReadFileCallCount = 0;
     std::uint64_t HidReadFileBlockedCount = 0;
     std::uint64_t HidReadFilePassedCount = 0;
@@ -212,6 +213,8 @@ DebugState GetDebugState();
 
 bool IsKeyDown(int vk);
 bool IsKeyPressed(int vk);
+bool IsMenuKeyPressed();
+bool IsMenuKeyReleased();
 bool IsKeyReleased(int vk);
 int GetLastPressedKey();
 

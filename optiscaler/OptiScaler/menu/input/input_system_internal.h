@@ -1,6 +1,8 @@
-﻿#pragma once
+#pragma once
 
 #include "input_system.h"
+#include "menu_physical_key.h"
+#include "print_screen_key.h"
 
 #include <Windows.h>
 
@@ -29,6 +31,7 @@
 
 namespace OptiInput
 {
+inline constexpr wchar_t OriginalWndProcProperty[] = L"OptiShade.Input.OriginalWndProc.1";
 enum class InputMessageSource
 {
     WndProc,
@@ -94,6 +97,7 @@ struct HidHandleSlot
     HidDeviceKind Kind = HidDeviceKind::Other;
     USHORT UsagePage = 0;
     USHORT Usage = 0;
+    std::uint64_t Generation = 0;
 };
 
 constexpr std::size_t MaxTrackedWindowsHooks = 32;
@@ -115,6 +119,8 @@ struct ButtonState
 
 struct InputState
 {
+    MenuPhysicalKey PhysicalMenu;
+    PrintScreenKey PrintScreen;
     // Target/game window and optional local input window.
     HWND TargetHwnd = nullptr;
     HWND TargetRootHwnd = nullptr;
@@ -325,6 +331,9 @@ struct InputState
     bool HidOtherHandleSeen = false;
     std::uint64_t HidCreateFileCallCount = 0;
     std::uint64_t HidTrackedHandleCount = 0;
+    std::uint64_t HidNextGeneration = 0;
+    std::uint64_t HidTrackingOverflowCount = 0;
+    ULONGLONG HidLastOverflowWarning = 0;
     std::uint64_t HidReadFileCallCount = 0;
     std::uint64_t HidReadFileBlockedCount = 0;
     std::uint64_t HidReadFilePassedCount = 0;
@@ -531,6 +540,11 @@ void ResetRawInputSanitizeCacheLocked();
 bool ShouldApplyBlockingPolicyLocked();
 bool PreserveFlightControllerInput();
 bool IsReservedMenuKeyLocked(int vk);
+bool IsPhysicalMenuBindingLocked();
+bool IsReservedMenuEventLocked(int vk, unsigned scan, bool e0, bool e1 = false);
+void ObserveMenuKeyLocked(int vk, unsigned scan, bool e0, bool e1, bool released, PhysicalKeySource source);
+void ClearFocusInputStateLocked();
+void ReconcileInputFocusLocked(bool focused);
 bool ShouldBlockKeyboardInputLocked();
 bool ShouldBlockMouseInputLocked();
 bool ShouldBlockCursorInputLocked();

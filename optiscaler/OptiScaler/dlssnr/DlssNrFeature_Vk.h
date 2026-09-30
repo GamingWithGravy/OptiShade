@@ -9,6 +9,7 @@
 #include <nvsdk_ngx_vk.h>
 #include <nvsdk_ngx_helpers_vk.h>
 #include "../../../shared/VulkanNeuralBridge.h"
+#include "../../../shared/VulkanNrLifecycle.h"
 
 // DLSS 5 Neural Rendering on Vulkan, natively.
 //
@@ -35,7 +36,8 @@ class Config;
 
 namespace DlssNr
 {
-int EvaluateGuidesVk(const osvtaa::Frame& frame, VkInstance instance, VkPhysicalDevice physical, VkDevice device);
+int EvaluateGuidesVk(const osvtaa::Frame& frame, VkInstance instance, VkPhysicalDevice physical, VkDevice device,
+                    const optishade::vknr::GuideOptions& options);
 
 // Runs the model over what the upscaler just wrote, on the same command buffer.
 //

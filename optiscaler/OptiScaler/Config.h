@@ -5,6 +5,7 @@
 
 #include <optional>
 #include <filesystem>
+#include "../../shared/MenuGeometry.h"
 
 enum HasDefaultValue
 {
@@ -631,6 +632,8 @@ class Config
     // Menu
     CustomOptional<float, NoDefault> MenuScale;
     CustomOptional<bool> OverlayMenu { true };
+    // Legacy configurations retain logical navigation-key mappings.
+    CustomOptional<bool> MenuPhysicalNavigationKey { false };
     CustomOptional<int> ShortcutKey { VK_INSERT };
     CustomOptional<int> SnapshotKey { 0 };
     CustomOptional<int> PresetHotSwapKey { 0 }; // Disabled until explicitly assigned
@@ -971,6 +974,8 @@ class Config
     bool LoadFromPath(const wchar_t* InPath);
     bool SaveIni();
     bool SaveXeFG();
+    std::optional<optishade::menu_geometry::Geometry> LoadMenuGeometry(const std::string& context);
+    bool SaveMenuGeometry(const std::string& context, const optishade::menu_geometry::Geometry& geometry);
 
     void CheckUpscalerFiles();
 

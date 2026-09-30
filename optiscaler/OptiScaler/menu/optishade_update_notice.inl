@@ -1,21 +1,17 @@
 // Read-only release notification. Network work never runs on the render thread.
 #include <winhttp.h>
 #include <atomic>
-#include <regex>
+#include "../../../shared/UpdateNoticePolicy.h"
 #include "../../../shared/OptiShadeVersion.h"
 namespace OptiShadeUpdates {
 static std::atomic<bool> running=false,available=false;
 static std::atomic<ULONGLONG> nextCheck{0};
 static bool ApplyReleaseResponse(const std::string& body){
- try{
-  std::smatch match;
-  static const std::regex tag("\"tag_name\"\\s*:\\s*\"v?([0-9]+)\\.([0-9]+)(?:\\.([0-9]+))?(?:\\.([0-9]+))?\"");
-  if(!std::regex_search(body,match,tag))return false;
-  const std::array<int,4> release{std::stoi(match[1]),std::stoi(match[2]),match[3].matched?std::stoi(match[3]):0,match[4].matched?std::stoi(match[4]):0};
-  available=release>OptiShadeVersion::Current;
-  return true;
- }catch(...){return false;}
+ const auto result=optishade::update_notice::Available(body,OPTISHADE_VERSION_TEXT);
+ if(!result)return false;
+ available.store(*result);return true;
 }
+static bool BetaChannel(){const auto version=optishade::update_notice::Parse(OPTISHADE_VERSION_TEXT);return version&&version->beta;}
 static DWORD WINAPI Check(void* reference){
  bool succeeded=false;
  HMODULE http=LoadLibraryExW(L"winhttp.dll",nullptr,LOAD_LIBRARY_SEARCH_SYSTEM32);
@@ -31,7 +27,7 @@ static DWORD WINAPI Check(void* reference){
     WinHttpSetTimeouts(session,3000,3000,3000,3000);
     HINTERNET connection=WinHttpConnect(session,L"api.github.com",INTERNET_DEFAULT_HTTPS_PORT,0);
     if(connection){
-     HINTERNET request=WinHttpOpenRequest(connection,L"GET",L"/repos/GamingWithGravy/OptiShade/releases/latest",nullptr,nullptr,nullptr,WINHTTP_FLAG_SECURE);
+     HINTERNET request=WinHttpOpenRequest(connection,L"GET",(BetaChannel()?L"/repos/GamingWithGravy/OptiShade/releases?per_page=100":L"/repos/GamingWithGravy/OptiShade/releases/latest"),nullptr,nullptr,nullptr,WINHTTP_FLAG_SECURE);
      if(request){
       if(WinHttpSendRequest(request,nullptr,0,nullptr,0,0,0)&&WinHttpReceiveResponse(request,nullptr)){
        DWORD status=0,length=sizeof(status);
@@ -62,7 +58,7 @@ static void Draw(bool){
 }
 static void DrawHeader(){
  if(!available.load())return;
- const char* title="UPDATE AVAILABLE";const char* detail="please check OptiShade manager";
+ const char* title=BetaChannel()?"BETA UPDATE AVAILABLE":"STABLE UPDATE AVAILABLE";const char* detail="please check OptiShade manager";
  auto* font=ImGui::GetFont();float titleSize=ImGui::GetFontSize()*.9f,detailSize=ImGui::GetFontSize()*.75f;
  float right=ImGui::GetWindowPos().x+ImGui::GetWindowWidth()-20.f;
  float top=ImGui::GetItemRectMax().y+8.f;

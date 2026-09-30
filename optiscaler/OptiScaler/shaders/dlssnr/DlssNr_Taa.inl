@@ -10,7 +10,13 @@ uint64_t epoch = 0, fenceValue = 0;
 ULONGLONG lastCall = 0, lastRun = 0;
 bool poisoned = false;
 std::string status = "Enable OptiShade_TAA_Guides in Image effects. Use TAA, SDR and disable frame generation.";
-void Say(const char* value) { if (status != value) { status = value; LOG_INFO("TAA NR: {}", value); } }
+optishade::nr_admission::Reasons statusReasons, contractReasons;
+uint64_t callerQueueIdentity=0;
+void Say(const char* value) {
+    status=value;uint64_t suppressed=0;
+    if(statusReasons.Permit(optishade::nr_admission::ReasonKey(value),callerQueueIdentity,0,GetTickCount64(),suppressed))
+        LOG_INFO("TAA NR: {}; queue={:X}; repeated={}",value,callerQueueIdentity,suppressed);
+}
 bool Wait(ID3D12CommandQueue* queue) {
     if (FAILED(queue->Signal(fence.Get(), ++fenceValue))) return false;
     if (fence->GetCompletedValue() >= fenceValue)
@@ -40,6 +46,7 @@ void Submit(const ostaa::Frame* input) {
     lastCall = now;
     if (poisoned) { Say("Graphics submission failed. Restart MSFS before retrying TAA NR."); return; }
     if (!input || input->version != ostaa::Version || input->size != sizeof(ostaa::Frame)) { Say("TAA bridge version mismatch. Repair OptiShade."); return; }
+    callerQueueIdentity=reinterpret_cast<uintptr_t>(input->queue);
     if (now - g_lastNativeNrInput.load() < 2000) { Say("Native upscaler inputs detected; TAA fallback is standing aside."); return; }
     if (State::Instance().currentFG && State::Instance().currentFG->IsActive() && !State::Instance().currentFG->IsPaused()) { Say("Disable frame generation before testing TAA NR."); return; }
     if (!input->providerReady || !input->queue || !input->color || !input->depth || !input->motion) { Say("Waiting for enabled TAA guides, valid scene depth and an SDR D3D12 frame."); return; }
@@ -48,17 +55,20 @@ void Submit(const ostaa::Frame* input) {
     auto* depth = static_cast<ID3D12Resource*>(input->depth);
     auto* motion = static_cast<ID3D12Resource*>(input->motion);
     const auto c = color->GetDesc(), d = depth->GetDesc(), m = motion->GetDesc();
-    const auto valid = [&](const D3D12_RESOURCE_DESC& r) {
-        return r.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D && r.SampleDesc.Count == 1 &&
-            r.DepthOrArraySize == 1 && r.MipLevels == 1 && r.Width == c.Width && r.Height == c.Height;
-    };
-    if (!valid(c) || !valid(d) || !valid(m) || !c.Width || !c.Height || c.Width > 3840 || c.Height > 2160 ||
-        (c.Format != DXGI_FORMAT_R8G8B8A8_UNORM && c.Format != DXGI_FORMAT_B8G8R8A8_UNORM) ||
-        d.Format != DXGI_FORMAT_R32_FLOAT || m.Format != DXGI_FORMAT_R16G16_FLOAT) {
-        Say("TAA inputs have unsupported sizes or formats. SDR and full-resolution guides are required."); return;
+    if (const char* reason=optishade::nr_admission::TaaReason(c,d,m)) {
+        Say(reason);uint64_t suppressed=0;
+        if(contractReasons.Permit(optishade::nr_admission::ReasonKey(reason),callerQueueIdentity,0,now,suppressed)){
+            LOG_INFO("TAA NR rejected native output {}x{}: {}; native envelope=3840x2160; experimental ultrawide=5120x1440 -> 3840x1080 working extent; repeated={}",c.Width,c.Height,reason,suppressed);
+            const char* names[]={"colour","depth","motion"};unsigned index=0;
+            for(auto* resource:{color,depth,motion}){const auto desc=resource->GetDesc();
+                LOG_INFO("TAA {} resource={:X}; allocation={}x{} format={} dimension={} mip={} samples={}/{} array={} subresource=0",
+                    names[index++],(uintptr_t)resource,desc.Width,desc.Height,(int)desc.Format,(int)desc.Dimension,desc.MipLevels,desc.SampleDesc.Count,desc.SampleDesc.Quality,desc.DepthOrArraySize);
+            }
+        }
+        return;
     }
     ComPtr<ID3D12Device> current;
-    if (FAILED(queue->GetDevice(IID_PPV_ARGS(&current))) || queue->GetDesc().Type != D3D12_COMMAND_LIST_TYPE_DIRECT) return;
+    if (FAILED(queue->GetDevice(IID_PPV_ARGS(&current))) || queue->GetDesc().Type != D3D12_COMMAND_LIST_TYPE_DIRECT) {Say("TAA requires an available direct command queue.");return;}
     const auto queueIdentity = optishade::ReShadeDeviceIdentity(current.Get());
     if (!queueIdentity) { Say("TAA queue identity unavailable."); return; }
     for (auto* resource : {color, depth, motion}) {
@@ -66,19 +76,19 @@ void Submit(const ostaa::Frame* input) {
         if (FAILED(resource->GetDevice(IID_PPV_ARGS(&owner))) || optishade::ReShadeDeviceIdentity(owner.Get()) != queueIdentity) { Say("TAA resources belong to different devices."); return; }
     }
     // Keep ReShade's device wrapper for descriptor creation and command recording.
-    if (FAILED(color->GetDevice(IID_PPV_ARGS(&current)))) return;
-    if (device && device != current) { Say("Graphics device changed. Restart MSFS before retrying TAA NR."); return; }
+    if (FAILED(color->GetDevice(IID_PPV_ARGS(&current)))) {Say("TAA colour device is unavailable.");return;}
+    if (device && optishade::ReShadeDeviceIdentity(device.Get()) != queueIdentity) { Say("Graphics device changed. Restart MSFS before retrying TAA NR."); return; }
     device = current;
-    if (!fence && FAILED(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)))) return;
+    if (!fence && FAILED(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)))) {Say("TAA completion fence creation failed.");return;}
     const auto waitStart = std::chrono::steady_clock::now();
     // Drain preceding ReShade/game work before touching the shared NR scratch set.
     if (!Wait(queue)) { poisoned = true; Say("TAA GPU synchronization failed."); return; }
-    if (!allocator && FAILED(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&allocator)))) return;
+    if (!allocator && FAILED(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&allocator)))) {Say("TAA command allocator creation failed.");return;}
     if (!commands) {
-        if (FAILED(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, allocator.Get(), nullptr, IID_PPV_ARGS(&commands)))) return;
+        if (FAILED(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, allocator.Get(), nullptr, IID_PPV_ARGS(&commands)))) {Say("TAA command list creation failed.");return;}
         commands->Close();
     }
-    if (FAILED(allocator->Reset()) || FAILED(commands->Reset(allocator.Get(), nullptr))) { poisoned = true; return; }
+    if (FAILED(allocator->Reset()) || FAILED(commands->Reset(allocator.Get(), nullptr))) { poisoned = true;Say("TAA command reset failed. Restart MSFS.");return; }
     borrowedColor = color; borrowedDepth = depth; borrowedMotion = motion;
     auto* cmd = commands.Get();
     const auto shaderRead = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
@@ -87,6 +97,7 @@ void Submit(const ostaa::Frame* input) {
     if (!g_compose) g_compose = std::make_unique<DlssNr_Dx12>("TAA neural rendering", device.Get());
     DlssNrFrameInfo frame {};
     frame.FinishedPicture = true; frame.IndependentCommands = true;
+    frame.EstimatedTaaGuides = true;
     frame.OutputArrivalState = D3D12_RESOURCE_STATE_RENDER_TARGET;
     frame.ColourIsLinearHdr = false; frame.DepthInverted = input->reversedDepth != 0;
     frame.MvScaleX = static_cast<float>(c.Width); frame.MvScaleY = static_cast<float>(c.Height);
@@ -94,6 +105,14 @@ void Submit(const ostaa::Frame* input) {
     frame.RenderSubrectWidth = frame.OutputWidth; frame.RenderSubrectHeight = frame.OutputHeight;
     frame.Reset = gap || !lastRun || now - lastRun > 500;
     frame.SubmissionEpoch = ++epoch;
+    const auto work = optishade::taa::TaaWorkingExtent(c.Width, c.Height);
+    uint64_t suppressed = 0;
+    const uint64_t extentKey = (c.Width << 32) | c.Height;
+    if (contractReasons.Permit(optishade::nr_admission::ReasonKey("accepted working extent"), extentKey,
+                               callerQueueIdentity, now, suppressed))
+        LOG_INFO("TAA NR contract: native={}x{} working={}x{} depth={}x{} motion={}x{}; one pass; model motion scale={}x{}; matched residual={}; repeated={}",
+                 c.Width, c.Height, work.width, work.height, d.Width, d.Height, m.Width, m.Height,
+                 work.width, work.height, work.reduced(static_cast<unsigned>(c.Width), c.Height), suppressed);
     DlssNrNative::SetPrecision(cfg.DlssNrPrecision.value_or_default());
     const auto before = g_nr.successfulDispatches;
     g_compose->Dispatch(cmd, color, depth, motion, color, frame, queue);
@@ -123,7 +142,11 @@ void Submit(const ostaa::Frame* input) {
     }
     if (g_nr.successfulDispatches > before) {
         lastRun = now;
-        Say(cfg.DlssNrApplyModel.value_or_default() ? "TAA NR submitted and GPU work completed (experimental estimated motion)." : "TAA NR completed; model changes are hidden.");
+        Say(cfg.DlssNrApplyModel.value_or_default()
+            ? (work.reduced(static_cast<unsigned>(c.Width), c.Height)
+                ? "Ultrawide TAA NR completed: 3840x1080 model, native 5120x1440 output (experimental estimated motion)."
+                : "TAA NR submitted and GPU work completed (experimental estimated motion).")
+            : "TAA NR completed; model changes are hidden.");
     } else Say(g_nr.failed ? g_nr.reason : "Preparing the TAA neural model; no completed evaluation yet.");
 }
 }

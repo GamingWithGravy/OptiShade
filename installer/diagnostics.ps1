@@ -81,9 +81,41 @@ function SavePreRestoreEvidence([string]$Game,[string]$Folder){
  $dest=OwnedPath $Folder 'PreRestoreDiagnostics.json';$tmp=OwnedPath $Folder 'PreRestoreDiagnostics.tmp'
  try{[IO.File]::WriteAllText($tmp,$json,[Text.UTF8Encoding]::new($false));Move-Item -LiteralPath $tmp -Destination $dest -Force}finally{if(Test-Path -LiteralPath $tmp){Remove-Item -LiteralPath $tmp -Force}}
 }
+function GetMfgSessionAssessment($Status,$Processes,[DateTime]$NowUtc=[DateTime]::UtcNow){
+ $result=[ordered]@{Association='Unknown';RequestedMultiplier=$null;AppliedOptions='Unknown';ObservedMultiplier='Unknown';RuntimeMaximumGeneratedFrames=$null;DynamicSupported=$null;Note='Hook activity and accepted options are not measured frame output.'}
+ try{
+  $state=if($Status -is [string]){$Status|ConvertFrom-Json}else{$Status}
+  [uint64]$validatedBirth=0
+  if(-not [uint64]::TryParse([string]$state.processBirth,[ref]$validatedBirth) -or $validatedBirth -eq 0){$result.Association='Unverifiable process birth';return $result}
+  $matching=@($Processes|Where-Object { $_.Id -eq $state.pid -and $_.StartedFileTimeUtc -eq [string]$validatedBirth -and $_.SelectedInstallation -eq 'Matched' })
+  $heartbeat=[DateTimeOffset]::FromUnixTimeSeconds([long]$state.heartbeat).UtcDateTime
+  if($matching.Count -ne 1 -or [Math]::Abs(($NowUtc-$heartbeat).TotalSeconds) -gt 30){$result.Association='Unmatched or stale';return $result}
+  $result.Association='Current selected process';$result.RequestedMultiplier=$state.multiplier
+  $result.RuntimeMaximumGeneratedFrames=$state.numFramesToGenerateMax;$result.DynamicSupported=$state.dynamicMfgSupported
+  if($state.lastSetOptionsResult -eq 0 -and $null -ne $state.lastSetOptionsResult){$result.AppliedOptions='Accepted options; not rendering proof'}
+  if($state.intervalValidSamples -gt 0 -and $state.realFpsMilli -gt 0 -and $state.dlssFpsMilli -gt 0){$result.ObservedMultiplier=[Math]::Round(([double]$state.dlssFpsMilli/[double]$state.realFpsMilli),2)}
+ }catch{$result.Association='Unreadable or incomplete'}
+ return $result
+}
+function GetDiagnosticModuleIdentity([string]$Path,[string]$Game,$Manifest){
+ $result=@{SHA256='Unknown';Ownership='Unknown third party or unrecorded';SelectedEntrypoint='Unknown; loaded module alone does not identify the invoked export'}
+ try{
+  $item=Get-Item -LiteralPath $Path -ErrorAction Stop
+  if($item.PSIsContainer -or $item.Length -gt 256MB -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)){return $result}
+  $result.SHA256=(Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash
+  $base=[IO.Path]::GetFullPath($Game).TrimEnd('\')+'\';$full=[IO.Path]::GetFullPath($Path)
+  if($full.StartsWith($base,[StringComparison]::OrdinalIgnoreCase)){
+   $relative=$full.Substring($base.Length)
+   $entry=@($Manifest.Files|Where-Object {$_.Path -eq $relative -or $_.Relative -eq $relative})
+   if($entry.Count -eq 1 -and ($entry[0].InstalledHash -eq $result.SHA256 -or $entry[0].Hash -eq $result.SHA256)){$result.Ownership='Matches OptiShade ownership receipt'}
+   else{$result.Ownership='Selected game folder; ownership not verified'}
+  }elseif($full -match '(?i)[\\/]NVIDIA[\\/]NGX[\\/]models[\\/]'){$result.Ownership='NVIDIA OTA location; not an OptiShade-owned file'}
+ }catch{}
+ return $result
+}
 function GetDetailedSupportReport([string]$Game,[string]$Store){
  $report=GetOptiShadeSupportReport $Game $Store
- $report.SchemaVersion=6;$report.ReportId=[guid]::NewGuid().ToString('N');$report.RuntimeEvidence='Logs and optional process metadata. Installed files alone do not establish active features.'
+ $report.SchemaVersion=7;$report.ReportId=[guid]::NewGuid().ToString('N');$report.RuntimeEvidence='Logs and optional process metadata. Installed files alone do not establish active features.'
  $report.CaptureContext=GetDiagnosticContext $Game
  $report.SimulatorCrashText=@(GetSimulatorCrashText $Game)
  $report.LogEvidence=@{}
@@ -123,6 +155,12 @@ function GetDetailedSupportReport([string]$Game,[string]$Store){
    elseif($section -in @('Menu','Upscalers','FrameGen','DlssNr','Plugins','Framerate','DLSSG','DLSS','FSR','FSRFG','XeSS','XeFG','Reflex','NvngxFG','Fakenvapi','Hotfix','Log') -and $line -match '^\s*([A-Za-z0-9]+)\s*=\s*(true|false|auto|[A-Za-z0-9_.-]{1,40})\s*$'){$report.FeatureSettings[$section+'.'+$Matches[1]]=$Matches[2]}
   }
  }catch{}
+ $report.FeatureSettingsContext='Saved tuning only. auto requires policy resolution; NR starts off each session. Live requests and GPU completion require matching runtime evidence.'
+ $report.NrEffectiveState=@{LiveRequest='Unknown';SelectedRoute='Unknown';ModelCreated='Unknown';Evaluated='Unknown';Composed='Unknown';GpuCompleted='Unknown';Evidence='Read timestamped runtime stage/route counters for the matching process. No state inferred from saved booleans.'}
+ $report.BoundedLogArchives=@{}
+ foreach($relative in @('OptiShadeData/Performance.log.first.log','OptiShadeData/Performance.1.log','OptiShadeData/Performance.2.log','OptiShadeData/ReShade.log.first.log','OptiShadeData/ReShade.log.1','OptiShadeData/ReShade.log.2','ReShade.log.first.log','ReShade.log.1','ReShade.log.2')){
+  try{$path=OwnedPath $Game $relative;if(Test-Path -LiteralPath $path -PathType Leaf){$report.BoundedLogArchives[$relative]=@{ModifiedUtc=(Get-Item -LiteralPath $path).LastWriteTimeUtc.ToString('o');Text=(ReadDiagnosticTail $path 65536);Context='First failure or rotated tail; correlate session timestamps'}}}catch{}
+ }
  try{$report.InputDevices=@(Get-CimInstance Win32_PnPEntity -Filter "PNPClass='HIDClass'" -ErrorAction Stop|Select-Object -First 40 Name,Status,Service)}catch{$report.InputDevices='Unavailable'}
  $report.RecentDisplayEvents=@();$report.DisplayEventQuery='Completed; see matching events below'
  try{
@@ -132,11 +170,18 @@ function GetDetailedSupportReport([string]$Game,[string]$Store){
  $report.LoadedModules=@();$report.Processes=@();$report.ModuleInspection='Simulator not running or unavailable'
  foreach($process in Get-Process FlightSimulator2024,FlightSimulator,X-Plane -ErrorAction SilentlyContinue){
   try{
-   $report.Processes+=@{Name=$process.ProcessName;Id=$process.Id;Started=$process.StartTime.ToString('o');Responding=$process.Responding;WorkingSetBytes=$process.WorkingSet64;CpuSeconds=$process.TotalProcessorTime.TotalSeconds;HasMainWindow=($process.MainWindowHandle -ne 0)}
+   $association='Unknown';$exePath='Unknown'
+   try{if($process.Path){$exePath=$process.Path;$association=if([IO.Path]::GetFullPath((Split-Path $exePath -Parent)).TrimEnd('\') -eq [IO.Path]::GetFullPath($Game).TrimEnd('\')){'Matched'}else{'Other installation'}}}catch{}
+   $report.Processes+=@{Name=$process.ProcessName;Id=$process.Id;Started=$process.StartTime.ToString('o');StartedUtc=$process.StartTime.ToUniversalTime().ToString('o');StartedFileTimeUtc=[string]$process.StartTime.ToUniversalTime().ToFileTimeUtc();ExecutablePath=$exePath;SelectedInstallation=$association;Responding=$process.Responding;WorkingSetBytes=$process.WorkingSet64;CpuSeconds=$process.TotalProcessorTime.TotalSeconds;HasMainWindow=($process.MainWindowHandle -ne 0)}
    $report.LoadedModules+=@($process.Modules|Where-Object {$_.ModuleName -match '^(winmm|dxgi|d3d12|OptiScaler|ReShade64|dlss-enabler-headless|nvngx.*|sl\..*|amd_fidelityfx.*|libxess.*|openxr_loader|openvr_api|vrclient_x64|gameoverlayrenderer64|DiscordHook64|RTSSHooks64|nvspcap64)\.dll$' -or $_.FileName -match '[\\/]NVIDIA[\\/]NGX[\\/]models[\\/]'}|ForEach-Object {@{ProcessId=$process.Id;Name=$_.ModuleName;Path=$_.FileName;Version=$_.FileVersionInfo.FileVersion;Location=$(if($_.FileName.StartsWith($Game,[StringComparison]::OrdinalIgnoreCase)){'Game folder'}elseif($_.FileName.StartsWith($env:WINDIR,[StringComparison]::OrdinalIgnoreCase)){'Windows folder'}else{'Other location'})}})
    $report.ModuleInspection='Observed loaded modules; not proof an optional feature rendered successfully'
   }catch{$report.ModuleInspection='Process access unavailable; no elevation requested'}
  }
+ $receipt=$null
+ try{if($Store){$receiptPath=ManifestPath $Store $Game;if((Get-Item -LiteralPath $receiptPath).Length -le 4MB){$receipt=Get-Content -LiteralPath $receiptPath -Raw|ConvertFrom-Json}}}catch{}
+ foreach($module in $report.LoadedModules){$identity=GetDiagnosticModuleIdentity $module.Path $Game $receipt;foreach($key in $identity.Keys){$module[$key]=$identity[$key]}}
+ $report.ExporterIdentity=@{Version=$report.InstallerVersion;Context='Collector version; loaded components have separate hashes and versions'}
+ $report.OptionalMfg.SessionAssessment=GetMfgSessionAssessment $report.OptionalMfg.Status $report.Processes
  $report.RecentCrashEvents=@();$report.CrashEventQuery='Completed; see matching events below'
  try{
   $events=Get-WinEvent -FilterHashtable @{LogName='Application';Id=1000,1001;StartTime=(Get-Date).AddDays(-3)} -MaxEvents 100 -ErrorAction Stop

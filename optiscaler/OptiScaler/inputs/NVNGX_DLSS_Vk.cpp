@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "../../../shared/UpscalerFailureNotice.h"
 #include <dlssnr/DlssNrFeature_Vk.h>
 #include "Util.h"
 #include "Config.h"
@@ -976,6 +977,7 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_VULKAN_ReleaseFeature(NVSDK_NGX_Handle*
         VkContexts[handleId].feature.reset();
         auto it = std::find_if(VkContexts.begin(), VkContexts.end(),
                                [&handleId](const auto& p) { return p.first == handleId; });
+        optishade::UpscalerFailureNotices().Retire(optishade::UpscalerFailureKey(optishade::UpscalerApi::Vulkan, handleId));
         VkContexts.erase(it);
     }
 
@@ -1086,8 +1088,15 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_VULKAN_EvaluateFeature(VkCommandBuffer 
     if (nrColor)
         InParameters->Set(NVSDK_NGX_Parameter_Color, originalColor);
 
-    if (!upscaleResult)
-        ImGui::InsertNotification({ ImGuiToastType::Error, 10000, "Upscaler failed to run!" });
+    const auto failureNotice = optishade::UpscalerFailureNotices().Observe(
+        optishade::UpscalerFailureKey(optishade::UpscalerApi::Vulkan, handleId), upscaleResult, GetTickCount64());
+    if (failureNotice.notify)
+    {
+        LOG_ERROR("Feature evaluation failed for '{}'; Vulkan handle={} failures={} aggregateOverflow={}; repeated notices limited",
+                  deviceContext->Name(), handleId, failureNotice.failures, failureNotice.overflow);
+        ImGui::InsertNotification({ ImGuiToastType::Error, 10000,
+                                   "Upscaler failed to run: %s. See diagnostics for details.", deviceContext->Name().c_str() });
+    }
 
     if ((!upscaleResult || !deviceContext->IsInited()) &&
         Config::Instance()->VulkanUpscaler.value_or_default() != Upscaler::FSR22)
