@@ -1,4 +1,4 @@
-// OptiShade controls for the verified optional MFG backend. Ordinary/native FG
+﻿// OptiShade controls for the verified optional MFG backend. Ordinary/native FG
 // remains on its existing UI path when this backend does not own the session.
 #include "../../../shared/MfgControlWin.h"
 #include <regex>
@@ -9,12 +9,12 @@ using optishade::mfg::Snapshot;
 
 static bool SameSettings(const Settings& a,const Settings& b)
 {
-    return a.followGame==b.followGame && a.dynamic==b.dynamic && a.multiplier==b.multiplier &&
+    return a.overrideOff==b.overrideOff && a.followGame==b.followGame && a.dynamic==b.dynamic && a.multiplier==b.multiplier &&
         a.targetFps==b.targetFps && a.preset==b.preset && a.vsyncMode==b.vsyncMode && a.reflexLimit==b.reflexLimit;
 }
 static bool SupportedRenderingGpu(bool hardwareNvidia,const std::string& name)
 {
-    static const std::regex rtx40(R"(\bRTX\s*40\d{2}\b)",std::regex_constants::icase);
+    static const std::regex rtx40(R"(\bRTX\s*[234]0\d{2}\b)",std::regex_constants::icase);
     return hardwareNvidia && std::regex_search(name,rtx40);
 }
 static bool ReplacesOrdinaryControls(const Snapshot& snapshot,bool supportedRenderingGpu)
@@ -41,19 +41,21 @@ struct PanelState
         if(!initialized || !dirty){draft=snapshot.settings;initialized=true;}
     }
 };
-static optishade::mfg::Bridge bridge;
+// Process-lifetime bridge: never join a file worker under DLL detach loader lock.
+static optishade::mfg::Bridge& bridge=*new optishade::mfg::Bridge;
 static PanelState panel;
 
 static bool OwnsFrameGeneration(bool supportedRenderingGpu)
 { return ReplacesOrdinaryControls(bridge.Refresh(),supportedRenderingGpu); }
 
 static const char* ModeLabel(const Settings& settings)
-{ return settings.followGame?"Follow game":settings.dynamic?"Dynamic":"Fixed multiplier"; }
+{ return settings.overrideOff?"Override off":settings.followGame?"Follow game":settings.dynamic?"Dynamic":"Fixed multiplier"; }
 
 static void DrawStatus(const Snapshot& snapshot)
 {
     if(!snapshot.live){ImGui::TextWrapped("%s",snapshot.message.c_str());return;}
     const auto& status=snapshot.status;
+    if(snapshot.sourceBuilt){ImGui::TextWrapped("Source-built backend: RTX %u series",status.gpuFamily);ImGui::TextWrapped("%s",snapshot.message.c_str());}
     ImGui::TextWrapped("Saved request: %s",ModeLabel(snapshot.settings));
     if(!snapshot.settings.followGame && !snapshot.settings.dynamic)
         ImGui::Text("Requested multiplier: %ux",snapshot.settings.multiplier);
@@ -79,21 +81,24 @@ static void DrawPanel(const Snapshot& snapshot,PanelState& state,Save save)
 {
     state.Observe(snapshot);
     ImGui::PushID("OptiShade MFG");
-    ImGui::TextUnformatted("Multi Frame Generation - RTX 40");
+    ImGui::TextUnformatted("Multi Frame Generation");
     ImGui::TextWrapped("Control Multi Frame Generation using the supported NVIDIA backend. Enable DLSS Frame Generation in the game's graphics settings first.");
-    if(snapshot.live && snapshot.status.gpuFamily!=1)
+    if(snapshot.live && (!snapshot.sourceBuilt && snapshot.status.gpuFamily!=1))
         ImGui::TextWrapped("The backend reported a different graphics-card family. These controls are unavailable.");
-    ImGui::BeginDisabled(!snapshot.editable || !snapshot.status.bridgeReady || snapshot.status.gpuFamily!=1);
+    ImGui::BeginDisabled(!snapshot.editable || (!snapshot.sourceBuilt && !snapshot.status.bridgeReady) || (!snapshot.sourceBuilt && snapshot.status.gpuFamily!=1));
     auto& draft=state.draft;
     if(ImGui::BeginCombo("Mode",ModeLabel(draft)))
     {
-        if(ImGui::Selectable("Follow game",draft.followGame)){draft.followGame=true;draft.dynamic=false;draft.multiplier=2;state.dirty=true;}
+        if(snapshot.sourceBuilt && ImGui::Selectable("Override off",draft.overrideOff)){draft.overrideOff=true;draft.followGame=true;draft.dynamic=false;state.dirty=true;}
+        if(ImGui::Selectable("Follow game",draft.followGame&&!draft.overrideOff)){draft.overrideOff=false;draft.followGame=true;draft.dynamic=false;draft.multiplier=2;state.dirty=true;}
+        ImGui::BeginDisabled(!snapshot.status.bridgeReady);
         if(ImGui::Selectable("Fixed multiplier",!draft.followGame&&!draft.dynamic)){
-            draft.followGame=false;draft.dynamic=false;
+            draft.overrideOff=false;draft.followGame=false;draft.dynamic=false;
             draft.multiplier=std::clamp(draft.multiplier,std::max(2u,snapshot.status.minMultiplier),std::max(2u,snapshot.status.maxMultiplier));state.dirty=true;
         }
+        ImGui::EndDisabled();
         ImGui::BeginDisabled(!snapshot.status.canDynamic);
-        if(ImGui::Selectable("Dynamic",!draft.followGame&&draft.dynamic)){draft.followGame=false;draft.dynamic=true;state.dirty=true;}
+        if(ImGui::Selectable("Dynamic",!draft.followGame&&draft.dynamic)){draft.overrideOff=false;draft.followGame=false;draft.dynamic=true;state.dirty=true;}
         ImGui::EndDisabled();ImGui::EndCombo();
     }
     if(!draft.followGame&&!draft.dynamic){
@@ -115,6 +120,7 @@ static void DrawPanel(const Snapshot& snapshot,PanelState& state,Save save)
         else ImGui::TextWrapped("Target follows the display refresh rate.");
         if(!snapshot.status.canDynamic)ImGui::TextWrapped("Dynamic is unavailable in the current pipeline. Choose Follow game or a fixed multiplier.");
     }
+    if(!snapshot.sourceBuilt){
     const char* presets[]={"Game / driver","Preset A","Preset B"};int preset=static_cast<int>(std::min(draft.preset,2u));
     if(ImGui::Combo("MFG preset",&preset,presets,3)){draft.preset=static_cast<unsigned>(preset);state.dirty=true;}
     ImGui::TextWrapped("Changing the preset after frame generation starts may require a game restart.");
@@ -126,11 +132,12 @@ static void DrawPanel(const Snapshot& snapshot,PanelState& state,Save save)
     if(draft.reflexLimit){int fps=static_cast<int>(draft.reflexLimit);if(ImGui::SliderInt("FPS limit",&fps,1,1000,"%d",ImGuiSliderFlags_AlwaysClamp)){draft.reflexLimit=static_cast<unsigned>(fps);state.dirty=true;}}
     ImGui::EndDisabled();
     if(!reflexAvailable)ImGui::TextWrapped("The manual limit is unavailable while Dynamic is active or Reflex is not connected.");
+    }
     state.dirty=!SameSettings(draft,snapshot.settings);
     ImGui::BeginDisabled(!state.dirty);
     if(ImGui::Button("Apply MFG settings")){
         std::string error;
-        if(save(draft,error)){state.feedback="MFG settings saved. Waiting for the backend to apply the request.";state.dirty=false;state.initialized=false;}
+        if(save(draft,error)){state.feedback="MFG save queued. The result appears below.";state.dirty=false;state.initialized=false;}
         else state.feedback=error.empty()?"MFG settings could not be saved. Previous settings were kept.":error;
     }
     ImGui::SameLine();if(ImGui::Button("Discard changes")){draft=snapshot.settings;state.dirty=false;state.feedback.clear();}
@@ -145,6 +152,7 @@ static bool Draw(bool supportedRenderingGpu)
 {
     const auto snapshot=bridge.Refresh();
     if(!ReplacesOrdinaryControls(snapshot,supportedRenderingGpu)){panel.Observe(Snapshot{});return false;}
+    const auto saved=bridge.SaveResult();if(!saved.empty())panel.feedback=saved;
     DrawPanel(snapshot,panel,[](const Settings& settings,std::string& error){return bridge.Save(settings,error);});
     return true;
 }

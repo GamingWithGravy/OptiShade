@@ -685,6 +685,10 @@ void reshade::runtime::update_texture_bindings(const char *semantic, api::resour
 	}
 
 	// Update texture bindings
+	// Core depth binding can change while cosmetic workers compile. The semantic
+	// map above remains current; new effect descriptors consume it when created.
+	if (is_loading())
+		return;
 	size_t num_bindings = 0;
 	for (const effect &effect_data : _effects)
 	{

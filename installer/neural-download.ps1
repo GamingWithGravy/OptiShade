@@ -1,6 +1,35 @@
-﻿function GetNeuralDownload($Gpu){
+﻿function GetObservedNeuralGpu([string]$Game,$Gpu){
+ # Evidence from the previous selected-game session. Never treat a closed-game
+ # log as live telemetry or resolve a different installation's adapter from it.
+ $path=OwnedPath $Game 'OptiScaler.log'
+ if(-not(Test-Path -LiteralPath $path -PathType Leaf)){return $null}
+ $item=Get-Item -LiteralPath $path
+ if(($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $item.LastWriteTimeUtc -lt [DateTime]::UtcNow.AddDays(-7)){return $null}
+ $stream=[IO.File]::Open($path,[IO.FileMode]::Open,[IO.FileAccess]::Read,([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+ try{
+  $n=[int][Math]::Min(262144,$stream.Length);[void]$stream.Seek(-$n,[IO.SeekOrigin]::End)
+  $bytes=New-Object byte[] $n;$count=$stream.Read($bytes,0,$n);$text=[Text.Encoding]::UTF8.GetString($bytes,0,$count)
+ }finally{$stream.Dispose()}
+ $matches=[regex]::Matches($text,'(?m)NR rendering adapter: luid=([A-Fa-f0-9]{16}); vendor=10DE; device=([A-Fa-f0-9]{4}); software=false; name=([^\r\n]{1,160})\r?$')
+ if(-not $matches.Count){return $null}
+ $last=$matches[$matches.Count-1];$name=$last.Groups[3].Value.Trim()
  $cards=@($Gpu.Names -split ',\s*'|Where-Object {$_ -match '(?i)NVIDIA.*RTX'})
- if($cards.Count -ne 1){throw 'Automatic model selection needs exactly one detected RTX GPU. Use Add NVIDIA runtime after identifying the GPU used by MSFS.'}
+ if(@($cards|Where-Object {$_ -eq $name}).Count -ne 1){return $null}
+ return [pscustomobject]@{Name=$name;Luid=$last.Groups[1].Value;Evidence='Previous selected-game rendering device; not live';ModifiedUtc=$item.LastWriteTimeUtc.ToString('o')}
+}
+function ResolveNeuralGpuChoice($Manifest,$Gpu){
+ $observed=GetObservedNeuralGpu ([string]$Manifest.Game) $Gpu
+ $selected=[string]$Manifest.NeuralGpuName
+ if($observed){
+  if($selected -and $selected -ne $observed.Name){throw ('The last recorded rendering GPU for this game is '+$observed.Name+', but '+$selected+' is selected. Choose the game GPU again before installing a model. No model was changed.')}
+  return $observed.Name
+ }
+ return $selected
+}
+function GetNeuralDownload($Gpu,[string]$SelectedName){
+ $cards=@($Gpu.Names -split ',\s*'|Where-Object {$_ -match '(?i)NVIDIA.*RTX'})
+ if($SelectedName){if($SelectedName -notin $cards){throw 'The selected game GPU is no longer detected. Choose the game GPU again before downloading a model.'};$cards=@($SelectedName)}
+ if($cards.Count -ne 1){throw 'Choose this game GPU in Advanced options before downloading its neural model. No model was changed.'}
  if($cards[0] -match 'RTX\s*50\d\d'){
   return [pscustomobject]@{Family='RTX 50';Url='https://github.com/RankFTW/rhi-repo/releases/download/dlssnr-310.8.0/nvngx_dlssnr_310.8.0.zip';ArchiveHash='388C0A7912E15EC911B9C9E11A692142B11FE387DDF2B637D8C358138FFFB3AC';ModelHash='E16BCF15E16E13F527491CDF7845B2FE6521A738D8F7C9C721866A8496E1FC8E';Entry='nvngx_dlssnr.dll';Signed=$true}
  }
@@ -10,9 +39,9 @@
  throw 'No verified model download is configured for this GPU family.'
 }
 function EnsureNeuralRuntime([string]$ManifestPath,$Gpu,[scriptblock]$Progress={param($text)}){
- $selection=GetNeuralDownload $Gpu
- $manifest=Get-Content -LiteralPath $ManifestPath -Raw|ConvertFrom-Json
+ $manifest=ReadOptiShadeState $ManifestPath
  AssertClosed $manifest.Game
+ $selection=GetNeuralDownload $Gpu (ResolveNeuralGpuChoice $manifest $Gpu)
  $target=OwnedPath $manifest.Game 'nvngx_dlssnr.dll'
  if((HashFile $target) -eq $selection.ModelHash){if($selection.Signed){AssertNvidiaFile $target};&$Progress 'Correct neural model already installed; download skipped.';return}
  $downloadStore=if($env:OPTISHADE_STORE){$env:OPTISHADE_STORE}else{Join-Path $env:LOCALAPPDATA 'OptiShade'}

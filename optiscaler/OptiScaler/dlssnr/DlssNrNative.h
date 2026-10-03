@@ -6,4 +6,5 @@ void SetEnabled(bool enabled);
 void SetPrecision(unsigned precision);
 bool IsActive();
 std::string Status();
+std::string HybridAvailability();
 }

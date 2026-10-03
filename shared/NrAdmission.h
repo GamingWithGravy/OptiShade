@@ -53,7 +53,7 @@ inline const char* TaaReason(const D3D12_RESOURCE_DESC& c,const D3D12_RESOURCE_D
     if(d.Width!=c.Width||m.Width!=c.Width||d.Height!=c.Height||m.Height!=c.Height)
         return "TAA depth/motion guides must match full output extent";
     if(!optishade::taa::TaaWorkingExtent(c.Width,c.Height).valid())
-        return "TAA size is outside the native 3840x2160 envelope and experimental 5120x1440 ultrawide route";
+        return "TAA size exceeds the bounded 5120x2160 desktop envelope";
     if(c.Format!=DXGI_FORMAT_R8G8B8A8_UNORM&&c.Format!=DXGI_FORMAT_B8G8R8A8_UNORM)
         return "TAA requires SDR RGBA8/BGRA8 UNORM colour";
     if(d.Format!=DXGI_FORMAT_R32_FLOAT)return "TAA depth guide must be R32_FLOAT";

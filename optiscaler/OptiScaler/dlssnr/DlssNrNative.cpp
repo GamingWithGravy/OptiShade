@@ -28,7 +28,7 @@
 namespace DlssNrNative {namespace {
 namespace fs=std::filesystem;using Microsoft::WRL::ComPtr;void Check(HRESULT r){if(FAILED(r))throw std::runtime_error("D3D12 status "+std::to_string((unsigned)r));}void NvCheck(NvAPI_Status r){if(r!=NVAPI_OK)throw std::runtime_error("NVAPI status "+std::to_string(r));}
 using Blob=std::vector<unsigned char>;
-Blob Read(const fs::path&p){std::ifstream f(p,std::ios::binary|std::ios::ate);if(!f)throw std::runtime_error("Missing asset "+p.string());auto n=f.tellg();if(n<=0)throw std::runtime_error("Empty asset");Blob b((size_t)n);f.seekg(0);if(!f.read((char*)b.data(),b.size()))throw std::runtime_error("Asset read failed");return b;}
+Blob Read(const fs::path&p){std::ifstream f(p,std::ios::binary|std::ios::ate);if(!f)throw std::runtime_error("Missing asset "+p.string());auto n=f.tellg();if(n<=0||n>256ll*1024*1024)throw std::runtime_error("Invalid asset size");Blob b((size_t)n);f.seekg(0);if(!f.read((char*)b.data(),b.size()))throw std::runtime_error("Asset read failed");return b;}
 uint64_t Num(const std::string&s){size_t n=0;auto v=std::stoull(s,&n,0);if(n!=s.size()||s[0]=='-')throw std::runtime_error("Invalid asset integer");return v;}
 struct Patch{size_t offset;std::string name;uint64_t add=0;};
 struct Template{Blob params;fs::path cubin;std::string name;NVAPI_DIM3 grid{},block{};unsigned shared=0;uint64_t workspaceBytes=64ull<<20,resetBytes=~0ull;std::vector<Patch>patches;NVDX_ObjectHandle fn=nullptr;};
@@ -139,9 +139,19 @@ NvAPI_Status __cdecl DestroyFunction(ID3D12Device*d,NVDX_ObjectHandle f){auto&s=
 NvAPI_Status __cdecl DestroyModule(ID3D12Device*d,NVDX_ObjectHandle m){auto&s=S();std::lock_guard<std::recursive_mutex>g(s.mutex);s.modules.erase(m);s.active=false;for(auto i=s.targets.begin();i!=s.targets.end();)if(i->second.module==m)i=s.targets.erase(i);else++i;return s.destroyModule(d,m);}
 }
 void*WrapNvapi(unsigned id,void*raw){if(!raw)return raw;auto&s=S();std::lock_guard<std::recursive_mutex>apiGuard(s.mutex);switch(id){case 0xad1a677d:s.createModule=(decltype(s.createModule))raw;return(void*)&CreateModule;case 0xe2436e22:s.createFunction=(decltype(s.createFunction))raw;return(void*)&CreateFunction;case 0x24973538:s.launch=(decltype(s.launch))raw;return(void*)&Launch;case 0x41c65285:s.destroyModule=(decltype(s.destroyModule))raw;return(void*)&DestroyModule;case 0xdf295ea6:s.destroyFunction=(decltype(s.destroyFunction))raw;return(void*)&DestroyFunction;default:return raw;}}
+std::string HybridAvailability(){
+ std::lock_guard<std::recursive_mutex> guard(S().mutex);
+ // A bounded, process-local preflight. Never acquire assets or probe research folders.
+ // Verified hashes stay mandatory; changing an installation requires a game restart.
+ static const std::string result=[](){try{VerifyAssets();VerifyCandidateAssets();return std::string();}
+ catch(const std::exception&){return std::string("Hybrid precision is unavailable: its verified asset set is missing or incomplete. Original FP8 remains available. Restart after repairing approved assets.");}}();
+ return result;
+}
+extern "C" __declspec(dllexport) bool OptiShadeHybridReady(){return HybridAvailability().empty();}
 void SetPrecision(unsigned precision){auto&s=S();std::lock_guard<std::recursive_mutex>g(s.mutex);const bool on=precision==4,candidate=on;
  if(s.restartRequired){s.status="Restart required: hybrid recording failed; precision change was not applied";return;}if(s.enabled==on&&s.candidate==candidate)return;
  for(auto&p:s.sessions)if(p.second.pending){s.restartRequired=true;s.status="Restart required: hybrid pair still pending; precision change was not applied";return;}
+ if(on&&!HybridAvailability().empty()){s.enabled=false;s.candidate=false;s.active=false;s.status=HybridAvailability();return;}
  s.enabled=on;s.candidate=candidate;s.active=false;s.status=candidate?"Candidate hybrid selected; waiting for original model":on?"Hybrid FFN selected; waiting for supported original model":"Original FP8 selected";
 }
 void SetEnabled(bool on){SetPrecision(on?4u:0u);}

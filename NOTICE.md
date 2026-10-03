@@ -1,9 +1,11 @@
 # Source and dependency notices
 
-The experimental TAA guide includes a CC BY-NC 4.0 motion estimator attributed to
-Jakob Wapenhensch, Pascal Gilcher and Vortigern. Its helper files have separate
-notices. See installer/DefaultEffects/Licenses/OptiShade-TAA-THIRD-PARTY.txt;
-the upstream repository's general MIT license does not override that file notice.
+The legacy loose TAA helper source retains its CC BY-NC 4.0 notices and is
+not included in these candidate payloads. The Beta internal core guide is
+original GPL-3.0-or-later source (reshade/res/shaders/optishade_guides.hlsl),
+with generated DXIL/SPIR-V and build-core-guides.ps1. It does not use the
+legacy helper's includes, textures or motion-estimator source. No legacy
+third-party material is relicensed by this replacement.
 
 Optishade's installer and integration were created by gravy. The modified performance engine is based on OptiScaler-DLSSNR-PreSR-Multipass, licensed under GPL-3.0; ReShade carries its BSD-3-Clause licence. RenoDX-derived portions retain their attribution. This project does not claim original authorship of those components.
 
@@ -54,3 +56,14 @@ Licenses/RTXMFG directory preserves the upstream MIT, Ultimate ASI Loader,
 ImGui and MinHook notices, source/release references and binary provenance.
 See https://github.com/dashdogy/RTX40MFG-Unlock. Other upstream dependencies
 retain their own notices, including those embedded in the upstream binary.
+
+The source-built OptiShadeMFG component derives from mcsoderh/RTX30MFG-Unlock,
+revision 21a2b9931f0c13f46a4b3b8a5856620d9698f88e. Upstream MIT notices credit
+Michael Robles and Marcus Soderholm; the exact upstream spelling is retained
+in its LICENSE.txt. MinHook retains its own licence. The OptiShade integration
+adapter and shared bridge retain GPL-3.0-or-later terms. This is a modified
+combined component, not an unchanged MIT-only binary. Its packaged source-build
+manifest identifies the exact DLL and source inputs. Vendor runtime rights are
+separate from the upstream MIT grant.
+
+This software is based in part on the work of the FreeType Team (https://www.freetype.org). Full FreeType, Detours, JSON for Modern C++, Streamline header and additional dependency notices accompany the distribution under LICENSES/ThirdParty. Header versions do not by themselves establish the build provenance of a prebuilt static library.

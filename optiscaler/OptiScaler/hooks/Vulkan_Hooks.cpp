@@ -17,6 +17,7 @@
 
 #include <vulkan/vulkan.hpp>
 #include "../../../shared/VulkanOverlayBridge.h"
+#include "../../../shared/VulkanOwner.h"
 
 #include <dlssnr/DlssNr_VkExtensions.h>
 #include <dlssnr/DlssNrFeature_Vk.h>
@@ -30,7 +31,30 @@
 static VkDevice _device = VK_NULL_HANDLE;
 static VkInstance _instance = VK_NULL_HANDLE;
 static VkPhysicalDevice _PD = VK_NULL_HANDLE;
-static HWND _hwnd = nullptr;
+static optishade::vkowner::Registry _owners;
+static std::recursive_mutex _ownerMutex;
+static VkSwapchainCreateInfoKHR _ownerCreateInfo{};
+static uint64_t _preparedGeneration = 0;
+static std::unordered_map<VkDevice, VkPhysicalDevice> _physicalDevices;
+
+static bool GameplayWindow(HWND hwnd)
+{
+    DWORD pid=0; GetWindowThreadProcessId(hwnd,&pid);
+    if (!IsWindow(hwnd) || pid!=GetCurrentProcessId() || GetAncestor(hwnd,GA_ROOT)!=hwnd ||
+        GetWindow(hwnd,GW_OWNER) || (GetWindowLongPtrW(hwnd,GWL_EXSTYLE)&WS_EX_TOOLWINDOW)) return false;
+    if (_wcsicmp(Util::ExePath().filename().c_str(),L"X-Plane.exe")!=0)
+        return hwnd==Util::GetProcessWindow();
+    wchar_t title[256]{};GetWindowTextW(hwnd,title,256);
+    // Process, top-level ownership and the simulator title corroborate identity;
+    // popup dimensions/focus and creation order never select the owner.
+    return wcsncmp(title,L"X-System",8)==0 || wcsncmp(title,L"X-Plane",7)==0;
+}
+
+extern "C" __declspec(dllexport) bool OptiShadeVulkanOwnsWindow(uint64_t window)
+{
+    std::lock_guard lock(_ownerMutex);
+    return _owners.owner.window==window && _owners.owner.chain && IsWindow((HWND)window);
+}
 
 extern "C" __declspec(dllexport) bool OptiShadeVulkanNrRequested()
 {
@@ -46,7 +70,7 @@ extern "C" __declspec(dllexport) void OptiShadeVulkanNrReset()
 extern "C" __declspec(dllexport) int OptiShadeVulkanNrSubmit(const osvtaa::Frame* frame)
 {
     if (!OptiShadeVulkanNrRequested()) return -2;
-    if (!frame || frame->version != 1 || frame->size != sizeof(*frame) ||
+    if (!frame || frame->version != 2 || frame->size != sizeof(*frame) ||
         frame->device != (uint64_t)_device || !_instance || !_PD || !frame->commands ||
         !frame->color || !frame->colorView || !frame->depth || !frame->depthView ||
         !frame->motion || !frame->motionView || frame->width < 64 || frame->height < 64 ||
@@ -78,6 +102,34 @@ PFN_vkCreateSemaphore VulkanHooks::o_vkCreateSemaphore = nullptr;
 PFN_vkSignalSemaphore VulkanHooks::o_vkSignalSemaphore = nullptr;
 PFN_vkAntiLagUpdateAMD VulkanHooks::o_vkAntiLagUpdateAMD = nullptr;
 
+
+static PFN_vkDestroySurfaceKHR o_DestroySurface=nullptr;
+static PFN_vkDestroySwapchainKHR o_DestroySwapchain=nullptr;
+static PFN_vkDestroyDevice o_DestroyDevice=nullptr;
+static PFN_vkDestroyInstance o_DestroyInstance=nullptr;
+static void VKAPI_CALL hkvkDestroySwapchainKHR(VkDevice d,VkSwapchainKHR c,const VkAllocationCallbacks* a) {
+    std::lock_guard lock(_ownerMutex);
+    if(_owners.owner.chain==(uint64_t)c) {MenuOverlayVk::DestroyVulkanObjects(true);_preparedGeneration=0;}
+    _owners.eraseChain((uint64_t)c);o_DestroySwapchain(d,c,a);
+}
+static void VKAPI_CALL hkvkDestroySurfaceKHR(VkInstance i,VkSurfaceKHR s,const VkAllocationCallbacks* a) {
+    std::lock_guard lock(_ownerMutex);
+    if(_owners.owner.surface==(uint64_t)s) {MenuOverlayVk::DestroyVulkanObjects(true);_preparedGeneration=0;}
+    _owners.eraseSurface((uint64_t)s);o_DestroySurface(i,s,a);
+}
+static void VKAPI_CALL hkvkDestroyDevice(VkDevice d,const VkAllocationCallbacks* a) {
+    std::lock_guard lock(_ownerMutex);
+    if(_owners.owner.device==(uint64_t)d) {MenuOverlayVk::DestroyVulkanObjects(true);_preparedGeneration=0;}
+    _owners.eraseDevice((uint64_t)d);_physicalDevices.erase(d);
+    if(_device==d){_device=VK_NULL_HANDLE;_PD=VK_NULL_HANDLE;}
+    o_DestroyDevice(d,a);
+}
+static void VKAPI_CALL hkvkDestroyInstance(VkInstance i,const VkAllocationCallbacks* a) {
+    std::lock_guard lock(_ownerMutex);
+    if(_owners.lookup(_owners.owner.surface).instance==(uint64_t)i) {MenuOverlayVk::DestroyVulkanObjects(true);_preparedGeneration=0;}
+    _owners.eraseInstance((uint64_t)i);if(_instance==i)_instance=VK_NULL_HANDLE;
+    o_DestroyInstance(i,a);
+}
 
 // Forward declaration
 static VkResult hkvkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPresentInfo);
@@ -131,13 +183,8 @@ static VkResult hkvkCreateWin32SurfaceKHR(VkInstance instance, const VkWin32Surf
 
     if (result == VK_SUCCESS && !State::Instance().vulkanSkipHooks)
     {
-        MenuOverlayVk::DestroyVulkanObjects(false);
-
-        _instance = instance;
-        State::Instance().VulkanInstance = instance;
-        LOG_DEBUG("_instance captured: {0:X}", (UINT64) _instance);
-        _hwnd = pCreateInfo->hwnd;
-        LOG_DEBUG("_hwnd captured: {0:X}", (UINT64) _hwnd);
+        std::lock_guard lock(_ownerMutex);
+        _owners.surface((uint64_t)instance,(uint64_t)*pSurface,(uint64_t)pCreateInfo->hwnd);
     }
 
     LOG_FUNC_RESULT(result);
@@ -279,16 +326,27 @@ static VkResult hkvkCreateDevice(VkPhysicalDevice physicalDevice, const VkDevice
 
     if (result == VK_SUCCESS && Config::Instance()->OverlayMenu.value_or_default())
     {
+        std::lock_guard lock(_ownerMutex);
+        _physicalDevices[*pDevice]=physicalDevice;
+        uint32_t familyCount=0;
+        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice,&familyCount,nullptr);
+        std::vector<VkQueueFamilyProperties> families(familyCount);
+        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice,&familyCount,families.data());
+        for(uint32_t i=0;i<pCreateInfo->queueCreateInfoCount;++i) {
+            const auto& requested=pCreateInfo->pQueueCreateInfos[i];
+            if(requested.flags || requested.queueFamilyIndex>=familyCount)continue;
+            for(uint32_t n=0;n<requested.queueCount;++n) {
+                VkQueue q{};vkGetDeviceQueue(*pDevice,requested.queueFamilyIndex,n,&q);
+                _owners.queue((uint64_t)*pDevice,(uint64_t)q,requested.queueFamilyIndex,
+                    (families[requested.queueFamilyIndex].queueFlags&VK_QUEUE_GRAPHICS_BIT)!=0);
+            }
+        }
         if (!State::Instance().vulkanSkipHooks)
         {
             // Disabled to prevent unnecessary object release
             // MenuOverlayVk::DestroyVulkanObjects(false);
 
-            _PD = physicalDevice;
-            LOG_DEBUG("_PD captured: {0:X}", (UINT64) _PD);
-            _device = *pDevice;
-            LOG_DEBUG("_device captured: {0:X}", (UINT64) _device);
-            HookDevice(_device);
+            HookDevice(*pDevice);
         }
 
         ScopedSkipSpoofingGlobal skipSpoofingGlobal {};
@@ -339,6 +397,20 @@ VALIDATE_HOOK(hkvkQueuePresentKHR, PFN_vkQueuePresentKHR)
 static VkResult hkvkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPresentInfo)
 {
     LOG_FUNC();
+    std::lock_guard lock(_ownerMutex);
+    if(!pPresentInfo || !_owners.present((uint64_t)queue,pPresentInfo->swapchainCount,
+        reinterpret_cast<const uint64_t*>(pPresentInfo->pSwapchains),pPresentInfo->pImageIndices,UINT32_MAX))
+        return o_QueuePresentKHR(queue,pPresentInfo);
+    if(_preparedGeneration!=_owners.owner.generation) {
+        const auto q=_owners.findQueue((uint64_t)queue);
+        VkBool32 present=VK_FALSE;
+        if(vkGetPhysicalDeviceSurfaceSupportKHR(_PD,q.family,(VkSurfaceKHR)_owners.owner.surface,&present)!=VK_SUCCESS || !present)
+            return o_QueuePresentKHR(queue,pPresentInfo);
+        auto chain=(VkSwapchainKHR)_owners.owner.chain;
+        MenuOverlayVk::CreateSwapchain(_device,_PD,_instance,(HWND)_owners.owner.window,
+            &_ownerCreateInfo,nullptr,&chain,queue,q.family);
+        _preparedGeneration=_owners.owner.generation;
+    }
 
     // get upscaler time
     UpscalerTimeVk::ReadUpscalingTime(_device);
@@ -365,7 +437,8 @@ static VkResult hkvkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPres
     if (!deferredOverlay && !MenuOverlayVk::QueuePresent(queue, &localPresentInfo))
     {
         LOG_ERROR("QueuePresent: false!");
-        return VK_ERROR_OUT_OF_DATE_KHR;
+        // Failed overlay submission has not consumed the incoming waits.
+        // Preserve the game's result instead of inventing OUT_OF_DATE.
     }
 
     ReflexHooks::update(false, true);
@@ -400,6 +473,19 @@ static VkResult hkvkCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
     if (result == VK_SUCCESS && device != VK_NULL_HANDLE && pCreateInfo != nullptr && *pSwapchain != VK_NULL_HANDLE &&
         !State::Instance().vulkanSkipHooks)
     {
+        std::lock_guard lock(_ownerMutex);
+        const auto surface=_owners.lookup((uint64_t)pCreateInfo->surface);
+        const bool selected=_owners.swapchain((uint64_t)device,(uint64_t)pCreateInfo->surface,
+            (uint64_t)*pSwapchain,GameplayWindow((HWND)surface.window),IsWindow((HWND)_owners.owner.window)!=FALSE);
+        if(!selected)return result;
+        MenuOverlayVk::DestroyVulkanObjects(false);
+        _instance=(VkInstance)surface.instance;
+        _PD=_physicalDevices[device];
+        _ownerCreateInfo=*pCreateInfo;
+        _ownerCreateInfo.pNext=nullptr;
+        _ownerCreateInfo.pQueueFamilyIndices=nullptr;
+        _preparedGeneration=0;
+        State::Instance().VulkanInstance=_instance;
         State::Instance().screenWidth = static_cast<float>(pCreateInfo->imageExtent.width);
         State::Instance().screenHeight = static_cast<float>(pCreateInfo->imageExtent.height);
 
@@ -450,7 +536,7 @@ static VkResult hkvkCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
         _device = device;
         LOG_DEBUG("_device captured: {0:X}", (UINT64) _device);
 
-        MenuOverlayVk::CreateSwapchain(device, _PD, _instance, _hwnd, pCreateInfo, pAllocator, pSwapchain);
+        // Initialize on the first owned presentation, using its actual queue.
     }
 
     LOG_FUNC_RESULT(result);
@@ -466,6 +552,14 @@ PFN_vkVoidFunction hkvkGetInstanceProcAddr(VkInstance instance, const char* pNam
         return VK_NULL_HANDLE;
 
     auto procName = std::string(pName);
+    if(procName=="vkDestroySurfaceKHR" && o_DestroySurface)return (PFN_vkVoidFunction)hkvkDestroySurfaceKHR;
+    if(procName=="vkDestroySwapchainKHR" && o_DestroySwapchain)return (PFN_vkVoidFunction)hkvkDestroySwapchainKHR;
+    if(procName=="vkDestroyDevice" && o_DestroyDevice)return (PFN_vkVoidFunction)hkvkDestroyDevice;
+    if(procName=="vkDestroyInstance" && o_DestroyInstance)return (PFN_vkVoidFunction)hkvkDestroyInstance;
+    if(procName=="vkCreateWin32SurfaceKHR" && o_vkCreateWin32SurfaceKHR)return (PFN_vkVoidFunction)hkvkCreateWin32SurfaceKHR;
+    if(procName=="vkCreateSwapchainKHR" && o_CreateSwapchainKHR)return (PFN_vkVoidFunction)hkvkCreateSwapchainKHR;
+    if(procName=="vkQueuePresentKHR" && o_QueuePresentKHR)return (PFN_vkVoidFunction)hkvkQueuePresentKHR;
+
 
     if (procName == std::string("vkCreateInstance"))
     {
@@ -500,6 +594,14 @@ PFN_vkVoidFunction hkvkGetDeviceProcAddr(VkDevice device, const char* pName)
         return VK_NULL_HANDLE;
 
     auto procName = std::string(pName);
+    if(procName=="vkDestroySurfaceKHR" && o_DestroySurface)return (PFN_vkVoidFunction)hkvkDestroySurfaceKHR;
+    if(procName=="vkDestroySwapchainKHR" && o_DestroySwapchain)return (PFN_vkVoidFunction)hkvkDestroySwapchainKHR;
+    if(procName=="vkDestroyDevice" && o_DestroyDevice)return (PFN_vkVoidFunction)hkvkDestroyDevice;
+    if(procName=="vkDestroyInstance" && o_DestroyInstance)return (PFN_vkVoidFunction)hkvkDestroyInstance;
+    if(procName=="vkCreateWin32SurfaceKHR" && o_vkCreateWin32SurfaceKHR)return (PFN_vkVoidFunction)hkvkCreateWin32SurfaceKHR;
+    if(procName=="vkCreateSwapchainKHR" && o_CreateSwapchainKHR)return (PFN_vkVoidFunction)hkvkCreateSwapchainKHR;
+    if(procName=="vkQueuePresentKHR" && o_QueuePresentKHR)return (PFN_vkVoidFunction)hkvkQueuePresentKHR;
+
 
     if (procName == std::string("vkCreateInstance"))
     {
@@ -563,6 +665,10 @@ void VulkanHooks::Hook(HMODULE vulkan1)
     address = KernelBaseProxy::GetProcAddress_()(vulkan1, "vkSignalSemaphore");
     o_vkSignalSemaphore = (PFN_vkSignalSemaphore) address;
 
+    o_DestroySurface=(PFN_vkDestroySurfaceKHR)KernelBaseProxy::GetProcAddress_()(vulkan1,"vkDestroySurfaceKHR");
+    o_DestroySwapchain=(PFN_vkDestroySwapchainKHR)KernelBaseProxy::GetProcAddress_()(vulkan1,"vkDestroySwapchainKHR");
+    o_DestroyDevice=(PFN_vkDestroyDevice)KernelBaseProxy::GetProcAddress_()(vulkan1,"vkDestroyDevice");
+    o_DestroyInstance=(PFN_vkDestroyInstance)KernelBaseProxy::GetProcAddress_()(vulkan1,"vkDestroyInstance");
     DetourTransactionBegin();
     DetourUpdateThread(GetCurrentThread());
 
@@ -581,6 +687,10 @@ void VulkanHooks::Hook(HMODULE vulkan1)
     if (o_vkCreateWin32SurfaceKHR != nullptr)
         DetourAttach(&(PVOID&) o_vkCreateWin32SurfaceKHR, hkvkCreateWin32SurfaceKHR);
 
+    if(o_DestroySurface)DetourAttach(&(PVOID&)o_DestroySurface,hkvkDestroySurfaceKHR);
+    if(o_DestroySwapchain)DetourAttach(&(PVOID&)o_DestroySwapchain,hkvkDestroySwapchainKHR);
+    if(o_DestroyDevice)DetourAttach(&(PVOID&)o_DestroyDevice,hkvkDestroyDevice);
+    if(o_DestroyInstance)DetourAttach(&(PVOID&)o_DestroyInstance,hkvkDestroyInstance);
     // if (o_vkCmdPipelineBarrier != nullptr)
     //     DetourAttach(&(PVOID&) o_vkCmdPipelineBarrier, hkvkCmdPipelineBarrier);
 
@@ -617,6 +727,10 @@ void VulkanHooks::Unhook()
     if (o_vkCreateWin32SurfaceKHR != nullptr)
         DetourDetach(&(PVOID&) o_vkCreateWin32SurfaceKHR, hkvkCreateWin32SurfaceKHR);
 
+    if(o_DestroySurface)DetourDetach(&(PVOID&)o_DestroySurface,hkvkDestroySurfaceKHR);
+    if(o_DestroySwapchain)DetourDetach(&(PVOID&)o_DestroySwapchain,hkvkDestroySwapchainKHR);
+    if(o_DestroyDevice)DetourDetach(&(PVOID&)o_DestroyDevice,hkvkDestroyDevice);
+    if(o_DestroyInstance)DetourDetach(&(PVOID&)o_DestroyInstance,hkvkDestroyInstance);
     // if (o_vkCmdPipelineBarrier != nullptr)
     //     DetourDetach(&(PVOID&) o_vkCmdPipelineBarrier, hkvkCmdPipelineBarrier);
 

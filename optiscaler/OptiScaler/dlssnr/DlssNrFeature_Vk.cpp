@@ -2,6 +2,7 @@
 
 #include "DlssNrFeature_Vk.h"
 #include "DlssNrFeature_Dx12.h"
+#include "NrObservationConfig.h"
 #include "PassProfiles.h"
 
 #include <Config.h>
@@ -124,6 +125,7 @@ struct VkState
     float timestampPeriod = 0.0f;
     unsigned long long timedFrames = 0;
     std::optional<double> lastGpuTime;
+    uint64_t observationTickets[4] = {};
 
     // Whether the game hands over an exposure texture, and what it said when it did.
     bool exposureOffered = false;
@@ -161,6 +163,7 @@ constexpr uint32_t kTimingSlots = 4;
 
 VkState g_vk;
 std::mutex g_vkMutex;
+ULONGLONG g_vkLastCompletedAt = 0;
 
 // Local XP12 probe only: nine 4x4 tiles from input/output, nine captures per process.
 // No screenshots are retained; coherent readback is read only after its GPU event signals.
@@ -639,7 +642,7 @@ std::optional<std::filesystem::path> FindSnippet()
 
 // ---------------------------------------------------------------------------------------------
 
-bool IsRunningVk() { return g_vk.feature != nullptr && !g_vk.failed; }
+bool IsRunningVk() { std::lock_guard<std::mutex> guard(g_vkMutex); return Config::Instance()->DlssNrEnabled.value_or_default() && g_vk.feature != nullptr && !g_vk.failed && g_vkLastCompletedAt && GetTickCount64()-g_vkLastCompletedAt < 1500; }
 
 const char* FailureReasonVk() { return g_vk.failed ? g_vk.reason : ""; }
 
@@ -647,12 +650,12 @@ unsigned long long FramesVk() { return g_vk.frames; }
 
 bool ExposureOfferedVk() { return g_vk.exposureOffered; }
 
-std::optional<double> LastGpuTimeVk() { return g_vk.lastGpuTime; }
+std::optional<double> LastGpuTimeVk() { std::lock_guard<std::mutex> guard(g_vkMutex); return Config::Instance()->DlssNrEnabled.value_or_default() && !g_vk.failed && g_vkLastCompletedAt && GetTickCount64()-g_vkLastCompletedAt < 1500 ? g_vk.lastGpuTime : std::nullopt; }
 
 static void EvaluateAtSeamVk(VkCommandBuffer cmdBuffer, NVSDK_NGX_Parameter* params, VkInstance instance,
                              VkPhysicalDevice physicalDevice, VkDevice device, bool beforeSr, bool rayReconstruction,
                              bool& applied, bool* handled = nullptr,
-                             const optishade::vknr::GuideOptions* guideOptions = nullptr)
+                             const optishade::vknr::GuideOptions* guideOptions = nullptr, const osvtaa::Frame* observedFrame = nullptr)
 {
     applied = false;
     auto& cfg = *Config::Instance();
@@ -1217,7 +1220,14 @@ static void EvaluateAtSeamVk(VkCommandBuffer cmdBuffer, NVSDK_NGX_Parameter* par
 
     // Open the measurement. Reset immediately before writing: a query pool slot must be reset before
     // it is written again, and doing it here rather than at the end keeps the two in one place.
+    ObserveRequest(cfg);
+    const auto observation = optishade::nr_observation::State().Begin(
+        {reinterpret_cast<uintptr_t>(device),observedFrame?observedFrame->queue:0,observedFrame?observedFrame->runtime:0,observedFrame?observedFrame->generation:0,0,width,height,
+         guideOptions ? optishade::nr_observation::Route::EstimatedVulkan : optishade::nr_observation::Route::NativeVulkan},
+        observedFrame?observedFrame->frame:g_vk.frames,GetTickCount64());
+    if(observedFrame && observedFrame->observationTicket) *observedFrame->observationTicket=observation;
     const uint32_t timingSlot = (uint32_t) (g_vk.timedFrames % kTimingSlots);
+    g_vk.observationTickets[timingSlot] = observation;
 
     if (g_vk.queryPool != VK_NULL_HANDLE)
     {
@@ -1476,6 +1486,7 @@ static void EvaluateAtSeamVk(VkCommandBuffer cmdBuffer, NVSDK_NGX_Parameter* par
     if (beforeSr)
         Transition(cmdBuffer, g_vk.preColor, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     applied = true;
+    optishade::nr_observation::State().Evaluated(observation, cfg.DlssNrApplyModel.value_or_default());
 
     // Close it, and read the pair from three frames ago -- retired by now, so the read does not wait.
     if (g_vk.queryPool != VK_NULL_HANDLE)
@@ -1492,14 +1503,17 @@ static void EvaluateAtSeamVk(VkCommandBuffer cmdBuffer, NVSDK_NGX_Parameter* par
             // right answer rather than a stall.
             if (vkGetQueryPoolResults(device, g_vk.queryPool, readSlot * 2, 2, sizeof(ticks), ticks, sizeof(uint64_t),
                                       VK_QUERY_RESULT_64_BIT) == VK_SUCCESS &&
-                ticks[1] > ticks[0])
+                ticks[1] >= ticks[0])
             {
                 const double ms = (double) (ticks[1] - ticks[0]) * (double) g_vk.timestampPeriod / 1e6;
 
                 // A pass that appears to have taken over a second did not; the queue was reset under
                 // it or the pair straddled a device change.
+                optishade::nr_observation::State().Completed(g_vk.observationTickets[readSlot],0,
+                    g_vk.timestampPeriod>0 ? uint64_t(1e9/g_vk.timestampPeriod) : 0,
+                    ms>=0.0 && ms<1000.0 ? std::optional<double>(ms) : std::nullopt);
                 if (ms > 0.0 && ms < 1000.0)
-                    g_vk.lastGpuTime = ms;
+                    { g_vk.lastGpuTime = ms; g_vkLastCompletedAt = GetTickCount64(); }
             }
         }
     }
@@ -1577,7 +1591,7 @@ int EvaluateGuidesVk(const osvtaa::Frame& f, VkInstance instance, VkPhysicalDevi
     params.Set(NVSDK_NGX_Parameter_MV_Scale_Y, float(f.height));
     params.Set(NVSDK_NGX_Parameter_DLSS_Feature_Create_Flags, 0u);
     bool applied = false;
-    EvaluateAtSeamVk((VkCommandBuffer)f.commands, &params, instance, pd, device, false, false, applied, nullptr, &options);
+    EvaluateAtSeamVk((VkCommandBuffer)f.commands, &params, instance, pd, device, false, false, applied, nullptr, &options, &f);
     // Sparse model readback belongs to diagnostics builds, not normal presentation.
     return applied ? 1 : (g_vk.failed ? -1 : 0);
 }

@@ -1,4 +1,4 @@
-// OptiShade additions, GPL-3.0-or-later.
+﻿// OptiShade additions, GPL-3.0-or-later.
 #pragma once
 #include <json.hpp>
 #include <cstdint>
@@ -12,7 +12,7 @@ namespace optishade::mfg {
 inline constexpr char kExpectedDllSha256[] = "e9ca3587854eeb723e0579f7ddf6cfb1e6cf4bed79b0d75bc716003ed98fe040";
 using Json = nlohmann::json;
 struct Settings {
-    bool followGame = true, dynamic = false;
+    bool followGame = true, dynamic = false, overrideOff = false;
     uint32_t multiplier = 2, targetFps = 0, preset = 2, vsyncMode = 0, reflexLimit = 0;
 };
 struct Live {
@@ -28,6 +28,7 @@ struct Live {
 };
 struct Snapshot {
     bool detected = false, verified = false, owned = false, live = false, editable = false;
+    bool sourceBuilt = false;
     Settings settings;
     Live status;
     std::string message;
@@ -64,7 +65,7 @@ inline bool String(const Json& j, const char* key, std::string& value) {
 }
 inline bool ReadSettings(const Json& j, Settings& value) {
     Settings s; s.followGame = false; // Missing legacy key means an explicit override.
-    if (!Bool(j, "followGame", s.followGame, false) || !U32(j, "multiplier", s.multiplier, 1, 6) ||
+    if (!Bool(j,"overrideOff",s.overrideOff,false) || !Bool(j, "followGame", s.followGame, false) || !U32(j, "multiplier", s.multiplier, 1, 6) ||
         !U32(j, "dynamicTargetFrameRate", s.targetFps, 0, 1000, false) ||
         !U32(j, "dlssgPreset", s.preset, 0, 2, false) || !U32(j, "vsyncMode", s.vsyncMode, 0, 2, false) ||
         !U32(j, "reflexFrameLimitFps", s.reflexLimit, 0, 1000, false)) return false;
@@ -78,7 +79,7 @@ inline bool ReadSettings(const Json& j, Settings& value) {
     value = s; return true;
 }
 inline bool SameRequest(const Settings& a, const Settings& b) {
-    return a.followGame == b.followGame && a.dynamic == b.dynamic && a.multiplier == b.multiplier &&
+    return a.overrideOff == b.overrideOff && a.followGame == b.followGame && a.dynamic == b.dynamic && a.multiplier == b.multiplier &&
         a.targetFps == b.targetFps && a.preset == b.preset && a.vsyncMode == b.vsyncMode && a.reflexLimit == b.reflexLimit;
 }
 inline bool ReadDesired(const Json& status, Settings& value, Json* seed = nullptr) {
@@ -157,6 +158,7 @@ inline bool MergeSettings(Json& document, const Settings& current, const Setting
         error = "The Reflex frame limit is unavailable while Dynamic MFG is selected or active."; return false;
     }
     if (current.vsyncMode != requested.vsyncMode) { error = "VSync is managed by the current game settings."; return false; }
+    document["overrideOff"] = requested.overrideOff;
     document["followGame"] = requested.followGame;
     document["mode"] = requested.followGame ? "follow" : requested.dynamic ? "dynamic" : "fixed";
     document["multiplier"] = requested.followGame ? 2u : requested.multiplier;
@@ -166,5 +168,11 @@ inline bool MergeSettings(Json& document, const Settings& current, const Setting
     document["vsyncMode"] = requested.vsyncMode;
     document["version"] = 13;
     return true;
+}
+// Source Off/Follow store intent without needing a created output. Fixed and
+// Dynamic still require the real connected capability record.
+inline bool MergeAdapterSettings(bool source,Json& document,const Settings& current,const Settings& requested,const Live& status,std::string& error){
+ auto validation=status;if(source&&requested.followGame)validation.bridgeReady=true;
+ return MergeSettings(document,current,requested,validation,error);
 }
 }

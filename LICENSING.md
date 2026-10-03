@@ -59,7 +59,7 @@ overrides third-party licence rights.
 | ReShade | reshade/LICENSE.md (BSD-3-Clause) | Reuse and modification are permitted with the required copyright, conditions and disclaimer; upstream names cannot be used for endorsement without permission. |
 | RenoDX-derived portions and other dependencies | Their notices in optiscaler/Licenses, optiscaler/external and reshade/deps | Retain each component's attribution and comply with its own terms. OptiShade does not claim their original authorship. |
 | Shader packages | Their individual licences, installed under OptiShadeData/Licenses | Permissions vary by author and package. Do not assume every shader uses the project's GPL licence. |
-| TAA motion-estimator helper | installer/DefaultEffects/Licenses/OptiShade-TAA-THIRD-PARTY.txt (CC BY-NC 4.0) | Attribution and non-commercial restrictions apply to that separately identified material. |
+| Legacy loose TAA motion-estimator helper (not packaged in these candidates) | installer/DefaultEffects/Licenses/OptiShade-TAA-THIRD-PARTY.txt (CC BY-NC 4.0) | Attribution and non-commercial restrictions apply to that separately identified material. |
 | Optional NVIDIA runtimes and other vendor components | The vendor's applicable terms | This project does not grant additional rights to vendor binaries, SDKs or model weights. |
 
 ## OptiShade name, logo and endorsement
@@ -86,3 +86,5 @@ dependencies and distribution. No such future restriction applies retroactively
 to existing grants. The designation process and proprietary-material disclaimer
 are in OPTISHADE_LICENSING.md. This summary grants no rights to private research
 or vendor model weights.
+
+The Beta internal guide source and generated shaders are GPL-3.0-or-later. See NOTICE.md for the source-built MFG integration and its separate upstream and adapter terms.

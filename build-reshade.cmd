@@ -1,4 +1,6 @@
 @echo off
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0check-core-guides.ps1"
+if errorlevel 1 exit /b 1
 call "%~dp0build-env.cmd" >nul
 if errorlevel 1 exit /b 1
 cd /d "%~dp0reshade"

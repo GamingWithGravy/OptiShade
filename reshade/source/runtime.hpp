@@ -248,6 +248,8 @@ namespace reshade
 		api::format _back_buffer_format = api::format::unknown;
 		api::color_space _back_buffer_color_space = api::color_space::unknown;
 		bool _is_vr = false;
+		bool _optishade_link_vr_preset = true;
+		std::filesystem::path _optishade_separate_vr_preset;
 
 #if RESHADE_ADDON
 		bool _is_in_present_call = false;
@@ -362,6 +364,7 @@ namespace reshade
 
 		bool _should_save_screenshot = false;
 	bool _optishade_snapshot = false;
+	uint64_t _optishade_snapshot_ticket = 0;
 		std::atomic<bool> _last_screenshot_save_successful = true;
 		bool _screenshot_directory_creation_successful = true;
 		std::filesystem::path _last_screenshot_file;

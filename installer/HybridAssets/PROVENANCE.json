@@ -1,0 +1,82 @@
+{
+  "SourceURL": "https://github.com/wilsjo2/OptiScaler-DLSSNR-PreSR-Multipass/releases/download/v0.7.5-nr-fixes/OptiScaler-DLSSNR-v0.7.5-nr-fixes.zip",
+  "ArchiveSHA256": "3e735f825b85872d20c35c0d75404c1a28b7b6e11ca28ef06243a18225191037",
+  "Files": [
+    {
+      "Path": "candidate/split-half/fused_expand.cubin",
+      "Bytes": 5013480,
+      "SHA256": "d516fe1ac387d59f83b097214ca9b89fcebc86f26367f9ddc7e8cb692e776659"
+    },
+    {
+      "Path": "candidate/split-half/params_builder.dll",
+      "Bytes": 55808,
+      "SHA256": "59c9da127ef3feb56939632004ed0921621dcb6be5f8630c00e7ac89f7763a04"
+    },
+    {
+      "Path": "contract/manifest.txt",
+      "Bytes": 590,
+      "SHA256": "f7e18e5a454abaaa61faf56040a8c44a25661f98ada48e7f4358ba022c9067b4"
+    },
+    {
+      "Path": "contract/params.bin",
+      "Bytes": 3456,
+      "SHA256": "928907d65a5c714799b78f002a610837c264a2a00b0aae3aba838d25a05b2551"
+    },
+    {
+      "Path": "contract_m2160/manifest.txt",
+      "Bytes": 591,
+      "SHA256": "f37a469b587bd0ed254fcb04d99f6b7ad791a27204ecb03a2a4988254be8e203"
+    },
+    {
+      "Path": "contract_m2160/params.bin",
+      "Bytes": 3456,
+      "SHA256": "4f11ba182d9929b2d221ae7f7c7575dd9d6ac61f6d50bf3dd8b7e42a44d8126e"
+    },
+    {
+      "Path": "contract_m3840/manifest.txt",
+      "Bytes": 591,
+      "SHA256": "f11afd6affb0b438313367d885e5bd33fae01a77a7c370dd3f31822530be7717"
+    },
+    {
+      "Path": "contract_m3840/params.bin",
+      "Bytes": 3456,
+      "SHA256": "e19897f8174aaf4fac22db6c7e9ac52b0bd4af6b17a283be07280da697667698"
+    },
+    {
+      "Path": "contracts.txt",
+      "Bytes": 116,
+      "SHA256": "57c4627aeb05e8efe16f5f1116c06cd12afbe527a772be9d3c02f3df7ff154ac"
+    },
+    {
+      "Path": "expansion/fused_expand.cubin",
+      "Bytes": 4960880,
+      "SHA256": "fe7f5700ac5e6d5a2fe6571d0f369c9432fabcb29120fdfa33f1ec1c05727ee1"
+    },
+    {
+      "Path": "expansion/params_builder.dll",
+      "Bytes": 55296,
+      "SHA256": "5b5a8902dd856aae752bafc3ea30db9a69beb348a0f50fb79bf1377f690ff4fb"
+    },
+    {
+      "Path": "original_io.cubin",
+      "Bytes": 82712,
+      "SHA256": "9def9af8e5ebf6a17cd8dc2f8ca36d6bd5bdc1eb8c927f9d9a890e38fde0890e"
+    },
+    {
+      "Path": "sm120_16255890_da0cd6180a8a.cubin",
+      "Bytes": 2706504,
+      "SHA256": "da0cd6180a8a4d739c3bd94ade55cbafc4246039a4f7c3dc8cc1a93ddd79df31"
+    },
+    {
+      "Path": "weights.bin",
+      "Bytes": 37765120,
+      "SHA256": "735f0a04a156dcf625097ae34222827bb9cbab8c4c69d09418a7e577034a0371"
+    },
+    {
+      "Path": "weights.txt",
+      "Bytes": 636,
+      "SHA256": "dc15da940164cd71eb619ae24d85f9c3ddf3e84ca332445fa9ee6fed00b444ab"
+    }
+  ],
+  "Scope": "Exact runtime-pinned Hybrid assets; no new model or CUDA runtime installation. Existing distribution decisions still apply."
+}

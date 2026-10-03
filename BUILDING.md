@@ -32,16 +32,16 @@ Standard and SweetFX packs are bundled from installer/DefaultEffects. Additional
 
 ## Update compatibility
 
-The display names are **0.21.4 stable** and **0.21.5 beta**. The beta's internal
-release identity remains `0.21.5-beta.1` for existing updater compatibility;
+The display names are **0.21.6 stable** and **0.21.7 beta**. The beta's internal
+release identity remains `0.21.7-beta.1` for existing updater compatibility;
 the beta revision is omitted from the app's ordinary version display.
 
 When publishing is explicitly authorised, use one installer asset per release:
 
 | Release tag | Single EXE asset name | Display label |
 | --- | --- | --- |
-| `v0.21.4` | `OptiShade_Version_0.21.4.exe` | Optishade 0.21.4 stable |
-| `v0.21.5-beta.1` | `OptiShade_Version_0.21.5-beta.1.exe` | Optishade 0.21.5 beta |
+| `v0.21.6` | `OptiShade_Version_0.21.6.exe` | Optishade 0.21.6 stable |
+| `v0.21.7-beta.1` | `OptiShade_Version_0.21.7-beta.1.exe` | Optishade 0.21.7 beta |
 
 Retain the exact asset names: older launchers match them before downloading.
 Do not upload a second renamed copy. A portable ZIP may accompany that EXE.
@@ -54,3 +54,10 @@ must have beta opt-in enabled when checking. The published 0.21.2 reader has an
 existing release-array handling defect; a new asset name cannot repair that
 already-installed code. The compatibility fixtures retain this known failure
 rather than claiming that all historical launchers can update.
+
+## Hybrid runtime assets
+
+Acquire the hash-pinned upstream archive using optiscaler/get_hybrid_assets.ps1 into a new staging folder. Copy its OptiScaler/nvfp4/hybrid contents to installer/HybridAssets, preserving PROVENANCE.json. The provenance file records every expected hash; do not disable verification. These upstream binary assets are supplied separately from their source and retain their applicable terms.
+
+The read-only hardware temperature helper is built from installer/HardwareSensors.cs by build-installer-host.cmd using the Windows .NET Framework compiler. No sensor driver is bundled. CPU and additional sensor readings require a running Libre Hardware Monitor WMI provider; NVIDIA sensors use the installed system NVAPI.
+

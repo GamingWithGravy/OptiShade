@@ -1,4 +1,5 @@
-﻿function GetVerifiedDownload([string]$Url,[string]$Path,[string]$Hash){
+﻿. "$PSScriptRoot/json-state.ps1"
+function GetVerifiedDownload([string]$Url,[string]$Path,[string]$Hash){
     $web=New-Object Net.WebClient
     try{$web.Headers['User-Agent']='OptiShade-FusionEngine';$task=$web.DownloadFileTaskAsync([uri]$Url,$Path)
         $downloadClock=[Diagnostics.Stopwatch]::StartNew()
@@ -17,8 +18,8 @@ function InstallNvidia([string]$Game,[scriptblock]$Progress={param($text) Write-
     try{$latest=(Invoke-RestMethod 'https://api.github.com/repos/NVIDIA/DLSS/releases/latest' -Headers @{'User-Agent'='OptiShade'} -TimeoutSec 15).tag_name}catch{}
     try{$latestSl=(Invoke-RestMethod 'https://api.github.com/repos/NVIDIA-RTX/Streamline/releases/latest' -Headers @{'User-Agent'='OptiShade'} -TimeoutSec 15).tag_name}catch{}
     $staging=OwnedPath $Game 'OptiShadeData/Downloads/NVIDIA';New-Item -ItemType Directory $staging -Force|Out-Null
-    $files=Get-Content "$PSScriptRoot/nvidia-files.json" -Raw|ConvertFrom-Json
-    $streamline=Get-Content "$PSScriptRoot/streamline-files.json" -Raw|ConvertFrom-Json
+    $files=ReadOptiShadeJson "$PSScriptRoot/nvidia-files.json" 'NVIDIA catalogue JSON' -Shape Array
+    $streamline=ReadOptiShadeJson "$PSScriptRoot/streamline-files.json" 'Streamline catalogue JSON' -Shape Object
     $engine=OwnedPath $Game 'OptiShadeData/Engine'
     $dlssPending=@($files|Where-Object {(HashFile (OwnedPath $engine $_.Name)) -ne $_.SHA256})
     $slPending=@($streamline.files|Where-Object {(HashFile (OwnedPath $engine ('streamline/'+$_.name))) -ne $_.sha256})

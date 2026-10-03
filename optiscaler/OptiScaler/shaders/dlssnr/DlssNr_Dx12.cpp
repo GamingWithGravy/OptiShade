@@ -1,4 +1,7 @@
 #include "pch.h"
+#include "../../../../shared/NrMemoryBudget.h"
+#include "../../../../shared/DiagnosticRateLimit.h"
+#include <dlssnr/NrObservationConfig.h>
 #include "../../../../shared/D3D12FrameContext.h"
 #include "../../../../shared/D3D12Capabilities.h"
 #include <dlssnr/PassProfiles.h>
@@ -41,9 +44,10 @@
 #include "DlssNr_ResidualPair.h"
 #include "../output_scaling/OS_Dx12.h"
 #include "../../../../shared/TaaBridge.h"
+#include "../../../../shared/TaaRoutePolicy.h"
 #include "../../../../shared/DeferredSrQuality.h"
 
-static std::atomic<ULONGLONG> g_lastNativeNrInput { 0 };
+static optishade::taa::NativeInputs g_nativeNrInputs; // guarded by g_nrMutex
 
 namespace
 {
@@ -421,6 +425,8 @@ std::unique_ptr<DlssNr_Dx12> g_compose;
 
 // What the pass costs on the GPU, for the breakdown in the overlay.
 std::unique_ptr<DlssNrGpuTime> g_gpuTime;
+struct NrTimingDomain {ID3D12Device* device=nullptr;ID3D12CommandQueue* queue=nullptr;unsigned width=0,height=0;bool taa=false,finished=false;};
+NrTimingDomain g_timingDomain;
 
 // A second timer, around the model's evaluate and nothing else.
 //
@@ -1440,8 +1446,11 @@ void RecordBuiltPrimaryTuning(const Config& cfg)
 // holding two threads apart -- but the D3D11-on-D3D12 bridge enters from its own call site, and the
 // cost is a CPU-side lock on a path that already records command lists.
 std::recursive_mutex g_nrMutex;
+bool g_nrDeviceLost = false;
 // Session-only policy override. Never bypass device loss or model failures.
 static bool g_memoryPressureStopped = false;
+static optishade::nr::BudgetCheck g_memoryCheck;
+static OptiShadeLog::ReasonLimits<2> g_memoryLogs;
 static bool g_memoryPressureOverride = false;
 
 // Runs the pass inside the same state envelope every other OptiScaler compute pass runs in.
@@ -1723,6 +1732,35 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
             return;
         }
     }
+    const NrTimingDomain timingDomain{_device,timingQueue,frame.OutputWidth,frame.OutputHeight,frame.EstimatedTaaGuides,frame.FinishedPicture};
+    if(frame.Reset || g_timingDomain.device!=timingDomain.device || g_timingDomain.queue!=timingDomain.queue ||
+       g_timingDomain.width!=timingDomain.width || g_timingDomain.height!=timingDomain.height ||
+       g_timingDomain.taa!=timingDomain.taa || g_timingDomain.finished!=timingDomain.finished){
+        if(g_gpuTime)g_gpuTime->ClearLast();if(g_ngxTime)g_ngxTime->ClearLast();
+        g_lastGpuTime.reset();g_lastNgxTime.reset();g_timingDomain=timingDomain;
+    }
+    // The LUID comes from the actual rendering device, never adapter zero.
+    static LUID reportedAdapter{};
+    const auto renderingLuid=_device->GetAdapterLuid();
+    if(renderingLuid.HighPart!=reportedAdapter.HighPart || renderingLuid.LowPart!=reportedAdapter.LowPart) {
+        Microsoft::WRL::ComPtr<IDXGIFactory4> factory;
+        Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;DXGI_ADAPTER_DESC1 description{};
+        if(SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&factory))) &&
+           SUCCEEDED(factory->EnumAdapterByLuid(renderingLuid,IID_PPV_ARGS(&adapter))) &&
+           SUCCEEDED(adapter->GetDesc1(&description))) {
+            reportedAdapter=renderingLuid;
+            LOG_INFO("NR rendering adapter: luid={:08X}{:08X}; vendor={:04X}; device={:04X}; software={}; name={}",
+                (unsigned)renderingLuid.HighPart,renderingLuid.LowPart,description.VendorId,description.DeviceId,
+                (description.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)!=0,wstring_to_string(description.Description));
+        }
+    }
+    DlssNr::ObserveRequest(cfg);
+    const auto observationRoute = frame.EstimatedTaaGuides ? optishade::nr_observation::Route::EstimatedTAA : frame.FinishedPicture ? optishade::nr_observation::Route::FinishedPicture :
+        frame.BeforeUpscale ? optishade::nr_observation::Route::BeforeSR : optishade::nr_observation::Route::NativeD3D12;
+    const auto observation = optishade::nr_observation::State().Begin(
+        {reinterpret_cast<uintptr_t>(_device),reinterpret_cast<uintptr_t>(timingQueue),frame.ObservationOwner,
+         frame.ObservationGeneration,frame.ObservationView,frame.OutputWidth,frame.OutputHeight,observationRoute},
+        frame.SubmissionEpoch,GetTickCount64(),frame.Reset);
     ID3D12Resource* target = output;
 
     // Feature creation records GPU work too, and may return before the first evaluate.
@@ -1742,6 +1780,7 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
     if (!_device || FAILED(_device->GetDeviceRemovedReason()))
     {
         g_nr.failed = true;
+        g_nrDeviceLost = true;
         g_nr.reason = "the graphics device has failed; restart the simulator";
         Config::Instance()->DlssNrEnabled = false;
         LOG_ERROR("DLSS-NR stopped: {}", g_nr.reason);
@@ -1749,11 +1788,9 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
     }
     const auto admissionDesc = output->GetDesc();
     const bool allocating = !g_nr.feature || g_nr.width != admissionDesc.Width || g_nr.height != admissionDesc.Height;
-    static ULONGLONG lastMemoryCheck = 0;
     const auto memoryCheckTime = GetTickCount64();
-    if (allocating || !lastMemoryCheck || memoryCheckTime - lastMemoryCheck >= 1000)
+    if (g_memoryCheck.due(memoryCheckTime, allocating))
     {
-        lastMemoryCheck = memoryCheckTime;
         Microsoft::WRL::ComPtr<IDXGIFactory4> factory;
         Microsoft::WRL::ComPtr<IDXGIAdapter3> adapter;
         DXGI_QUERY_VIDEO_MEMORY_INFO memory {};
@@ -1763,7 +1800,7 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
         {
             const UINT64 free = memory.Budget > memory.CurrentUsage ? memory.Budget - memory.CurrentUsage : 0;
             const UINT64 reserve = allocating ? 256ull * 1024 * 1024 + admissionDesc.Width * admissionDesc.Height * 64ull : 64ull * 1024 * 1024;
-            if (allocating || (memory.Budget && free < reserve))
+            if ((allocating || (memory.Budget && free < reserve)) && g_memoryLogs.record(0, memoryCheckTime))
                 LOG_INFO("DLSS-NR memory admission: {}x{}, independent={}, budget={} MiB, usage={} MiB, reserve={} MiB",
                      admissionDesc.Width, admissionDesc.Height, frame.IndependentCommands,
                      memory.Budget / 1048576, memory.CurrentUsage / 1048576, reserve / 1048576);
@@ -1777,7 +1814,7 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
                 return;
             }
         }
-        else LOG_WARN("DLSS-NR: GPU memory budget query unavailable; allocation checks remain active");
+        else if (g_memoryLogs.record(1, memoryCheckTime)) LOG_WARN("DLSS-NR: GPU memory budget query unavailable; allocation checks remain active (occurrences: {})", g_memoryLogs.count(1));
     }
     ScopedNrStateEnvelope stateEnvelope(cmdList);
 
@@ -2411,7 +2448,7 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
         g_ngxTime = std::make_unique<DlssNrGpuTime>(device, "model");
 
     if (g_gpuTime != nullptr)
-        g_gpuTime->Start(cmdList);
+        g_gpuTime->Start(cmdList, observation);
 
     // Copy just the live image, not the stale right/bottom margins. Do this only after model
     // creation/pending-submission early returns, and inside the measured GPU interval. The compact
@@ -3149,8 +3186,11 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
     // only the active rectangle and restores both resources before DLSS consumes the image.
     // ResidualAcrossRR never copies back -- Color must reach RR untouched.
     FinishColor(result == NVSDK_NGX_Result_Success && !residualAcrossRr);
-    if (result == NVSDK_NGX_Result_Success)
+    if (result == NVSDK_NGX_Result_Success) {
         ++g_nr.successfulDispatches;
+        optishade::nr_observation::State().Evaluated(observation,
+            cfg.DlssNrApplyModel.value_or_default() && !residualAcrossRr && !frame.PrivateColorCopy);
+    }
 
     if (g_gpuTime != nullptr)
     {
@@ -3190,6 +3230,8 @@ void DlssNr_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* c
         }
     }
 
+    DlssNr::Observation();
+
     // Put any guide clones back where the next frame's copy expects to find them.
     // A clone left in NON_PIXEL_SHADER_RESOURCE by a frozen frame was never transitioned back to
     // COPY_DEST, because a frozen frame does not copy. Putting it back unconditionally would be a
@@ -3223,12 +3265,29 @@ std::string DeferredDlssStatus() { return SynchronousDeferredDlssStatus(); }
 void RetryAfterFailure()
 {
     std::lock_guard<std::recursive_mutex> guard(g_nrMutex);
+    if (g_nrDeviceLost) return;
     if (g_memoryPressureStopped) Config::Instance()->DlssNrEnabled = true;
     g_memoryPressureStopped = false;
+    g_memoryCheck.invalidate();
     g_nr.failed = false;
     g_nr.reason = "";
     g_nr.reset = true;
 
+}
+
+void SetEnabled(bool enabled)
+{
+    std::lock_guard<std::recursive_mutex> guard(g_nrMutex);
+    if (enabled && g_nrDeviceLost) return;
+    const bool changed = Config::Instance()->DlssNrEnabled.value_or_default() != enabled;
+    Config::Instance()->DlssNrEnabled = enabled;
+    ObserveRequest(*Config::Instance());
+    if (!changed) return;
+    if (enabled) RetryAfterFailure();
+    g_nr.reset = true;
+    if (g_gpuTime) g_gpuTime->ClearLast();
+    if (g_ngxTime) g_ngxTime->ClearLast();
+    g_lastGpuTime.reset(); g_lastNgxTime.reset();
 }
 
 bool MemoryPressureOverride() { std::lock_guard<std::recursive_mutex> guard(g_nrMutex); return g_memoryPressureOverride; }
@@ -3237,6 +3296,7 @@ void SetMemoryPressureOverride(bool enabled)
 {
     std::lock_guard<std::recursive_mutex> guard(g_nrMutex);
     g_memoryPressureOverride = enabled;
+    g_memoryCheck.invalidate();
     LOG_WARN("NR memory headroom override for this session: {}", enabled);
     if (enabled && g_memoryPressureStopped) RetryAfterFailure();
 }
@@ -3313,9 +3373,22 @@ void EvaluateInternal(ID3D12GraphicsCommandList* cmdList, NVSDK_NGX_Parameter* p
                       bool beforeUpscale, ID3D12CommandQueue* timingQueue, bool rayReconstruction,
                       unsigned long long submissionEpoch)
 {
-    g_lastNativeNrInput.store(GetTickCount64());
     std::lock_guard<std::recursive_mutex> nrLock(g_nrMutex);
     const Config& cfg = *Config::Instance();
+    // Invalid/secondary-device NGX calls cannot indefinitely suppress a valid
+    // main TAA provider. Scope preference to validated device/output evidence.
+    if(cfg.DlssNrEnabled.value_or_default() && cmdList && params) {
+        auto* output=GetResource(params,NVSDK_NGX_Parameter_Output,"DLSSD.Output");
+        auto* depth=GetResource(params,NVSDK_NGX_Parameter_Depth,"DLSSD.Depth");
+        auto* motion=GetResource(params,NVSDK_NGX_Parameter_MotionVectors,"DLSSD.MotionVectors");
+        Microsoft::WRL::ComPtr<ID3D12Device> owner;
+        if(output && depth && motion && SUCCEEDED(output->GetDevice(IID_PPV_ARGS(&owner)))) {
+            const auto desc=output->GetDesc();
+            if(desc.Dimension==D3D12_RESOURCE_DIMENSION_TEXTURE2D && desc.DepthOrArraySize==1 && desc.Width<=UINT32_MAX)
+                g_nativeNrInputs.observe(reinterpret_cast<uint64_t>(optishade::ReShadeDeviceIdentity(owner.Get()).Get()),static_cast<unsigned>(desc.Width),desc.Height,GetTickCount64());
+        }
+    }
+
     static unsigned lastPrecision=0;
     const unsigned precision=cfg.DlssNrPrecision.value_or_default();
     if(lastPrecision!=precision)
@@ -3819,10 +3892,10 @@ void ProbeD3D11(void* d3d11Device)
         // AdapterUnsupported, which looks like a verdict on the hardware and is really a verdict on
         // the question -- that is what the first attempt got, on a 5080.
         IDXGIAdapter* adapter = nullptr;
-        IDXGIFactory1* factory = nullptr;
+        IDXGIDevice* gameDevice = nullptr;
 
-        if (SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&factory))) && factory != nullptr)
-            factory->EnumAdapters(0, &adapter);
+        if (SUCCEEDED(static_cast<IUnknown*>(d3d11Device)->QueryInterface(IID_PPV_ARGS(&gameDevice))))
+            gameDevice->GetAdapter(&adapter);
 
         unsigned int supported = 0xFFFFFFFFu;
         unsigned int minArch = 0;
@@ -3844,8 +3917,8 @@ void ProbeD3D11(void* d3d11Device)
         if (adapter != nullptr)
             adapter->Release();
 
-        if (factory != nullptr)
-            factory->Release();
+        if (gameDevice != nullptr)
+            gameDevice->Release();
     }
 
     LOG_INFO("DLSS-NR D3D11: entry points resolved {}/15 (init {}, create {}, evaluate {}, release {})",
@@ -3901,7 +3974,22 @@ CalibrationReading Calibration()
     return r;
 }
 
-bool IsRunning() { return Config::Instance()->DlssNrEnabled.value_or_default() && g_nr.feature != nullptr && !g_nr.failed && g_nr.successfulDispatches > 0; }
+optishade::nr_observation::Snapshot Observation() {
+    std::lock_guard<std::recursive_mutex> guard(g_nrMutex);
+    ObserveRequest(*Config::Instance());
+    if(g_gpuTime) g_gpuTime->HasRecentCompletion();
+    const auto now=GetTickCount64();
+    auto value=optishade::nr_observation::State().Read(now);
+    static ULONGLONG lastLog=0;
+    if(now-lastLog>=5000) {
+        lastLog=now;
+        LOG_INFO("NR observation: pid={} request={} effective={} route={} owner={:X} generation={} view={} device={:X} queue={:X} frame={} completedFrame={} enabled={} visible={} evaluated={} completed={} composed={} recent={} ageMs={} gpuMs={} frequency={}",
+            GetCurrentProcessId(),value.request,value.effective,optishade::nr_observation::Name(value.owner.route),value.owner.runtime,value.owner.generation,value.owner.view,value.owner.device,value.queue,
+            value.frame,value.completedFrame,value.requested,value.visible,value.evaluated,value.completed,value.composed,value.recent,value.age,value.gpuMilliseconds.value_or(-1),value.frequency);
+    }
+    return value;
+}
+bool IsRunning() { std::lock_guard<std::recursive_mutex> guard(g_nrMutex); return Config::Instance()->DlssNrEnabled.value_or_default() && g_nr.feature != nullptr && !g_nr.failed && g_gpuTime && g_gpuTime->HasRecentCompletion(); }
 
 const char* FailureReason() { return g_nr.failed ? g_nr.reason : ""; }
 
@@ -3918,7 +4006,7 @@ ExposureStatus GameExposureStatus()
     return s;
 }
 
-std::optional<double> LastGpuTime() { return g_lastGpuTime; }
+std::optional<double> LastGpuTime() { std::lock_guard<std::recursive_mutex> guard(g_nrMutex); return Config::Instance()->DlssNrEnabled.value_or_default() && !g_nr.failed && g_gpuTime ? g_gpuTime->ReadGpuTime(nullptr) : std::nullopt; }
 
 
 
@@ -4125,5 +4213,20 @@ extern "C" __declspec(dllexport) void OptiShadeTaaSubmit(const ostaa::Frame* fra
     DlssNr::Taa::Submit(frame);
 }
 
+extern "C" __declspec(dllexport) bool OptiShadeTaaNeedsGuides(void* device, uint32_t width, uint32_t height)
+{
+    if (!OptiShadeTaaRequested() || !device || !width || !height) return false;
+    std::lock_guard<std::recursive_mutex> guard(g_nrMutex);
+    const auto identity = optishade::ReShadeDeviceIdentity(static_cast<ID3D12Device*>(device));
+    return identity && !g_nativeNrInputs.recent(reinterpret_cast<uint64_t>(identity.Get()), width, height, GetTickCount64());
+}
+
 // Read-only diagnostics for the OptiShade hardware test.
 extern "C" __declspec(dllexport) unsigned long long OptiShadeNrCompletedFrames(){std::lock_guard<std::recursive_mutex> guard(g_nrMutex);return g_nr.successfulDispatches;}
+
+extern "C" __declspec(dllexport) void OptiShadeNrCompositionCompleted(uint64_t ticket,uint64_t queue){
+    optishade::nr_observation::State().Completed(ticket,queue,0,std::nullopt);
+    DlssNr::Observation();
+}
+
+extern "C" __declspec(dllexport) uint64_t OptiShadeTaaHistoryKey(){return State::Instance().dlssgTemporalSignature.load(std::memory_order_relaxed);}

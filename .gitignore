@@ -59,3 +59,10 @@ __pycache__/
 /docs/Maintenance-*.md
 **/PrivateDiagnostics/
 OptiShade-diagnostics-*.zip
+
+# Generated read-only hardware sensor bridge
+/installer/OptiShadeSensors.exe
+
+# Acquired runtime assets remain in packages, not the source repository
+/installer/HybridAssets/*
+!/installer/HybridAssets/PROVENANCE.json

@@ -283,7 +283,7 @@ static VkResult get_physical_device_tool_properties(VkPhysicalDevice physicalDev
 	std::strncpy(tool_props.version, ReShadeVersion, VK_MAX_EXTENSION_NAME_SIZE);
 	tool_props.purposes = VK_TOOL_PURPOSE_ADDITIONAL_FEATURES_BIT | VK_TOOL_PURPOSE_MODIFYING_FEATURES_BIT;
 	std::strncpy(tool_props.description, "crosire's ReShade post-processing injector", VK_MAX_DESCRIPTION_SIZE);
-	std::strncpy(tool_props.layer, "VK_LAYER_reshade", VK_MAX_EXTENSION_NAME_SIZE);
+	std::strncpy(tool_props.layer, "VK_LAYER_OptiShade_effects", VK_MAX_EXTENSION_NAME_SIZE);
 
 	return VK_SUCCESS;
 }

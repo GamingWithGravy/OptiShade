@@ -361,6 +361,8 @@ reshade::runtime::~runtime()
 {
     osfx_impl::Retire(this);
     osvnr_impl::Retire(this);
+    ostaa_impl::Retire(this);
+    osguide::Retire(this);
 	assert(_worker_threads.empty());
 	assert(!_is_initialized && _techniques.empty() && _technique_sorting.empty());
 
@@ -632,6 +634,7 @@ exit_failure:
 }
 void reshade::runtime::on_reset()
 {
+	osfx_impl::Reset(this);
     osvnr_impl::Changed(this, true);
 	if (_is_initialized)
 		// Update initialization state immediately, so that any effect loading still in progress can abort early
@@ -733,8 +736,18 @@ void reshade::runtime::on_present()
 	if (_input != nullptr)
 		input_lock = _input->lock();
 
+	if (_is_vr) {
+		const int requestedLink=osfx_impl::VrLink();
+		if(requestedLink>=0 && _optishade_link_vr_preset!=(requestedLink!=0)) {
+			if(!_optishade_link_vr_preset) _optishade_separate_vr_preset=_current_preset_path;
+			_optishade_link_vr_preset=requestedLink!=0;
+			osfx_impl::Reset(this);
+			if(!_optishade_link_vr_preset&&!_optishade_separate_vr_preset.empty())set_current_preset_path(_optishade_separate_vr_preset.u8string().c_str());
+			save_config();
+		}
+	}
 	const bool previousPerformanceMode = _performance_mode;
-	if (osfx_impl::Pump(this, is_loading(), _performance_mode)) {
+	if (osfx_impl::Pump(this, is_loading(), _performance_mode, _is_vr, _optishade_link_vr_preset, _config_path.stem().u8string())) {
 		if (previousPerformanceMode != _performance_mode) save_config();
 		reload_effects(false);
 	}
@@ -745,7 +758,7 @@ void reshade::runtime::on_present()
 	// SnapShot never changes which effects are rendered. Legacy capture requests are disabled.
 	_should_save_screenshot = false;
 
-	if (!is_loading() && !_techniques.empty())
+	if (!is_loading() && !_techniques.empty() && osfx_impl::CanRender(this))
 	{
 		if (_back_buffer_resolved != 0)
 		{
@@ -759,14 +772,15 @@ void reshade::runtime::on_present()
 		}
 	}
 
-	if (auto request = osfx_impl::TakeSnapshotRequest(this); !request.empty()) {
+	if (auto request = osfx_impl::TakeSnapshotRequest(this); request != 0) {
 		try {
-			_screenshot_path = optishade::snapshot::folder(g_target_executable_path.parent_path().u8string());
+			const auto preferences=optishade::snapshot::settings(g_target_executable_path.parent_path());
+			_screenshot_path = optishade::snapshot::folder(preferences.parent.u8string());
 			_screenshot_name = std::filesystem::path(optishade::snapshot::unique_name()).stem().u8string();
-			_screenshot_format = 1; _screenshot_include_preset = false; _screenshot_clear_alpha = true;
+			_screenshot_format = preferences.jpeg ? 2 : 1; _screenshot_jpeg_quality = preferences.quality; _screenshot_include_preset = false; _screenshot_clear_alpha = true;
 			_screenshot_post_save_command.clear(); _screenshot_sound_path.clear();
-			_optishade_snapshot = true; save_screenshot(nullptr); _optishade_snapshot = false;
-		} catch (...) { _optishade_snapshot = false; osfx_impl::SnapshotComplete(false, "Check the snapshot folder and free disk space."); }
+			_optishade_snapshot_ticket = request; _optishade_snapshot = true; save_screenshot(nullptr); _optishade_snapshot = false;
+		} catch (...) { _optishade_snapshot = false; osfx_impl::SnapshotComplete(request,false, "Could not prepare the capture destination."); }
 	}
 
 	osfx_impl::Publish(this, is_loading(), _last_reload_successful, _effects_rendered_this_frame, _performance_mode);
@@ -1041,6 +1055,10 @@ void reshade::runtime::load_config()
 	config_get("GENERAL", "StartupPresetPath", _startup_preset_path);
 	config_get("GENERAL", "PresetPath", _current_preset_path);
 	config_get("GENERAL", "PresetTransitionDuration", _preset_transition_duration);
+	_optishade_link_vr_preset = !_is_vr || (!config.has("GENERAL", "PresetPath") && !config.has("GENERAL", "StartupPresetPath"));
+	config_get("OPTISHADE", "LinkDesktopPreset", _optishade_link_vr_preset);
+	_optishade_separate_vr_preset=_current_preset_path;
+	config_get("OPTISHADE", "SeparateVRPreset", _optishade_separate_vr_preset);
 
 	// Fall back to temp directory if cache path does not exist
 	std::error_code ec;
@@ -1117,6 +1135,7 @@ void reshade::runtime::save_config() const
 
 	config.set("GENERAL", "StartupPresetPath", make_relative_path(_startup_preset_path));
 	config.set("GENERAL", "PresetPath", make_relative_path(_current_preset_path));
+	if (_is_vr) {config.set("OPTISHADE", "LinkDesktopPreset", _optishade_link_vr_preset);config.set("OPTISHADE", "SeparateVRPreset", _optishade_separate_vr_preset);}
 
 	config.set("GENERAL", "PresetTransitionDuration", _preset_transition_duration);
 
@@ -3828,20 +3847,31 @@ void reshade::runtime::render_effects(api::command_list *cmd_list, api::resource
 		return;
 	_effects_rendered_this_frame = true;
 
-	// Compilation workers may be changing effect/technique metadata. Never look
-	// up guides or request a reload until those workers have finished.
-	if (is_loading())
-	{
-		osvnr_impl::Loading(this);
-		return;
-	}
-	const bool requiredNeuralGuides = osvnr_impl::RequiresGuides(this);
-	// Keep missing-guide recovery reachable after compilation, even if no
-	// techniques survived that compile. RequiresGuides can request a safe reload.
-	if (_techniques.empty())
-		return;
-	if (!requiredNeuralGuides && !_effects_enabled && std::all_of(_effects.cbegin(), _effects.cend(), [](const effect &effect) { return !effect.addon; }))
-		return;
+    // Core prerequisites run independently of cosmetic loading, enabled effects,
+    // presets and catalogue names. All output resources belong to this runtime.
+    const bool requiredNeuralGuides=osvnr_impl::RequiresGuides(this)||ostaa_impl::RequiresGuides(this);
+    if(requiredNeuralGuides){
+#if RESHADE_ADDON
+        if(!_is_in_present_call)api::capture_state(cmd_list,_app_state);
+        invoke_addon_event<addon_event::reshade_begin_effects>(this,cmd_list,rtv,rtv_srgb);
+#endif
+        api::resource_view sceneDepth{};
+        if(const auto it=_texture_semantic_bindings.find("DEPTH");it!=_texture_semantic_bindings.end())sceneDepth=it->second.first;
+        const auto setting=[&](const char* name,float fallback){
+            for(const auto& entry:_global_preprocessor_definitions)if(entry.first==name){try{return std::stof(entry.second);}catch(...){return fallback;}}
+            return fallback;
+        };
+        const auto guides=osguide::Run(this,cmd_list,rtv,sceneDepth,_back_buffer_color_space,
+            setting("RESHADE_DEPTH_INPUT_IS_REVERSED",1)!=0,setting("RESHADE_DEPTH_INPUT_IS_LOGARITHMIC",0)!=0,
+            setting("RESHADE_DEPTH_MULTIPLIER",1));
+        ostaa_impl::Run(this,cmd_list,rtv,_back_buffer_color_space,guides);
+#if RESHADE_ADDON
+        invoke_addon_event<addon_event::reshade_finish_effects>(this,cmd_list,rtv,rtv_srgb);
+        if(!_is_in_present_call)api::apply_state(cmd_list,_app_state);
+#endif
+    }else osguide::Retire(this);
+    if(is_loading()||_techniques.empty())return;
+    if(!_effects_enabled&&std::all_of(_effects.cbegin(),_effects.cend(),[](const effect& effect){return !effect.addon;}))return;
 
 	// Lock input so it cannot be modified by other threads while we are reading it here
 	std::unique_lock<std::recursive_mutex> input_lock;
@@ -4062,23 +4092,10 @@ void reshade::runtime::render_effects(api::command_list *cmd_list, api::resource
 		technique &tech = _techniques[technique_index];
 
 		const size_t effect_index = tech.effect_index;
-		// Run required guide work without changing saved technique states or presets.
-		const bool neuralGuide = requiredNeuralGuides && tech.name == "OptiShade_TAA_Guides" && _effects[effect_index].source_file.filename() == L"OptiShade_TAA_Guides.fx";
-		if (!neuralGuide && (!tech.enabled || (_should_save_screenshot && !tech.enabled_in_screenshot) || (!_effects_enabled && !_effects[effect_index].addon)))
-			continue;
-		if (neuralGuide && !_effects[effect_index].compiled)
-		{
-			osvnr_impl::GuideUnavailable(this);
-			continue;
-		}
-		if (neuralGuide && permutation_index < tech.permutations.size() && !tech.permutations[permutation_index].created && !_effects[effect_index].permutations[permutation_index].cso.empty())
-		{
-			const auto request = std::make_pair(effect_index, permutation_index);
-			if (std::find(_reload_create_queue.cbegin(), _reload_create_queue.cend(), request) == _reload_create_queue.cend())
-				_reload_create_queue.push_back(request);
-			osvnr_impl::Loading(this);
-			continue;
-		}
+        // Preserve old preset files but never execute the exact legacy helper
+        // alongside the built-in provider (including its motion history).
+        if(tech.name=="OptiShade_TAA_Guides"&&_effects[effect_index].source_file.filename()==L"OptiShade_TAA_Guides.fx")continue;
+        if(!tech.enabled||(_should_save_screenshot&&!tech.enabled_in_screenshot)||(!_effects_enabled&&!_effects[effect_index].addon))continue;
 
 		if (permutation_index >= tech.permutations.size() ||
 			(!tech.permutations[permutation_index].created && _effects[effect_index].permutations[permutation_index].cso.empty()))
@@ -4089,8 +4106,6 @@ void reshade::runtime::render_effects(api::command_list *cmd_list, api::resource
 		}
 
 		render_technique(tech, cmd_list, back_buffer_resource, rtv, rtv_srgb, permutation_index);
-		if (find_technique("OptiShade_TAA_Guides.fx", "OptiShade_TAA_Guides").handle == reinterpret_cast<uintptr_t>(&tech))
-			ostaa_impl::Run(this, cmd_list, rtv, _back_buffer_color_space);
 
 		if (tech.time_left > 0)
 		{
@@ -4828,6 +4843,10 @@ template <> void reshade::runtime::set_uniform_value<uint32_t>(uniform &variable
 void reshade::runtime::save_screenshot(const char *postfix_in)
 {
 	if (!_optishade_snapshot) return; // One managed capture path, including add-on API calls.
+	const auto capture_id = _optishade_snapshot_ticket;
+    if (!_width || !_height || static_cast<uint64_t>(_width)*_height*6 > 256ull*1024*1024) {
+        osfx_impl::SnapshotComplete(capture_id,false,"Capture dimensions exceed the bounded readback allocation.");return;
+    }
 	std::string postfix;
 	if (postfix_in != nullptr)
 		postfix = postfix_in;
@@ -4892,8 +4911,13 @@ void reshade::runtime::save_screenshot(const char *postfix_in)
 		if (!_screenshot_sound_path.empty())
 			utils::play_sound_async(g_reshade_base_path / _screenshot_sound_path);
 
-		_worker_threads.emplace_back([this, screenshot_count, screenshot_format, screenshot_path, postfix, pixels = std::move(pixels), include_preset, _width = _width, _height = _height, _screenshot_clear_alpha = _screenshot_clear_alpha, _back_buffer_format = _back_buffer_format, _back_buffer_color_space = _back_buffer_color_space]() mutable {
-			// Remove alpha channel
+		_worker_threads.emplace_back([this, capture_id, screenshot_count, screenshot_format, screenshot_path, postfix, pixels = std::move(pixels), include_preset, _width = _width, _height = _height, _screenshot_clear_alpha = _screenshot_clear_alpha, _back_buffer_format = _back_buffer_format, _back_buffer_color_space = _back_buffer_color_space]() mutable {
+			if (!osfx_impl::SnapshotStage(capture_id,optishade::capture::Stage::Encoding,_width,_height)) {
+                osfx_impl::SnapshotComplete(capture_id,false,"Capture cancelled before encoding.");return;
+            }
+            auto temporary_path=screenshot_path;temporary_path+=L".pending";
+            struct PartialCleanup {std::filesystem::path path;~PartialCleanup(){std::error_code ec;std::filesystem::remove(path,ec);}} cleanup{temporary_path};
+            // Remove alpha channel
 			int comp = 4;
 			if (screenshot_format >= 4)
 			{
@@ -4916,7 +4940,7 @@ void reshade::runtime::save_screenshot(const char *postfix_in)
 			// Default to a save failure unless it is reported to succeed below
 			bool save_success = false;
 
-			if (FILE *const file = _wfsopen(screenshot_path.c_str(), L"wbx", SH_DENYNO))
+			if (FILE *const file = _wfsopen(temporary_path.c_str(), L"wbx", SH_DENYNO))
 			{
 				const auto write_callback = [](void *context, void *data, int size) {
 					fwrite(data, 1, size, static_cast<FILE *>(context));
@@ -5074,15 +5098,8 @@ void reshade::runtime::save_screenshot(const char *postfix_in)
 				if (fclose(file) != 0) save_success = false;
 			}
 
-			if (save_success && !optishade::snapshot::receipt(screenshot_path)) {
-				std::error_code remove_error;
-				std::filesystem::remove(screenshot_path, remove_error);
-				osfx_impl::SnapshotComplete(false, remove_error ?
-					"Picture saved, but its cleanup record failed. Remove it manually from Optishade Snapshots." :
-					"Capture could not be recorded for cleanup. Check permissions and free space; no picture was kept.");
-				return;
-			}
-			osfx_impl::SnapshotComplete(save_success, screenshot_path.u8string());
+            if(save_success)save_success=osfx_impl::SnapshotPublish(capture_id,temporary_path,screenshot_path);
+            osfx_impl::SnapshotComplete(capture_id,save_success,save_success?screenshot_path.u8string():"Capture encoding or atomic file publication failed; check the destination permissions and free space.");
 			if (save_success)
 			{
 				execute_screenshot_post_save_command(screenshot_path, screenshot_count, postfix);
@@ -5114,7 +5131,7 @@ void reshade::runtime::save_screenshot(const char *postfix_in)
 			}
 		});
 	}
-	else osfx_impl::SnapshotComplete(false, "Could not read the rendered frame.");
+	else osfx_impl::SnapshotComplete(capture_id,false, "Could not read the rendered game frame.");
 }
 bool reshade::runtime::execute_screenshot_post_save_command(const std::filesystem::path &screenshot_path, unsigned int screenshot_count, std::string_view postfix)
 {

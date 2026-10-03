@@ -1221,9 +1221,15 @@ sl::Result StreamlineHooks::hkslDLSSGSetOptions(const sl::ViewportHandle& viewpo
         }
     }
 
-    state.dlssgLastSetMode = newOptions.mode;
-
-    return o_slDLSSGSetOptions(viewport, newOptions);
+    const auto result = o_slDLSSGSetOptions(viewport, newOptions);
+    // A rejected request must not become the effective mode used by Reflex.
+    if (result == sl::Result::eOk) {
+        state.dlssgLastSetMode = newOptions.mode;
+        // Dynamic frame counts can change every frame: only mode changes reset that history.
+        const uint64_t count=newOptions.mode==sl::DLSSGMode::eDynamic?0:newOptions.numFramesToGenerate;
+        state.dlssgTemporalSignature.store((uint64_t(newOptions.mode)<<32)|count,std::memory_order_relaxed);
+    }
+    return result;
 }
 
 sl::Result StreamlineHooks::hkslDLSSGGetState(const sl::ViewportHandle& viewport, sl::DLSSGState& state,

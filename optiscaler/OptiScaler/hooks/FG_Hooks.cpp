@@ -1,4 +1,5 @@
-#include "pch.h"
+﻿#include "pch.h"
+#include "../../../shared/SourceMfgOutput.h"
 #include <dlssnr/DlssNr.h>
 #include "FG_Hooks.h"
 #include <Config.h>
@@ -1102,6 +1103,7 @@ HRESULT FGHooks::hkFGPresent1(IDXGISwapChain1* This, UINT SyncInterval, UINT Fla
 HRESULT FGHooks::FGPresent(IDXGISwapChain* This, UINT SyncInterval, UINT Flags,
                            const DXGI_PRESENT_PARAMETERS* pPresentParameters)
 {
+    if(!(Flags & DXGI_PRESENT_TEST))optishade::mfg::source::ObservePresent(This);
     _lastPresentFlags = Flags;
 
     auto& state = State::Instance();

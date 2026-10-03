@@ -1,0 +1,333 @@
+{
+  "Groups": {
+    "Effects": [
+      {
+        "Target": "Effects-install.json",
+        "Source": "installer/DefaultEffects/Effects-install.json"
+      },
+      {
+        "Target": "Licenses/DirectX.txt",
+        "Source": "installer/DefaultEffects/Licenses/DirectX.txt"
+      },
+      {
+        "Target": "Licenses/FidelityFX-v1.md",
+        "Source": "installer/DefaultEffects/Licenses/FidelityFX-v1.md"
+      },
+      {
+        "Target": "Licenses/FidelityFX-v2.md",
+        "Source": "installer/DefaultEffects/Licenses/FidelityFX-v2.md"
+      },
+      {
+        "Target": "Licenses/OptiScaler-GPL3.txt",
+        "Source": "installer/DefaultEffects/Licenses/OptiScaler-GPL3.txt"
+      },
+      {
+        "Target": "Licenses/OptiShade-TAA-THIRD-PARTY.txt",
+        "Source": "installer/DefaultEffects/Licenses/OptiShade-TAA-THIRD-PARTY.txt"
+      },
+      {
+        "Target": "Licenses/RenoDX_ATTRIBUTION.txt",
+        "Source": "installer/DefaultEffects/Licenses/RenoDX_ATTRIBUTION.txt"
+      },
+      {
+        "Target": "Licenses/ReShade-BSD3.txt",
+        "Source": "installer/DefaultEffects/Licenses/ReShade-BSD3.txt"
+      },
+      {
+        "Target": "Licenses/Shaders/00/README.md",
+        "Source": "installer/DefaultEffects/Licenses/Shaders/00/README.md"
+      },
+      {
+        "Target": "Licenses/Shaders/01/LICENSE",
+        "Source": "installer/DefaultEffects/Licenses/Shaders/01/LICENSE"
+      },
+      {
+        "Target": "Licenses/Shaders/01/README.md",
+        "Source": "installer/DefaultEffects/Licenses/Shaders/01/README.md"
+      },
+      {
+        "Target": "Licenses/vort-Shaders-MIT.txt",
+        "Source": "installer/DefaultEffects/Licenses/vort-Shaders-MIT.txt"
+      },
+      {
+        "Target": "Licenses/XeSS.txt",
+        "Source": "installer/DefaultEffects/Licenses/XeSS.txt"
+      },
+      {
+        "Target": "Shaders/.keep",
+        "Source": "installer/DefaultEffects/Shaders/.keep"
+      },
+      {
+        "Target": "Shaders/Packages/00/Blending.fxh",
+        "Source": "installer/DefaultEffects/Shaders/Packages/00/Blending.fxh"
+      },
+      {
+        "Target": "Shaders/Packages/00/Daltonize.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/00/Daltonize.fx"
+      },
+      {
+        "Target": "Shaders/Packages/00/Deband.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/00/Deband.fx"
+      },
+      {
+        "Target": "Shaders/Packages/00/DisplayDepth.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/00/DisplayDepth.fx"
+      },
+      {
+        "Target": "Shaders/Packages/00/DrawText.fxh",
+        "Source": "installer/DefaultEffects/Shaders/Packages/00/DrawText.fxh"
+      },
+      {
+        "Target": "Shaders/Packages/00/LUT.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/00/LUT.fx"
+      },
+      {
+        "Target": "Shaders/Packages/00/Macros.fxh",
+        "Source": "installer/DefaultEffects/Shaders/Packages/00/Macros.fxh"
+      },
+      {
+        "Target": "Shaders/Packages/00/ReShade.fxh",
+        "Source": "installer/DefaultEffects/Shaders/Packages/00/ReShade.fxh"
+      },
+      {
+        "Target": "Shaders/Packages/00/ReShadeUI.fxh",
+        "Source": "installer/DefaultEffects/Shaders/Packages/00/ReShadeUI.fxh"
+      },
+      {
+        "Target": "Shaders/Packages/00/TriDither.fxh",
+        "Source": "installer/DefaultEffects/Shaders/Packages/00/TriDither.fxh"
+      },
+      {
+        "Target": "Shaders/Packages/00/UIMask.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/00/UIMask.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/ASCII.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/ASCII.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/Border.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/Border.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/Cartoon.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/Cartoon.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/CAS.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/CAS.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/ChromaticAberration.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/ChromaticAberration.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/ColorMatrix.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/ColorMatrix.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/Compare.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/Compare.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/CRT.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/CRT.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/Curves.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/Curves.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/DPX.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/DPX.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/FakeHDR.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/FakeHDR.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/FilmGrain.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/FilmGrain.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/FXAA.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/FXAA.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/FXAA.fxh",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/FXAA.fxh"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/Layer.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/Layer.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/Levels.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/Levels.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/LiftGammaGain.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/LiftGammaGain.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/LumaSharpen.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/LumaSharpen.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/Monochrome.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/Monochrome.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/Nostalgia.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/Nostalgia.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/Sepia.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/Sepia.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/SMAA.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/SMAA.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/SMAA.fxh",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/SMAA.fxh"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/Splitscreen.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/Splitscreen.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/Technicolor.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/Technicolor.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/Technicolor2.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/Technicolor2.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/Tonemap.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/Tonemap.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/Vibrance.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/Vibrance.fx"
+      },
+      {
+        "Target": "Shaders/Packages/01/SweetFX/Vignette.fx",
+        "Source": "installer/DefaultEffects/Shaders/Packages/01/SweetFX/Vignette.fx"
+      },
+      {
+        "Target": "Textures/.keep",
+        "Source": "installer/DefaultEffects/Textures/.keep"
+      },
+      {
+        "Target": "Textures/Packages/00/FontAtlas.png",
+        "Source": "installer/DefaultEffects/Textures/Packages/00/FontAtlas.png"
+      },
+      {
+        "Target": "Textures/Packages/00/lut.png",
+        "Source": "installer/DefaultEffects/Textures/Packages/00/lut.png"
+      },
+      {
+        "Target": "Textures/Packages/01/SweetFX/AreaTex.png",
+        "Source": "installer/DefaultEffects/Textures/Packages/01/SweetFX/AreaTex.png"
+      },
+      {
+        "Target": "Textures/Packages/01/SweetFX/Layer.png",
+        "Source": "installer/DefaultEffects/Textures/Packages/01/SweetFX/Layer.png"
+      },
+      {
+        "Target": "Textures/Packages/01/SweetFX/SearchTex.png",
+        "Source": "installer/DefaultEffects/Textures/Packages/01/SweetFX/SearchTex.png"
+      }
+    ],
+    "Notices": [
+      {
+        "Target": "RenoDX_ATTRIBUTION.txt",
+        "Source": "optiscaler/Licenses/RenoDX_ATTRIBUTION.txt"
+      }
+    ],
+    "XeSS": [
+      {
+        "Target": "libxell.dll",
+        "Source": "optiscaler/external/xess/bin/libxell.dll"
+      },
+      {
+        "Target": "libxess_dx11.dll",
+        "Source": "optiscaler/external/xess/bin/libxess_dx11.dll"
+      },
+      {
+        "Target": "libxess_fg.dll",
+        "Source": "optiscaler/external/xess/bin/libxess_fg.dll"
+      },
+      {
+        "Target": "libxess.dll",
+        "Source": "optiscaler/external/xess/bin/libxess.dll"
+      }
+    ],
+    "Hybrid": [
+      {
+        "Target": "contracts.txt",
+        "Source": "installer/HybridAssets/contracts.txt"
+      },
+      {
+        "Target": "original_io.cubin",
+        "Source": "installer/HybridAssets/original_io.cubin"
+      },
+      {
+        "Target": "sm120_16255890_da0cd6180a8a.cubin",
+        "Source": "installer/HybridAssets/sm120_16255890_da0cd6180a8a.cubin"
+      },
+      {
+        "Target": "weights.bin",
+        "Source": "installer/HybridAssets/weights.bin"
+      },
+      {
+        "Target": "weights.txt",
+        "Source": "installer/HybridAssets/weights.txt"
+      },
+      {
+        "Target": "candidate/split-half/fused_expand.cubin",
+        "Source": "installer/HybridAssets/candidate/split-half/fused_expand.cubin"
+      },
+      {
+        "Target": "candidate/split-half/params_builder.dll",
+        "Source": "installer/HybridAssets/candidate/split-half/params_builder.dll"
+      },
+      {
+        "Target": "contract/manifest.txt",
+        "Source": "installer/HybridAssets/contract/manifest.txt"
+      },
+      {
+        "Target": "contract/params.bin",
+        "Source": "installer/HybridAssets/contract/params.bin"
+      },
+      {
+        "Target": "contract_m2160/manifest.txt",
+        "Source": "installer/HybridAssets/contract_m2160/manifest.txt"
+      },
+      {
+        "Target": "contract_m2160/params.bin",
+        "Source": "installer/HybridAssets/contract_m2160/params.bin"
+      },
+      {
+        "Target": "contract_m3840/manifest.txt",
+        "Source": "installer/HybridAssets/contract_m3840/manifest.txt"
+      },
+      {
+        "Target": "contract_m3840/params.bin",
+        "Source": "installer/HybridAssets/contract_m3840/params.bin"
+      },
+      {
+        "Target": "expansion/fused_expand.cubin",
+        "Source": "installer/HybridAssets/expansion/fused_expand.cubin"
+      },
+      {
+        "Target": "expansion/params_builder.dll",
+        "Source": "installer/HybridAssets/expansion/params_builder.dll"
+      }
+    ]
+  },
+  "Version": 1
+}

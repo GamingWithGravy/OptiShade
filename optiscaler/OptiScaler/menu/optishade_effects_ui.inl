@@ -1,5 +1,6 @@
-﻿// OptiShade additions, GPL-3.0-or-later.
+// OptiShade additions, GPL-3.0-or-later.
 #include "../../../shared/EffectsBridge.h"
+#include "../../../shared/EffectReadiness.h"
 #include "../../../shared/PresetHotSwapPolicy.h"
 #include "../../../shared/PresetPathIdentity.h"
 #include "../../../shared/PresetTechniquePolicy.h"
@@ -16,7 +17,7 @@ static std::string MenuKeyLabel(int vk){
 static osfx::Snapshot fx{};
 static char feedback[8192]="";
 static uint64_t seenSave=0;
-static std::map<std::string,uint64_t> preparing;
+static std::map<std::string,optishade::fxready::Request> preparing;
 static bool EffectSwitch(const char* id,bool on){
  ImGui::PushID(id);auto pos=ImGui::GetCursorScreenPos();float height=ImGui::GetFrameHeight(),width=height*1.85f;
  bool clicked=ImGui::InvisibleButton("switch",ImVec2(width,height));auto* draw=ImGui::GetWindowDrawList();
@@ -73,15 +74,20 @@ static void DrawEffects(){
  PollZipImport();
  auto module=GetModuleHandleW(L"ReShade64.dll");auto read=module?(osfx::Read)GetProcAddress(module,"OptiShadeEffectsRead"):nullptr;
  bool connected=read&&read(&fx,sizeof(fx));
- if(!connected){ImGui::TextColored({1,.7f,.3f,1},"Waiting for image effects to become available.");return;}
+
  for(auto it=preparing.begin();it!=preparing.end();){
   bool found=false;
   if(!fx.loading){for(uint32_t i=0;i<fx.techniques;i++){auto& t=fx.technique[i];if(it->first==t.effect&&t.enabled)found=true;}}
-  if(found){it=preparing.erase(it);}
-  else if(!fx.loading&&fx.frames>it->second+1800){strcpy_s(feedback,"This shader did not become ready. Check the effects log for missing files or compile errors.");it=preparing.erase(it);}
-  else ++it;
+  const auto result=optishade::fxready::poll(it->second,GetTickCount64(),fx.generation,connected,fx.loading!=0,found);
+  if(result==optishade::fxready::Result::Waiting){++it;continue;}
+  if(result==optishade::fxready::Result::Active)strcpy_s(feedback,"Effect compiled and activated.");
+  else if(result==optishade::fxready::Result::RuntimeLost)strcpy_s(feedback,"The effects runtime stopped responding. Retry when the game finishes loading.");
+  else if(result==optishade::fxready::Result::Cancelled)strcpy_s(feedback,"The effects runtime changed. Please select the effect again.");
+  else strcpy_s(feedback,fx.loading?"Effect compilation has exceeded two minutes. Check the effects log before retrying.":"This effect did not activate. Check for missing files or shader compile errors, then retry.");
+  it=preparing.erase(it);
  }
 
+ if(!connected){ImGui::TextWrapped("Image effects are not responding yet. The game may still be loading.");if(feedback[0])ImGui::TextWrapped("%s",feedback);return;}
  ImGui::BeginDisabled(fx.loading!=0||zipProcess!=nullptr);
  bool performanceMode=fx.performanceMode!=0;
  ImGui::BeginDisabled(fx.dirty!=0&&!performanceMode);if(ImGui::Checkbox("Performance Mode (image effects)",&performanceMode)){osfx::Command c{};c.kind=osfx::PerformanceMode;c.enabled=performanceMode;Send(c);}ImGui::EndDisabled();
@@ -133,6 +139,22 @@ static void DrawEffects(){
 
  DrawDependencyPrompt();
  DrawPresetBrowser(root);
+ auto deliveryText=[](const char* label,const osfx::Delivery& d){
+  const char* state="not connected";
+  switch(d.state){case 1:state="preset pending";break;case 2:state="preset loading";break;case 3:state="preset failed or missing techniques";break;case 4:state="preset submitted to renderer (confirm output)";break;case 5:state="effects bypassed";break;case 6:state="separate profile retained";break;case 7:state="not currently presenting";break;}
+  ImGui::TextWrapped("%s: %s",label,state);
+ };
+ deliveryText("Desktop",fx.desktop);deliveryText("Headset",fx.headset);
+ if(fx.headset.generation){
+  const bool linked=fx.headset.state!=6;
+  ImGui::BeginDisabled(fx.dirty!=0);
+  if(EffectSwitch("Link headset look to desktop",linked)){osfx::Command c{};c.kind=osfx::LinkVR;c.enabled=!linked;Send(c);}
+  ImGui::SameLine();ImGui::TextUnformatted("Link headset look to desktop");
+  ImGui::EndDisabled();
+  if(fx.dirty)ImGui::TextWrapped("Save or discard your changes before changing headset linking.");
+ }
+
+
  if(!fx.loading){
   using optishade::preset::State;
   switch(static_cast<State>(fx.presetState)){
@@ -208,7 +230,7 @@ static void DrawEffects(){
    bool waiting=preparing.count(filename)!=0;ImGui::PushID(path.string().c_str());ImGui::BeginDisabled(waiting);
    if(EffectSwitch("library",on)){
     if(loaded){for(uint32_t i=0;i<fx.techniques;i++){auto& t=fx.technique[i];if(filename!=t.effect)continue;osfx::Command c{};c.kind=osfx::Technique;c.enabled=!on;strcpy_s(c.effect,t.effect);strcpy_s(c.name,t.name);Send(c);}}
-    else{osfx::Command c{};c.kind=osfx::Load;c.enabled=1;strncpy_s(c.effect,filename.c_str(),_TRUNCATE);if(Send(c)){preparing[filename]=fx.frames;strcpy_s(feedback,"Preparing your effect. It will switch on when it is ready.");}}
+    else{osfx::Command c{};c.kind=osfx::Load;c.enabled=1;strncpy_s(c.effect,filename.c_str(),_TRUNCATE);if(Send(c)){preparing[filename]={GetTickCount64(),fx.generation};strcpy_s(feedback,"Preparing your effect. It will switch on when it is ready.");}}
     if(!on){selectedEffect=filename;osfx::Command c{};c.kind=osfx::Inspect;strncpy_s(c.effect,filename.c_str(),_TRUNCATE);Send(c);}
    }
    ImGui::EndDisabled();ImGui::SameLine();

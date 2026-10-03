@@ -1,4 +1,5 @@
-﻿. "$PSScriptRoot/store-paths.ps1"
+﻿. "$PSScriptRoot/json-state.ps1"
+. "$PSScriptRoot/store-paths.ps1"
 # Read launcher catalogues; never crawl entire disks or start games during discovery.
 function ResolveFusionStoreFolder([string]$Folder){
  # Appx InstallLocation can be a protected package path or an Xbox junction.
@@ -25,7 +26,7 @@ function ResolveFusionStoreFolder([string]$Folder){
 function ResolveFusionInstallFolder([string]$Game){
  if([string]::IsNullOrWhiteSpace($Game)){throw 'Choose the simulator installation folder using Browse.'}
  $candidate=[Environment]::ExpandEnvironmentVariables($Game.Trim().Trim('"').Trim())
- if($candidate -notmatch '^(?:[A-Za-z]:[\\/]|\\\\[^\\]+\\[^\\]+)' -or $candidate.IndexOfAny([IO.Path]::GetInvalidPathChars()) -ge 0 -or $candidate -match '[*?]'){
+ if($candidate -notmatch '^(?:[A-Za-z]:[\\/]|\\\\[^\\]+\\[^\\]+)' -or $candidate.IndexOfAny([IO.Path]::GetInvalidPathChars()) -ge 0 -or $candidate -match '[<>|"*?\x00-\x1F]' ){
   throw 'The installation path is invalid. Use Browse to select the simulator installation folder.'
  }
  try{$folder=[IO.Path]::GetFullPath($candidate).TrimEnd('\')}catch{throw 'The installation path is invalid. Use Browse to select the simulator installation folder.'}
@@ -67,19 +68,59 @@ function JoinOptiShadeLayerPaths([string[]]$Values){
  }}
  return $paths -join ';'
 }
+function AssertOptiShadeXPlaneLaunchPolicy([string]$Exe){
+ $conflicts=[Collections.Generic.List[string]]::new()
+ foreach($scope in @('HKCU:','HKLM:')){
+  $key=$scope+'\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers'
+  try{$properties=Get-ItemProperty -LiteralPath $key -ErrorAction Stop
+   foreach($property in $properties.PSObject.Properties){if($property.Name -ieq $Exe -and [string]$property.Value -match '(?i)\bRUNASADMIN\b'){$conflicts.Add($scope+' executable compatibility setting')}}
+  }catch{}
+ }
+ if($env:__COMPAT_LAYER -match '(?i)\bRUNASADMIN\b'){$conflicts.Add('inherited compatibility setting')}
+ if($conflicts.Count){throw ('X-Plane is configured to require administrator access ('+($conflicts -join ', ')+'). Review the executable Properties > Compatibility > Run this program as administrator, including All users. OptiShade has not changed this setting; Play requires a normal non-elevated launch.')}
+ if(-not ('OptiShadeLaunchManifest' -as [type])){
+  Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class OptiShadeLaunchManifest {
+ [DllImport("kernel32",CharSet=CharSet.Unicode,SetLastError=true)] static extern IntPtr LoadLibraryEx(string p,IntPtr f,uint flags);
+ [DllImport("kernel32",SetLastError=true)] static extern IntPtr FindResource(IntPtr m,IntPtr n,IntPtr t);
+ [DllImport("kernel32")] static extern IntPtr LoadResource(IntPtr m,IntPtr r);
+ [DllImport("kernel32")] static extern IntPtr LockResource(IntPtr r);
+ [DllImport("kernel32")] static extern uint SizeofResource(IntPtr m,IntPtr r);
+ [DllImport("kernel32")] static extern bool FreeLibrary(IntPtr m);
+ public static string Read(string p){
+  var m=LoadLibraryEx(p,IntPtr.Zero,2|0x20); if(m==IntPtr.Zero)throw new InvalidOperationException("Cannot inspect the X-Plane executable manifest.");
+  try{var r=FindResource(m,new IntPtr(1),new IntPtr(24));if(r==IntPtr.Zero)return "";
+   uint length=SizeofResource(m,r);if(length>65536)throw new InvalidOperationException("Executable manifest exceeds inspection limit.");
+   var bytes=new byte[length];var ptr=LockResource(LoadResource(m,r));if(ptr==IntPtr.Zero)throw new InvalidOperationException("Cannot read executable manifest.");
+   Marshal.Copy(ptr,bytes,0,(int)length);return System.Text.Encoding.UTF8.GetString(bytes).Trim('\0','\uFEFF');
+  }finally{FreeLibrary(m);}
+ }
+}
+'@
+ }
+ $text=[OptiShadeLaunchManifest]::Read($Exe)
+ if($text){
+  $xml=[xml]::new();$xml.XmlResolver=$null;$xml.LoadXml($text)
+  $level=$xml.SelectSingleNode("//*[local-name()='requestedExecutionLevel']")
+  if($level -and $level.level -in @('requireAdministrator','highestAvailable')){throw ('X-Plane executable manifest requests '+$level.level+'. This conflicts with process-local Vulkan layers. Use an official non-elevated executable or review the executable policy; no security setting was changed and no game was launched.')}
+ }
+}
+
 function NewOptiShadeXPlaneStartInfo([string]$Exe,[string]$Store){
  AssertFusionExecutable $Exe
  if([IO.Path]::GetFileName($Exe) -ine 'X-Plane.exe'){throw 'This Vulkan launch path is only for X-Plane.'}
  if(TestOptiShadeElevated){throw 'Close OptiShade and reopen it normally (not Run as administrator) before Play. Vulkan ignores local layer paths in elevated processes. No game was launched.'}
  $game=Split-Path $Exe;$layers=OwnedPath $game 'OptiShadeData/Vulkan';$json=OwnedPath $game 'OptiShadeData/Vulkan/OptiShade.json'
  if(-not(Test-Path -LiteralPath $json -PathType Leaf)){throw 'OptiShade.json is missing. Repair using the matching beta manager.'}
- try{$layer=Get-Content -LiteralPath $json -Raw -ErrorAction Stop|ConvertFrom-Json -ErrorAction Stop}catch{throw 'OptiShade.json is unreadable or invalid JSON. Repair using the matching beta manager.'}
- if($layer.layer.name -cne 'VK_LAYER_reshade' -or $layer.layer.type -cne 'GLOBAL' -or -not $layer.layer.library_path){throw 'OptiShade.json has an invalid layer definition. Repair using the matching beta manager.'}
+ try{$layer=ReadOptiShadeJson $json 'Vulkan layer JSON' -MaxBytes 65536}catch{throw 'OptiShade.json is unreadable or invalid JSON. Repair using the matching beta manager.'}
+ if($layer.layer.name -cne 'VK_LAYER_OptiShade_effects' -or $layer.layer.type -cne 'GLOBAL' -or -not $layer.layer.library_path){throw 'OptiShade.json has an invalid layer definition. Repair using the matching beta manager.'}
  if($layer.layer.library_path -cne '..\..\ReShade64.dll'){throw 'OptiShade.json uses an unsupported Windows library path. Update to the latest beta, then use its matching Repair if needed.'}
  try{$resolved=[IO.Path]::GetFullPath((Join-Path $layers $layer.layer.library_path))}catch{throw 'OptiShade.json has an invalid library_path. Repair using the matching beta manager.'}
  if($resolved -ine (OwnedPath $game 'ReShade64.dll')){throw 'OptiShade.json does not resolve to the game ReShade64.dll. Repair using the matching beta manager.'}
  $mp=ManifestPath $Store $game
- try{$manifest=Get-Content -LiteralPath $mp -Raw -ErrorAction Stop|ConvertFrom-Json -ErrorAction Stop}catch{throw 'The recorded X-Plane installation is missing or unreadable. Install using this beta manager.'}
+ try{$manifest=ReadOptiShadeJson $mp 'Installation receipt JSON'}catch{throw 'The recorded X-Plane installation is missing or unreadable. Install using this beta manager.'}
  if($manifest.Status -ne 'Installed' -or (FullPath $manifest.Game) -ine (FullPath $game)){throw 'The X-Plane installation is incomplete. Repair using the matching beta manager.'}
  foreach($name in @('OptiShadeData/Vulkan/OptiShade.json','ReShade64.dll','dxgi.dll')){
   $file=OwnedPath $game $name
@@ -101,13 +142,19 @@ function NewOptiShadeXPlaneStartInfo([string]$Exe,[string]$Store){
   $inherited['VK_ADD_LAYER_PATH']=JoinOptiShadeLayerPaths @($layers,$inherited['VK_ADD_LAYER_PATH'])
  }
  $names=[Collections.Generic.List[string]]::new()
- foreach($name in (@('VK_LAYER_reshade')+@($inherited['VK_INSTANCE_LAYERS'] -split ';'))){
-  $name=$name.Trim();if(-not $name){continue}
+ foreach($name in (@('VK_LAYER_OptiShade_effects')+@($inherited['VK_INSTANCE_LAYERS'] -split ';'))){
+  $name=$name.Trim();if(-not $name -or $name -ceq 'VK_LAYER_reshade'){continue}
   if($name -notmatch '^VK_LAYER_[A-Za-z0-9_]+$'){throw 'VK_INSTANCE_LAYERS contains a malformed layer name. Review the existing Vulkan environment before Play.'}
   if(-not $names.Contains($name)){$names.Add($name)}
  }
  $inherited['VK_INSTANCE_LAYERS']=$names -join ';'
- $inherited['RESHADE_DISABLE_GRAPHICS_HOOK']='1'
+ # Child-process scope only. Unique explicit identity avoids name collisions;
+ # the registered upstream implicit runtime must not initialize a second copy.
+ $inherited['DISABLE_VK_LAYER_reshade_1']='1'
+ $filters=@($inherited['VK_LOADER_LAYERS_DISABLE'] -split ',' | Where-Object {$_})
+ if($filters -cnotcontains 'VK_LAYER_reshade'){$filters+= 'VK_LAYER_reshade'}
+ $inherited['VK_LOADER_LAYERS_DISABLE']=$filters -join ','
+ $inherited['RESHADE_DISABLE_GRAPHICS_HOOK']='1' 
  return $start
 }
 function StartOptiShadeXPlane([string]$Exe,[string]$Store){
@@ -134,7 +181,7 @@ function StartOptiShadeXPlane([string]$Exe,[string]$Store){
 function GetFusionInstallState([string]$Store,[string]$Game){
  $gamePath=ResolveFusionInstallFolder $Game
  foreach($file in Get-ChildItem (Join-Path $Store 'Games') -Filter manifest.json -Recurse -File -ErrorAction SilentlyContinue){
-  try{$m=Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8|ConvertFrom-Json;if([IO.Path]::GetFullPath($m.Game).TrimEnd('\') -ne $gamePath){continue}
+  try{$m=ReadOptiShadeJson $file.FullName 'Launcher or installation JSON';if([IO.Path]::GetFullPath($m.Game).TrimEnd('\') -ne $gamePath){continue}
    if($m.Status -eq 'Installed'){
     $loaders=@($m.Files|Where-Object {$_.SourcePath -eq 'winmm.dll'})
     foreach($loader in $loaders){
@@ -195,7 +242,7 @@ function FindFusionGames([string]$Store){
   }
  }
  foreach($file in Get-ChildItem "$env:ProgramData/Epic/EpicGamesLauncher/Data/Manifests" -Filter '*.item' -File -ErrorAction SilentlyContinue){
-  try{$item=Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8|ConvertFrom-Json;AddGame $item.DisplayName $item.InstallLocation 'Epic'}catch{}
+  try{$item=ReadOptiShadeJson $file.FullName 'Launcher or installation JSON';AddGame $item.DisplayName $item.InstallLocation 'Epic'}catch{}
  }
  foreach($drive in Get-PSDrive -PSProvider FileSystem){
   foreach($entry in Get-ChildItem -LiteralPath (Join-Path $drive.Root 'XboxGames') -Directory -ErrorAction SilentlyContinue){AddGame $entry.Name (Join-Path $entry.FullName 'Content') 'Xbox'}
@@ -221,7 +268,7 @@ function FindFusionGames([string]$Store){
  }
  foreach($file in Get-ChildItem (Join-Path $Store 'Games') -Filter manifest.json -Recurse -File -ErrorAction SilentlyContinue){
   try{
-   $m=Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8|ConvertFrom-Json
+   $m=ReadOptiShadeJson $file.FullName 'Launcher or installation JSON'
    $parent=@($games.Values|Where-Object {$m.Game.StartsWith($_.Folder+'\',[StringComparison]::OrdinalIgnoreCase)}|Sort-Object @{Expression={$_.Folder.Length};Descending=$true})|Select-Object -First 1
    if($parent){$parent.State=$m.Status;if($m.Status -eq 'Installed' -and $m.Downloads -eq 'Pending'){$parent.State='Installed - finish downloads'};$parent|Add-Member -NotePropertyName InstallFolder -NotePropertyValue $m.Game -Force}
    else{AddGame (Split-Path $m.Game -Leaf) $m.Game 'Added by you';$key=([IO.Path]::GetFullPath($m.Game).TrimEnd('\')).ToLowerInvariant();if($games.ContainsKey($key)){$games[$key].State=$m.Status;if($m.Status -eq 'Installed' -and $m.Downloads -eq 'Pending'){$games[$key].State='Installed - finish downloads'}}}

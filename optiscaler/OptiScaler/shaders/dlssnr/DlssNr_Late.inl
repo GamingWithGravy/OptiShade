@@ -367,6 +367,7 @@ void ApplyToFinishedPicture(IDXGISwapChain* swapchain, ID3D12CommandQueue* queue
         frame.WhitePointOverride = (pq || scrgb) ? 203.0f / 80.0f : 0.0f;
         frame.Reset |= Late::reset;
         frame.SubmissionEpoch = epoch;
+        frame.ObservationOwner=reinterpret_cast<uintptr_t>(swapchain);
         Barrier(cmd, slot.depth.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
         Barrier(cmd, slot.motion.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
         DlssNrNative::SetPrecision(Config::Instance()->DlssNrPrecision.value_or_default());
@@ -426,6 +427,7 @@ void ApplyToFinishedPicture(IDXGISwapChain* swapchain, ID3D12CommandQueue* queue
     }
     ID3D12CommandList* lists[] = { cmd };
     queue->ExecuteCommandLists(1, lists);
+    FinishedPictureSubmitted(queue,1,lists);
     slot.done = slot.ready + 1;
     if (FAILED(queue->Signal(slot.fence.Get(), slot.done)))
     {

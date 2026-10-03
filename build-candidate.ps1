@@ -1,4 +1,4 @@
-param([switch]$SkipPackage)
+﻿param([switch]$SkipPackage)
 $ErrorActionPreference='Stop'
 $root=$PSScriptRoot
 . "$root/build-identity.ps1"
@@ -10,7 +10,7 @@ foreach($script in @('build-performance.cmd','build-reshade.cmd','build-installe
 $after=GetOptiShadeSourceIdentity $root
 if($before -ne $after){throw 'Source changed while compiling; rerun the candidate build.'}
 $stamp=[ordered]@{SourceSHA256=$after;SourceHead=(git -C $root rev-parse HEAD);BuiltUtc=[DateTime]::UtcNow.ToString('o');Binaries=@{}}
-foreach($relative in @('optiscaler/x64/Release/OptiScaler.dll','optiscaler/x64/Release/a/nvngx.dll_dlssnr.dll','reshade/bin/x64/Release/ReShade64.dll','installer/FusionSetup.exe','installer/resource.syso','reshade/res/version.h')){
+foreach($relative in @('optiscaler/x64/Release/OptiScaler.dll','optiscaler/x64/Release/a/nvngx.dll_dlssnr.dll','reshade/bin/x64/Release/ReShade64.dll','installer/FusionSetup.exe','installer/OptiShadeSensors.exe','installer/resource.syso','reshade/res/version.h')){
  $stamp.Binaries[$relative]=(Get-FileHash -LiteralPath (Join-Path $root $relative) -Algorithm SHA256).Hash
 }
 New-Item -ItemType Directory -Path "$root/test-run" -Force|Out-Null
