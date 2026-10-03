@@ -1,5 +1,5 @@
 # OptiShade 0.21.6 Stable
-Approval draft. Shared entries apply to both channels; Beta-only entries require the opt-in Beta build. These notes cover changes since 0.21.4 Stable and 0.21.5-beta.1 Beta.
+Shared entries apply to both channels; Beta-only entries require the opt-in Beta build. These notes cover changes since 0.21.4 Stable and 0.21.5-beta.1 Beta.
 
 ## Fixes
 
