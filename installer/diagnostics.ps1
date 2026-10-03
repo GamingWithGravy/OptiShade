@@ -1,8 +1,20 @@
-﻿. "$PSScriptRoot/crash-dumps.ps1"
+﻿. "$PSScriptRoot/json-state.ps1"
+. "$PSScriptRoot/crash-dumps.ps1"
 function ReadDiagnosticTail([string]$Path,[int]$MaxBytes=65536){
  if(-not(Test-Path -LiteralPath $Path -PathType Leaf)){return 'Not available'}
- $stream=[IO.File]::Open($Path,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::ReadWrite)
- try{$size=[int][Math]::Min($MaxBytes,$stream.Length);[void]$stream.Seek(-$size,[IO.SeekOrigin]::End);$buffer=New-Object byte[] $size;$n=$stream.Read($buffer,0,$size);[Text.Encoding]::UTF8.GetString($buffer,0,$n)}finally{$stream.Dispose()}
+ $stream=[IO.File]::Open($Path,[IO.FileMode]::Open,[IO.FileAccess]::Read,([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+ try{
+  $bom=New-Object byte[] 3;$count=$stream.Read($bom,0,3)
+  $encoding=[Text.Encoding]::UTF8;$unit=1
+  if($count -ge 2 -and $bom[0] -eq 255 -and $bom[1] -eq 254){$encoding=[Text.Encoding]::Unicode;$unit=2}
+  elseif($count -ge 2 -and $bom[0] -eq 254 -and $bom[1] -eq 255){$encoding=[Text.Encoding]::BigEndianUnicode;$unit=2}
+  $start=[Math]::Max(0,$stream.Length-[Math]::Max(0,$MaxBytes))
+  if($unit -eq 2 -and $start%2){$start++}
+  [void]$stream.Seek($start,[IO.SeekOrigin]::Begin)
+  $buffer=New-Object byte[] ([int][Math]::Min($MaxBytes,$stream.Length-$start));$n=0
+  while($n -lt $buffer.Length){$read=$stream.Read($buffer,$n,$buffer.Length-$n);if(-not $read){break};$n+=$read}
+  return $encoding.GetString($buffer,0,$n).TrimStart([char]0xFEFF)
+ }finally{$stream.Dispose()}
 }
 function ReadDiagnosticHead([string]$Path){
  if(-not(Test-Path -LiteralPath $Path -PathType Leaf)){return 'Not available'}
@@ -22,7 +34,7 @@ function GetDiagnosticLogWindow([string]$Path){
   try{
    while($null -ne ($line=$reader.ReadLine())){
     if($line.Length -gt 4096){$line='[line truncated] '+$line.Substring($line.Length-4096)}
-    if($line -notmatch '(?i)\[E\]|\[W\]|\|\s*(ERROR|WARN)|exception|failed|failure|DXGI_ERROR|887A000[567]|device removed|MFG unlock|Set FPS Limit|Hold Frame|Neural Rendering state|DLSS-NR.*(feature|evaluate result|SUPERSAMPLE)|rendering GPU|swapchain.*(size|format|resize)|OpenXR|GetFullPath'){continue}
+    if($line -notmatch '(?i)\[E\]|\[W\]|\|\s*(ERROR|WARN)|exception|failed|failure|DXGI_ERROR|887A000[567]|device removed|MFG unlock|Set FPS Limit|Hold Frame|Neural Rendering state|NR observation:|DLSS-NR.*(feature|evaluate result|SUPERSAMPLE)|rendering GPU|swapchain.*(size|format|resize)|OpenXR|GetFullPath'){continue}
     $result.MatchesInWindow++;$kept.Enqueue($line);$chars+=$line.Length
     if($line -match '(?i)\[E\]|\|\s*ERROR|exception|failed|failure|DXGI_ERROR|887A000[567]|device removed|GetFullPath'){
      $failures.Enqueue($line);$failureChars+=$line.Length
@@ -36,7 +48,7 @@ function GetDiagnosticLogWindow([string]$Path){
  return $result
 }
 function GetDiagnosticContext([string]$Game){
- $context=[ordered]@{CapturedUtc=[DateTime]::UtcNow.ToString('o');TimeZone=[TimeZoneInfo]::Local.Id;UtcOffsetMinutes=[TimeZoneInfo]::Local.GetUtcOffset((Get-Date)).TotalMinutes;LauncherScripts=@();ConfigIdentity=@();VR=@();Hardware=@{}}
+ $context=[ordered]@{CapturedUtc=[DateTime]::UtcNow.ToString('o');TimeZone=[TimeZoneInfo]::Local.Id;UtcOffsetMinutes=[TimeZoneInfo]::Local.GetUtcOffset((Get-Date)).TotalMinutes;LauncherScripts=@();ConfigIdentity=@();VR=@();OpenXRLayers=@();Hardware=@{}}
  foreach($name in @('manager.ps1','diagnostics.ps1','crash-dumps.ps1','library.ps1','ownership.ps1')){
   try{$item=Get-Item -LiteralPath (Join-Path $PSScriptRoot $name) -ErrorAction Stop;$context.LauncherScripts+=@{Name=$name;SHA256=(Get-FileHash -LiteralPath $item.FullName -Algorithm SHA256).Hash}}catch{}
  }
@@ -49,16 +61,53 @@ function GetDiagnosticContext([string]$Game){
  foreach($key in @('HKLM:\SOFTWARE\Khronos\OpenXR\1','HKCU:\SOFTWARE\Khronos\OpenXR\1')){
   try{$value=Get-ItemProperty -LiteralPath $key -Name ActiveRuntime -ErrorAction Stop;$context.VR+=@{Registry=$key;ActiveRuntime=$value.ActiveRuntime;Evidence='Registered runtime only; not proof of an active headset or VR session'}}catch{}
  }
+ # Read-only layer discovery. Registration is never labelled as active.
+ foreach($hive in @('HKLM:','HKCU:')){foreach($kind in @('Implicit','Explicit')){
+  $layerKey=$hive+'\SOFTWARE\Khronos\OpenXR\1\ApiLayers\'+$kind
+  try{$registered=Get-ItemProperty -LiteralPath $layerKey -ErrorAction Stop
+   foreach($entry in @($registered.PSObject.Properties|Where-Object {$_.Name -notmatch '^PS' -and $_.Name -match '\.json$'}|Select-Object -First 32)){
+    $record=@{Kind=$kind;Manifest=$entry.Name;Disabled=($entry.Value -ne 0);Evidence='Registration only; inspect loaded modules and OpenXR session logs for activation'}
+    try{$item=Get-Item -LiteralPath $entry.Name -ErrorAction Stop
+     if($item.Length -le 256KB -and -not($item.Attributes -band [IO.FileAttributes]::ReparsePoint)){
+      $layer=(Get-Content -LiteralPath $item.FullName -Raw -ErrorAction Stop|ConvertFrom-Json -ErrorAction Stop).api_layer
+      $record.Name=[string]$layer.name;$record.Library=[string]$layer.library_path;$record.APIVersion=[string]$layer.api_version
+     }
+    }catch{$record.ReadStatus='Manifest unavailable'}
+    $context.OpenXRLayers+=$record
+   }
+  }catch{}
+ }}
  if(-not $context.VR.Count){$context.VR=@(@{Evidence='No readable OpenXR ActiveRuntime registration; VR may use another route'})}
- try{$context.Hardware.CPU=@(Get-CimInstance Win32_Processor -ErrorAction Stop|Select-Object Name,NumberOfCores,NumberOfLogicalProcessors)}catch{$context.Hardware.CPU='Unavailable'}
- try{$os=Get-CimInstance Win32_OperatingSystem -ErrorAction Stop;$context.Hardware.Memory=@{TotalPhysicalKB=$os.TotalVisibleMemorySize;FreePhysicalKB=$os.FreePhysicalMemory;TotalVirtualKB=$os.TotalVirtualMemorySize;FreeVirtualKB=$os.FreeVirtualMemory;Evidence='Single export-time snapshot, not a performance trend'}}catch{$context.Hardware.Memory='Unavailable'}
+ try{$context.Hardware.CPU=@(Get-CimInstance Win32_Processor -OperationTimeoutSec 3 -ErrorAction Stop|Select-Object Name,NumberOfCores,NumberOfLogicalProcessors)}catch{$context.Hardware.CPU='Unavailable'}
+ try{$os=Get-CimInstance Win32_OperatingSystem -OperationTimeoutSec 3 -ErrorAction Stop;$context.Hardware.Memory=@{TotalPhysicalKB=$os.TotalVisibleMemorySize;FreePhysicalKB=$os.FreePhysicalMemory;TotalVirtualKB=$os.TotalVirtualMemorySize;FreeVirtualKB=$os.FreeVirtualMemory;Evidence='Single export-time snapshot, not a performance trend'}}catch{$context.Hardware.Memory='Unavailable'}
  return $context
 }
 function GetSimulatorCrashText([string]$Game){
- $reports=@()
- # Only known simulator report names in the selected install; never search user documents.
- foreach($file in @(Get-ChildItem -LiteralPath $Game -Filter 'AsoboReport-Crash-*.txt' -File -ErrorAction SilentlyContinue|Where-Object {-not ($_.Attributes -band [IO.FileAttributes]::ReparsePoint)}|Sort-Object LastWriteTimeUtc -Descending|Select-Object -First 4)){
-  try{$reports+=@{Name=$file.Name;ModifiedUtc=$file.LastWriteTimeUtc.ToString('o');Bytes=$file.Length;Context='Historical simulator text report; correlate timestamps before linking it to this incident. Latest 64 KiB retained.';Text=(ReadDiagnosticTail $file.FullName)}}catch{$reports+=@{Name=$file.Name;Status='Unavailable'}}
+ $reports=@();$roots=@(@{Path=$Game;Role='Selected game'})
+ # Resolve only this simulator's documented data roots; never scan AppData.
+ $title=if(Test-Path -LiteralPath (Join-Path $Game 'FlightSimulator2024.exe')){'Microsoft Flight Simulator 2024'}elseif(Test-Path -LiteralPath (Join-Path $Game 'FlightSimulator.exe')){'Microsoft Flight Simulator'}else{''}
+ if($title){
+  if($env:APPDATA){$roots+=@{Path=(Join-Path $env:APPDATA $title);Role='Simulator roaming data'}}
+  if($env:LOCALAPPDATA){
+   $family=if($title -eq 'Microsoft Flight Simulator 2024'){'Microsoft.Limitless_8wekyb3d8bbwe'}else{'Microsoft.FlightSimulator_8wekyb3d8bbwe'}
+   foreach($area in @('LocalState','LocalCache')){$roots+=@{Path=(Join-Path $env:LOCALAPPDATA "Packages/$family/$area");Role=('Simulator package '+$area)}}
+  }
+ }
+ $files=@()
+ foreach($root in $roots){
+  if(-not(Test-Path -LiteralPath $root.Path -PathType Container)){continue}
+  try{
+   $check=[IO.Path]::GetFullPath($root.Path)
+   while($check){if((Get-Item -LiteralPath $check -Force -ErrorAction Stop).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Linked report root'};$parent=[IO.Path]::GetDirectoryName($check);if($parent -eq $check){break};$check=$parent}
+   foreach($file in @(Get-ChildItem -LiteralPath $root.Path -Filter 'AsoboReport-Crash*.txt' -File -ErrorAction Stop)){
+    if($file.Name -notmatch '^AsoboReport-Crash(?:-[^\\/:]+)?[.]txt$' -or ($file.Attributes -band [IO.FileAttributes]::ReparsePoint)){continue}
+    $files+=@{File=$file;Role=$root.Role}
+   }
+  }catch{$reports+=@{SourceRole=$root.Role;Status='Report location unavailable or linked'}}
+ }
+ foreach($entry in @($files|Sort-Object {$_.File.LastWriteTimeUtc} -Descending|Select-Object -First 4)){
+  $file=$entry.File
+  try{$reports+=@{Name=$file.Name;SourceRole=$entry.Role;ModifiedUtc=$file.LastWriteTimeUtc.ToString('o');Bytes=$file.Length;Context='Historical simulator text report; correlate timestamps before linking it to this incident. Latest 64 KiB retained.';Text=(ReadDiagnosticTail $file.FullName)}}catch{$reports+=@{Name=$file.Name;SourceRole=$entry.Role;Status='Unavailable'}}
  }
  return $reports
 }
@@ -113,7 +162,7 @@ function GetDiagnosticModuleIdentity([string]$Path,[string]$Game,$Manifest){
  }catch{}
  return $result
 }
-function GetDetailedSupportReport([string]$Game,[string]$Store){
+function GetDetailedSupportReportCore([string]$Game,[string]$Store){
  $report=GetOptiShadeSupportReport $Game $Store
  $report.SchemaVersion=7;$report.ReportId=[guid]::NewGuid().ToString('N');$report.RuntimeEvidence='Logs and optional process metadata. Installed files alone do not establish active features.'
  $report.CaptureContext=GetDiagnosticContext $Game
@@ -124,9 +173,9 @@ function GetDetailedSupportReport([string]$Game,[string]$Store){
  try{if($Store){$saved=OwnedPath (Split-Path (ManifestPath $Store $Game)) 'PreRestoreDiagnostics.json';if((Get-Item -LiteralPath $saved -ErrorAction Stop).Length -le 1MB){$report.PreRestoreEvidence=Get-Content -LiteralPath $saved -Raw -Encoding UTF8|ConvertFrom-Json}}}catch{$report.PreRestoreEvidence='No readable pre-restore evidence available'}
  $report.CaptureAdvice='For black screens, export while the simulator is running if possible. Otherwise close the simulator and export before Restore. Saved pre-restore evidence is historical and timestamped.'
  # Environment.OSVersion can report the host manifest's compatibility version (6.2), not the installed OS.
- try{$os=Get-CimInstance Win32_OperatingSystem -ErrorAction Stop|Select-Object -First 1;if($null -eq $os){throw 'No OS metadata'};$report.Windows=@{Name=$os.Caption;Version=$os.Version;Build=$os.BuildNumber}}catch{$report.Windows='Unavailable (OS metadata query failed)'}
+ try{$os=Get-CimInstance Win32_OperatingSystem -OperationTimeoutSec 3 -ErrorAction Stop|Select-Object -First 1;if($null -eq $os){throw 'No OS metadata'};$report.Windows=@{Name=$os.Caption;Version=$os.Version;Build=$os.BuildNumber}}catch{$report.Windows='Unavailable (OS metadata query failed)'}
  try{$gameExe=if(Test-Path -LiteralPath (OwnedPath $Game 'FlightSimulator2024.exe')){'FlightSimulator2024.exe'}elseif(Test-Path -LiteralPath (OwnedPath $Game 'X-Plane.exe')){'X-Plane.exe'}else{'FlightSimulator.exe'};$exe=Get-Item -LiteralPath (OwnedPath $Game $gameExe);$report.GameExecutable=@{Name=$exe.Name;Version=$exe.VersionInfo.FileVersion;Bytes=$exe.Length}}catch{$report.GameExecutable='Unavailable'}
- try{$report.Displays=@(Get-CimInstance Win32_VideoController|Select-Object Name,DriverVersion,CurrentHorizontalResolution,CurrentVerticalResolution,CurrentRefreshRate,VideoModeDescription)}catch{$report.Displays='Unavailable'}
+ try{$report.Displays=@(Get-CimInstance Win32_VideoController -OperationTimeoutSec 3|Select-Object Name,DriverVersion,CurrentHorizontalResolution,CurrentVerticalResolution,CurrentRefreshRate,VideoModeDescription)}catch{$report.Displays='Unavailable'}
  try{Add-Type -AssemblyName System.Windows.Forms;$report.MonitorLayout=@([Windows.Forms.Screen]::AllScreens|ForEach-Object {@{Primary=$_.Primary;X=$_.Bounds.X;Y=$_.Bounds.Y;Width=$_.Bounds.Width;Height=$_.Bounds.Height}})}catch{$report.MonitorLayout='Unavailable'}
  $report.LogTails=@{}
  $report.LogStarts=@{}
@@ -139,6 +188,9 @@ function GetDetailedSupportReport([string]$Game,[string]$Store){
  $report.LogCapture='Last 1 MiB per runtime log and 256 KiB installer log, plus first 64 KiB initialization. Selected failure/feature lines from each latest 16 MiB window include timestamps and omitted-byte counts. Older or excess matching lines can be omitted. Logs may predate this export or current installation.'
  $report.OptionalMfg=@{Evidence='Installed files/settings are not proof of generated frames';Status='Not available';Log='Not available'}
  try{
+  $report.OptionalMfg.SourceBuild=ReadDiagnosticTail (OwnedPath $Game 'OptiShadeData/MFG/source-build.json') 16384
+  $report.OptionalMfg.SourceSession=ReadDiagnosticTail (OwnedPath $Game 'OptiShadeData/MFG/session.json') 16384
+  $report.OptionalMfg.SourceActivation=ReadDiagnosticTail (OwnedPath $Game 'OptiShadeData/MFG/source-backend.json') 16384
   $mfgStatus=OwnedPath $Game 'RTXMFG-Universal.status.json'
   $report.OptionalMfg.Status=ReadDiagnosticTail $mfgStatus 65536
   $report.OptionalMfg.Settings=ReadDiagnosticTail (OwnedPath $Game 'RTXMFG-Universal.json') 65536
@@ -155,11 +207,12 @@ function GetDetailedSupportReport([string]$Game,[string]$Store){
  }catch{}
  $report.FeatureSettingsContext='Saved tuning only. auto requires policy resolution; NR starts off each session. Live requests and GPU completion require matching runtime evidence.'
  $report.NrEffectiveState=@{LiveRequest='Unknown';SelectedRoute='Unknown';ModelCreated='Unknown';Evaluated='Unknown';Composed='Unknown';GpuCompleted='Unknown';Evidence='Read timestamped runtime stage/route counters for the matching process. No state inferred from saved booleans.'}
+ $report.NrEffectiveState=GetNrObservationEvidence $report.LogTails
  $report.BoundedLogArchives=@{}
  foreach($relative in @('OptiShadeData/Performance.log.first.log','OptiShadeData/Performance.1.log','OptiShadeData/Performance.2.log','OptiShadeData/ReShade.log.first.log','OptiShadeData/ReShade.log.1','OptiShadeData/ReShade.log.2','ReShade.log.first.log','ReShade.log.1','ReShade.log.2')){
   try{$path=OwnedPath $Game $relative;if(Test-Path -LiteralPath $path -PathType Leaf){$report.BoundedLogArchives[$relative]=@{ModifiedUtc=(Get-Item -LiteralPath $path).LastWriteTimeUtc.ToString('o');Text=(ReadDiagnosticTail $path 65536);Context='First failure or rotated tail; correlate session timestamps'}}}catch{}
  }
- try{$report.InputDevices=@(Get-CimInstance Win32_PnPEntity -Filter "PNPClass='HIDClass'" -ErrorAction Stop|Select-Object -First 40 Name,Status,Service)}catch{$report.InputDevices='Unavailable'}
+ try{$report.InputDevices=@(Get-CimInstance Win32_PnPEntity -OperationTimeoutSec 3 -Filter "PNPClass='HIDClass'" -ErrorAction Stop|Select-Object -First 40 Name,Status,Service)}catch{$report.InputDevices='Unavailable'}
  $report.RecentDisplayEvents=@();$report.DisplayEventQuery='Completed; see matching events below'
  try{
   $report.RecentDisplayEvents=@(Get-WinEvent -FilterHashtable @{LogName='System';Id=4101;StartTime=(Get-Date).AddDays(-3)} -MaxEvents 5 -ErrorAction Stop|Where-Object Id -eq 4101|ForEach-Object {@{Time=$_.TimeCreated.ToString('o');EventId=$_.Id;Details=$_.Message.Substring(0,[Math]::Min(4096,$_.Message.Length))}})
@@ -215,8 +268,71 @@ function ConvertSupportReportToText($Report){
  }
  return ($lines -join "`r`n")
 }
+function ConvertOptiShadeDiagnosticExport($Report){
+ # Reduce before serialization: the input can contain large or arbitrary log
+ # strings. This is a bounded technical export, not a claim of anonymity.
+ $state=@{Nodes=0;Characters=0;Omissions=[Collections.Generic.List[string]]::new()}
+ function CleanValue($Value,[int]$Depth,[string]$Role){
+  $state.Nodes++
+  if($Depth -gt 12 -or $state.Nodes -gt 10000){if($state.Omissions.Count -lt 100){$state.Omissions.Add('Nesting/item budget reached')};return '[omitted: report budget]'}
+  if($null -eq $Value){return $null}
+  if($Value -is [string]){
+   $text=[string]$Value
+   $remaining=[Math]::Max(0,1000000-$state.Characters)
+   $limit=[Math]::Min(32768,$remaining)
+   if($text.Length -gt $limit){
+    if($state.Omissions.Count -lt 100){$state.Omissions.Add('String shortened: '+$Role)}
+    $half=[int][Math]::Floor($limit/2)
+    $text=$text.Substring(0,$half)+' [middle omitted] '+$text.Substring($text.Length-$half)
+   }
+   $state.Characters+=$text.Length
+   # Remove URL credentials before the email filter can split their syntax.
+   $text=[regex]::Replace($text,'(?i)\b(?:https?|ftp)://[^\s"<>]+',{param($m) try{$u=[uri]$m.Value;return $u.Scheme+'://'+$u.Host+$u.AbsolutePath}catch{return '<URL>'}})
+   $text=[regex]::Replace($text,'(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b','<EMAIL>')
+   $technicalVersion=$Role -match '^(FileVersion|ProductVersion|DriverVersion|Version|BuildNumber)$' -and $text -match '^\d+(?:\.\d+){1,4}$'
+   if(-not $technicalVersion){
+    $text=[regex]::Replace($text,'\b(?:[0-9]{1,3}\.){3}[0-9]{1,5}\b',{
+     param($m)
+     $prefix=$text.Substring([Math]::Max(0,$m.Index-32),[Math]::Min(32,$m.Index))
+     if($prefix -match '(?i)(version|driver|build)\s*[:=v]?\s*$'){return $m.Value}
+     $ip=$null;if([Net.IPAddress]::TryParse($m.Value,[ref]$ip)){return '<IP>'};return $m.Value
+    })
+   }
+   $text=[regex]::Replace($text,'(?i)[A-Z]:[\\/]+Users[\\/]+[^\\/\r\n"<>]+','<USERPROFILE>')
+   $text=[regex]::Replace($text,'(?i)\\\\[^\\\s]+\\[^\s"<>]+','<NETWORK_PATH>')
+   $text=[regex]::Replace($text,'(?i)(\b(?:password|passwd|token|secret|access_token|refresh_token|api_key|authorization|cookie)\b["''\s]*[:=]["''\s]*)([^\s,;"''<>]+)','$1<REDACTED>')
+   return $text
+  }
+  if($Value.GetType().IsPrimitive -or $Value -is [decimal]){return $Value}
+  if($Value -is [datetime]){return $Value.ToString('o')}
+  if($Value -is [Collections.IEnumerable] -and $Value -isnot [Collections.IDictionary]){
+   $items=[Collections.Generic.List[object]]::new();foreach($item in $Value){if($items.Count -ge 300){if($state.Omissions.Count -lt 100){$state.Omissions.Add('Array shortened: '+$Role)};break};$items.Add((CleanValue $item ($Depth+1) $Role))};return ,$items.ToArray()
+  }
+  $out=[ordered]@{}
+  $keys=if($Value -is [Collections.IDictionary]){@($Value.Keys)}else{@($Value.PSObject.Properties.Name)}
+  # Reserve structure and failure identity before bulk log copies.
+  $keys=@($keys|Sort-Object @{Expression={if($_ -match '^(LogTails|LogStarts|BoundedLogArchives)$'){1}else{0}}})
+  foreach($key in $keys){
+   if($out.Count -ge 300){if($state.Omissions.Count -lt 100){$state.Omissions.Add('Object shortened: '+$Role)};break}
+   $name=[string]$key
+   if($name -match '(?i)^(SerialNumber|DeviceID|PNPDeviceID|MachineName|ComputerName|UserName|Domain|Password|Token|Secret|AccessToken|RefreshToken|Cookie|Authorization|ApiKey)$'){$out[$name]='<REDACTED>';continue}
+   # Keep technical property names; arbitrary paths/identifiers are data too.
+   $safe=[string](CleanValue $name ($Depth+1) 'property name')
+   if($safe.Length -gt 160){$safe=$safe.Substring(0,160)}
+   if($out.Contains($safe)){$safe+='-'+$out.Count}
+   $out[$safe]=CleanValue $Value.$key ($Depth+1) $safe
+  }
+  return [pscustomobject]$out
+ }
+ $result=CleanValue $Report 0 'report'
+ $result|Add-Member -NotePropertyName ExportBudget -NotePropertyValue ([pscustomobject]@{Schema=1;Omissions=@($state.Omissions.ToArray());TextCharacters=$state.Characters;Nodes=$state.Nodes;Privacy='Bounded technical report with identifier filtering. Review before sharing; user text can still contain personal details.'}) -Force
+ return $result
+}
+
 function ExportDiagnosticReport($Report,[string]$Destination,[ValidateSet('zip','txt')][string]$Format='zip',[string]$Game='', [bool]$IncludeDumps=$false,[string]$AdditionalDump='',[string]$IssueDescription=''){
+ $Report=ConvertOptiShadeDiagnosticExport $Report
  if($IssueDescription.Length -gt 12000){throw 'Please keep the issue description under 12,000 characters.'}
+ $IssueDescription=[string](ConvertOptiShadeDiagnosticExport ([pscustomobject]@{Issue=$IssueDescription})).Issue
  $issueReport="User-reported issue (not independently verified)`r`n===============================================`r`n"+$IssueDescription
  $text=ConvertSupportReportToText $Report
  if($IssueDescription.Trim()){$text=$issueReport+"`r`n`r`n"+$text}
@@ -244,8 +360,60 @@ function ExportDiagnosticReport($Report,[string]$Destination,[ValidateSet('zip',
     }finally{if($zip){$zip.Dispose()}}
    }finally{$stream.Dispose()}
   }
-  if((Get-Item -LiteralPath $temporary).Length -gt 19000000){throw 'Diagnostic ZIP exceeds the 19 MB export limit. Existing export was preserved.'}
+  $exportLimit=if($IncludeDumps){20MB}else{10MB}
+  if((Get-Item -LiteralPath $temporary).Length -gt $exportLimit){throw 'Diagnostic export exceeds the selected size limit. Existing export was preserved.'}
   if(Test-Path -LiteralPath $Destination){[IO.File]::Replace($temporary,$Destination,$temporary+'.backup');Remove-Item -LiteralPath ($temporary+'.backup')}else{[IO.File]::Move($temporary,$Destination)}
   return (Get-Item -LiteralPath $Destination).Length
  }finally{if(Test-Path -LiteralPath $temporary){Remove-Item -LiteralPath $temporary}}
+}
+
+function GetDetailedSupportReport([string]$Game,[string]$Store,[ValidateRange(1,30000)][int]$DeadlineMilliseconds=30000){
+ # Bound even a blocked provider/event-log call. The child only reads diagnostic
+ # sources; cancelling it cannot interrupt installation or mutate game files.
+ $folder=Join-Path ([IO.Path]::GetTempPath()) ('OptiShade-diagnostic-worker-'+[guid]::NewGuid().ToString('N'))
+ [void][IO.Directory]::CreateDirectory($folder)
+ $request=Join-Path $folder 'request.json';$output=Join-Path $folder 'report.json'
+ $process=$null;$clock=[Diagnostics.Stopwatch]::StartNew()
+ try{
+  [IO.File]::WriteAllText($request,(@{Game=$Game;Store=$Store}|ConvertTo-Json),[Text.UTF8Encoding]::new($true))
+  $start=[Diagnostics.ProcessStartInfo]::new()
+  $start.FileName=Join-Path $PSScriptRoot 'FusionSetup.exe'
+  $start.Arguments='--diagnostic-worker "'+$request+'"'
+  $start.UseShellExecute=$false;$start.CreateNoWindow=$true
+  # Avoid inheriting PowerShell 7 module resolution into the Windows helper.
+  $start.EnvironmentVariables['PSModulePath']=(Join-Path $env:SystemRoot 'System32/WindowsPowerShell/v1.0/Modules')+';'+(Join-Path $env:ProgramFiles 'WindowsPowerShell/Modules')
+  $process=[Diagnostics.Process]::Start($start)
+  if(-not $process.WaitForExit([Math]::Max(1,$DeadlineMilliseconds-[int]$clock.ElapsedMilliseconds))){
+   $process.Kill();[void]$process.WaitForExit(1000)
+   return [pscustomobject]@{SchemaVersion=8;ReportId=[guid]::NewGuid().ToString('N');CollectionStatus='Incomplete - time budget reached';ElapsedMilliseconds=$clock.ElapsedMilliseconds;Limitations='Collection stopped at its deadline. Hardware, crash and runtime evidence may be missing. This is not evidence that the game or feature was working.';Game='<selected game>';LogTails=[pscustomobject]@{}}
+  }
+  $report=ReadOptiShadeJson $output 'Diagnostic worker result JSON' -MaxBytes 8388608
+  $report|Add-Member -NotePropertyName CollectionElapsedMilliseconds -NotePropertyValue $clock.ElapsedMilliseconds -Force
+  return $report
+ }catch{
+  return [pscustomobject]@{SchemaVersion=8;ReportId=[guid]::NewGuid().ToString('N');CollectionStatus='Incomplete - collector could not finish';FailureType=$_.Exception.GetType().FullName;Limitations='No successful diagnostic collection is implied. Retry diagnostics; keep the matching simulator crash text.';LogTails=[pscustomobject]@{}}
+ }finally{
+  if($process){if(-not $process.HasExited){$process.Kill();[void]$process.WaitForExit(1000)};$process.Dispose()}
+  # Only the two known files in this freshly generated local workspace are removed.
+  foreach($file in @($request,$output)){if(Test-Path -LiteralPath $file -PathType Leaf){Remove-Item -LiteralPath $file -Force}}
+  if(-not(Get-ChildItem -LiteralPath $folder -Force)){Remove-Item -LiteralPath $folder}
+ }
+}
+
+function GetNrObservationEvidence($LogTails){
+ $records=@()
+ $keys=if($LogTails -is [Collections.IDictionary]){@($LogTails.Keys)}else{@($LogTails.PSObject.Properties.Name)}
+ foreach($key in $keys){
+  $matches=[regex]::Matches([string]$LogTails.$key,'(?m)^([^\r\n]{0,160})NR observation: ([^\r\n]{1,2048})$')
+  if(-not $matches.Count){continue}
+  $last=$matches[$matches.Count-1];$body=$last.Groups[2].Value
+  $row=[ordered]@{Source=[IO.Path]::GetFileName([string]$key);Context='Recorded session snapshot; recent/age values refer to log time, not export time. Completion is GPU work, not proof of displayed image quality.';LogTimestamp=$last.Groups[1].Value.Trim();Route='unknown'}
+  if($body -match 'route=(.*?) owner='){$row.Route=$Matches[1]}
+  foreach($field in @('pid','request','effective','owner','generation','view','device','queue','frame','completedFrame','enabled','visible','evaluated','completed','composed','recent','ageMs','gpuMs','frequency')){
+   $match=[regex]::Match($body,'(?:^| )'+$field+'=([A-Za-z0-9.+-]{1,32})(?: |$)')
+   if($match.Success){$row[$field]=$match.Groups[1].Value}
+  }
+  if($row.Contains('request') -and $row.Contains('completed')){$records+=,[pscustomobject]$row}
+ }
+ return [pscustomobject]@{Schema=1;Snapshots=@($records|Select-Object -First 8);LiveState='Not inferred from log snapshots';MissingMeaning='No matching record means unavailable evidence, not an inactive feature.'}
 }

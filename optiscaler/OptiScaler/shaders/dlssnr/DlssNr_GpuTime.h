@@ -1,4 +1,5 @@
 #pragma once
+#include "../../../../shared/NrObservation.h"
 
 // NR calls are serialized by g_nrMutex, including submission/reset notifications.
 // Associate every query pair with its actual submitting queue and GPU completion.
@@ -10,6 +11,8 @@ class DlssNrGpuTime
         Microsoft::WRL::ComPtr<ID3D12Fence> fence;
         ID3D12CommandList* commands = nullptr; // identity only
         UINT64 value = 0, frequency = 0, sequence = 0;
+        ULONGLONG submittedAt = 0;
+        uint64_t observation = 0, queue = 0;
         bool occupied = false, ended = false, submitted = false;
     };
     static constexpr unsigned Count = 8;
@@ -18,6 +21,7 @@ class DlssNrGpuTime
     std::array<Sample, Count> samples;
     int recording = -1;
     UINT64 sequence = 0, lastSequence = 0;
+    ULONGLONG lastCompletedAt = 0;
     std::optional<double> last;
 
     void Collect()
@@ -28,19 +32,28 @@ class DlssNrGpuTime
             if (!s.occupied || !s.submitted) continue;
             const auto completed = s.fence->GetCompletedValue();
             if (completed == UINT64_MAX || completed < s.value) continue;
+            // Completion and a valid duration are separate observations. Age from
+            // submission, conservatively: polling an old fence cannot revive old work.
+            const bool newest = s.sequence > lastSequence;
+            if (newest)
+            {
+                lastSequence = s.sequence;
+                lastCompletedAt = s.submittedAt;
+                last.reset();
+            }
             UINT64* data = nullptr;
             D3D12_RANGE range { i * 2 * sizeof(UINT64), (i * 2 + 2) * sizeof(UINT64) };
             if (SUCCEEDED(readback->Map(0, &range, (void**) &data)))
             {
                 const auto begin = data[i * 2], end = data[i * 2 + 1];
-                if (s.sequence > lastSequence && s.frequency && begin && end >= begin)
+                if (newest && s.frequency && begin && end >= begin)
                 {
                     last = double(end - begin) * 1000.0 / double(s.frequency);
-                    lastSequence = s.sequence;
                 }
                 D3D12_RANGE written { 0, 0 };
                 readback->Unmap(0, &written);
             }
+            if(newest) optishade::nr_observation::State().Completed(s.observation,s.queue,s.frequency,last);
             s.occupied = false;
         }
     }
@@ -59,7 +72,7 @@ class DlssNrGpuTime
             { readback.Reset(); return; }
     }
 
-    void Start(ID3D12GraphicsCommandList* cmd)
+    void Start(ID3D12GraphicsCommandList* cmd, uint64_t observation = 0)
     {
         recording = -1;
         if (!readback) return;
@@ -69,6 +82,7 @@ class DlssNrGpuTime
             auto& s = samples[i];
             if (s.occupied) continue;
             s.commands = cmd;
+            s.observation = observation;
             ID3D12GraphicsCommandList* real = nullptr;
             if (Util::CheckForRealObject(__FUNCTION__, cmd, (IUnknown**) &real)) s.commands = real;
             s.occupied = true;
@@ -103,6 +117,8 @@ class DlssNrGpuTime
                     if (FAILED(queue->GetTimestampFrequency(&s.frequency))) s.frequency = 0;
                     // Executed after the real ExecuteCommandLists: protects query readback AND reuse.
                     // A failed signal must quarantine an executed slot, not make it look discarded.
+                    s.queue = reinterpret_cast<uintptr_t>(queue);
+                    s.submittedAt = GetTickCount64();
                     s.submitted = true;
                     if (FAILED(queue->Signal(s.fence.Get(), s.value))) s.frequency = 0;
                     break;
@@ -119,12 +135,19 @@ class DlssNrGpuTime
     void ClearLast()
     {
         last.reset();
+        lastCompletedAt = 0;
         lastSequence = sequence; // older, in-flight samples must not repopulate the display
+    }
+
+    bool HasRecentCompletion()
+    {
+        Collect();
+        return lastCompletedAt && GetTickCount64() - lastCompletedAt < 1500;
     }
 
     std::optional<double> ReadGpuTime([[maybe_unused]] ID3D12CommandQueue* queue)
     {
         Collect();
-        return last;
+        return lastCompletedAt && GetTickCount64() - lastCompletedAt < 1500 ? last : std::nullopt;
     }
 };

@@ -28,7 +28,8 @@ class FusionSetup {
      shell.Runspace=runspace;
      bool updating=args.Length>1 && (args[1]=="--apply-update" || args[1]=="--check-update");
      bool worker=args.Length>1 && args[0]=="--update-worker";
-     if(worker) shell.AddCommand(Path.Combine(root,"update-worker.ps1")).AddParameter("Config",args[1]);
+     if(args.Length>1 && args[0]=="--diagnostic-worker") shell.AddCommand(Path.Combine(root,"diagnostic-worker.ps1")).AddParameter("Request",args[1]);
+     else if(worker) shell.AddCommand(Path.Combine(root,"update-worker.ps1")).AddParameter("Config",args[1]);
      else shell.AddCommand(Path.Combine(root,updating?"update-install.ps1":"manager.ps1")).AddParameter("Payload",Path.Combine(root,"PayloadFusion")).AddParameter("Installer",args.Length>0?args[0]:Application.ExecutablePath);
      if(updating && args[1]=="--check-update")shell.AddParameter("ValidateOnly",true);
      shell.Invoke();
@@ -37,6 +38,6 @@ class FusionSetup {
      if(shell.InvocationStateInfo.State==PSInvocationState.Failed)throw new Exception(shell.InvocationStateInfo.Reason!=null?shell.InvocationStateInfo.Reason.Message:String.Join(Environment.NewLine,shell.Streams.Error));
     }
    }
-  } catch(Exception e){if(args.Length>1 && (args[1]=="--apply-update" || args[1]=="--check-update")){string store=Environment.GetEnvironmentVariable("OPTISHADE_STORE")??Path.Combine(Environment.GetEnvironmentVariable("LOCALAPPDATA")??Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"OptiShade");Directory.CreateDirectory(store);File.WriteAllText(Path.Combine(store,"Update-error.txt"),e.ToString());}else{MessageBox.Show(e.Message,"OptiShade setup",MessageBoxButtons.OK,MessageBoxIcon.Error);}Environment.ExitCode=1;}
+  } catch(Exception e){if(args.Length>1 && args[0]=="--diagnostic-worker"){Environment.ExitCode=1;return;}if(args.Length>1 && (args[1]=="--apply-update" || args[1]=="--check-update")){string store=Environment.GetEnvironmentVariable("OPTISHADE_STORE")??Path.Combine(Environment.GetEnvironmentVariable("LOCALAPPDATA")??Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"OptiShade");Directory.CreateDirectory(store);File.WriteAllText(Path.Combine(store,"Update-error.txt"),e.ToString());}else{MessageBox.Show(e.Message,"OptiShade setup",MessageBoxButtons.OK,MessageBoxIcon.Error);}Environment.ExitCode=1;}
  }
 }

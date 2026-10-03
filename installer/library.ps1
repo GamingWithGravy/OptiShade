@@ -1,4 +1,5 @@
-﻿. "$PSScriptRoot/store-paths.ps1"
+﻿. "$PSScriptRoot/json-state.ps1"
+. "$PSScriptRoot/store-paths.ps1"
 # Read launcher catalogues; never crawl entire disks or start games during discovery.
 function ResolveFusionStoreFolder([string]$Folder){
  # Appx InstallLocation can be a protected package path or an Xbox junction.
@@ -25,7 +26,7 @@ function ResolveFusionStoreFolder([string]$Folder){
 function ResolveFusionInstallFolder([string]$Game){
  if([string]::IsNullOrWhiteSpace($Game)){throw 'Choose the simulator installation folder using Browse.'}
  $candidate=[Environment]::ExpandEnvironmentVariables($Game.Trim().Trim('"').Trim())
- if($candidate -notmatch '^(?:[A-Za-z]:[\\/]|\\\\[^\\]+\\[^\\]+)' -or $candidate.IndexOfAny([IO.Path]::GetInvalidPathChars()) -ge 0 -or $candidate -match '[*?]'){
+ if($candidate -notmatch '^(?:[A-Za-z]:[\\/]|\\\\[^\\]+\\[^\\]+)' -or $candidate.IndexOfAny([IO.Path]::GetInvalidPathChars()) -ge 0 -or $candidate -match '[<>|"*?\x00-\x1F]' ){
   throw 'The installation path is invalid. Use Browse to select the simulator installation folder.'
  }
  try{$folder=[IO.Path]::GetFullPath($candidate).TrimEnd('\')}catch{throw 'The installation path is invalid. Use Browse to select the simulator installation folder.'}
@@ -71,7 +72,7 @@ function StartOptiShadeXPlane([string]$Exe){
 function GetFusionInstallState([string]$Store,[string]$Game){
  $gamePath=ResolveFusionInstallFolder $Game
  foreach($file in Get-ChildItem (Join-Path $Store 'Games') -Filter manifest.json -Recurse -File -ErrorAction SilentlyContinue){
-  try{$m=Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8|ConvertFrom-Json;if([IO.Path]::GetFullPath($m.Game).TrimEnd('\') -ne $gamePath){continue}
+  try{$m=ReadOptiShadeJson $file.FullName 'Launcher or installation JSON';if([IO.Path]::GetFullPath($m.Game).TrimEnd('\') -ne $gamePath){continue}
    if($m.Status -eq 'Installed'){
     $loaders=@($m.Files|Where-Object {$_.SourcePath -eq 'winmm.dll'})
     foreach($loader in $loaders){
@@ -132,7 +133,7 @@ function FindFusionGames([string]$Store){
   }
  }
  foreach($file in Get-ChildItem "$env:ProgramData/Epic/EpicGamesLauncher/Data/Manifests" -Filter '*.item' -File -ErrorAction SilentlyContinue){
-  try{$item=Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8|ConvertFrom-Json;AddGame $item.DisplayName $item.InstallLocation 'Epic'}catch{}
+  try{$item=ReadOptiShadeJson $file.FullName 'Launcher or installation JSON';AddGame $item.DisplayName $item.InstallLocation 'Epic'}catch{}
  }
  foreach($drive in Get-PSDrive -PSProvider FileSystem){
   foreach($entry in Get-ChildItem -LiteralPath (Join-Path $drive.Root 'XboxGames') -Directory -ErrorAction SilentlyContinue){AddGame $entry.Name (Join-Path $entry.FullName 'Content') 'Xbox'}
@@ -158,7 +159,7 @@ function FindFusionGames([string]$Store){
  }
  foreach($file in Get-ChildItem (Join-Path $Store 'Games') -Filter manifest.json -Recurse -File -ErrorAction SilentlyContinue){
   try{
-   $m=Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8|ConvertFrom-Json
+   $m=ReadOptiShadeJson $file.FullName 'Launcher or installation JSON'
    $parent=@($games.Values|Where-Object {$m.Game.StartsWith($_.Folder+'\',[StringComparison]::OrdinalIgnoreCase)}|Sort-Object @{Expression={$_.Folder.Length};Descending=$true})|Select-Object -First 1
    if($parent){$parent.State=$m.Status;if($m.Status -eq 'Installed' -and $m.Downloads -eq 'Pending'){$parent.State='Installed - finish downloads'};$parent|Add-Member -NotePropertyName InstallFolder -NotePropertyValue $m.Game -Force}
    else{AddGame (Split-Path $m.Game -Leaf) $m.Game 'Added by you';$key=([IO.Path]::GetFullPath($m.Game).TrimEnd('\')).ToLowerInvariant();if($games.ContainsKey($key)){$games[$key].State=$m.Status;if($m.Status -eq 'Installed' -and $m.Downloads -eq 'Pending'){$games[$key].State='Installed - finish downloads'}}}

@@ -1,4 +1,4 @@
-﻿// OptiShade additions, GPL-3.0-or-later.
+// OptiShade additions, GPL-3.0-or-later.
 #include "../../../shared/EffectsBridge.h"
 #include "../../../shared/PresetHotSwapPolicy.h"
 #include "../../../shared/PresetPathIdentity.h"
@@ -133,6 +133,22 @@ static void DrawEffects(){
 
  DrawDependencyPrompt();
  DrawPresetBrowser(root);
+ auto deliveryText=[](const char* label,const osfx::Delivery& d){
+  const char* state="not connected";
+  switch(d.state){case 1:state="preset pending";break;case 2:state="preset loading";break;case 3:state="preset failed or missing techniques";break;case 4:state="preset submitted to renderer (confirm output)";break;case 5:state="effects bypassed";break;case 6:state="separate profile retained";break;case 7:state="not currently presenting";break;}
+  ImGui::TextWrapped("%s: %s",label,state);
+ };
+ deliveryText("Desktop",fx.desktop);deliveryText("Headset",fx.headset);
+ if(fx.headset.generation){
+  const bool linked=fx.headset.state!=6;
+  ImGui::BeginDisabled(fx.dirty!=0);
+  if(EffectSwitch("Link headset look to desktop",linked)){osfx::Command c{};c.kind=osfx::LinkVR;c.enabled=!linked;Send(c);}
+  ImGui::SameLine();ImGui::TextUnformatted("Link headset look to desktop");
+  ImGui::EndDisabled();
+  if(fx.dirty)ImGui::TextWrapped("Save or discard your changes before changing headset linking.");
+ }
+
+
  if(!fx.loading){
   using optishade::preset::State;
   switch(static_cast<State>(fx.presetState)){

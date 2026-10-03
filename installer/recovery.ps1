@@ -19,7 +19,7 @@ function ResetOptiShadeSettings([string]$Game,[string]$Payload,[string]$Store){
  AssertClosed $Game
  $mp=ManifestPath $Store $Game
  if(-not(Test-Path -LiteralPath $mp)){throw 'No recorded OptiShade installation for this folder.'}
- $m=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json
+ $m=ReadOptiShadeState $mp
  if($m.Status -ne 'Installed'){throw 'Install OptiShade first.'}
  $backup=Join-Path (Split-Path $mp) ('Settings-'+[guid]::NewGuid().ToString('N'))
  New-Item -ItemType Directory -Path $backup|Out-Null
@@ -63,4 +63,22 @@ function InstallFusionCinema([string]$Game){
   $dest=OwnedPath (Join-Path $Game 'OptiShadeData') $pair[1]
   if(-not(Test-Path -LiteralPath $dest)){New-Item -ItemType Directory -Path (Split-Path $dest) -Force|Out-Null;Copy-Item -LiteralPath (Join-Path $base $pair[0]) -Destination $dest}
  }
+}
+
+function ResetOptiShadeDownloadCache([string]$Store){
+ # Park only disposable manager downloads. Original backups, game receipts,
+ # installed files and the channel/manager state are outside this boundary.
+ $base=[IO.Path]::GetFullPath($Store).TrimEnd('\','/')
+ $source=Join-Path $base 'Downloads'
+ if(-not(Test-Path -LiteralPath $source -PathType Container)){return 'No manager download cache to reset.'}
+ [void](OwnedPath $base 'Downloads')
+ $items=@(Get-ChildItem -LiteralPath $source -Recurse -Force -ErrorAction Stop)
+ if($items.Count -gt 10000){throw 'Download cache contains too many entries for safe recovery. Nothing was moved.'}
+ foreach($item in $items){
+  if(-not $item.FullName.StartsWith($source+'\',[StringComparison]::OrdinalIgnoreCase) -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'Download cache contains a linked or unexpected entry. Nothing was moved.'}
+ }
+ $recovery=OwnedPath $base ('DownloadRecovery/'+[guid]::NewGuid().ToString('N'))
+ [void][IO.Directory]::CreateDirectory((Split-Path $recovery -Parent))
+ [IO.Directory]::Move($source,$recovery)
+ return 'Download cache reset. Existing download data was preserved locally in '+$recovery+'. Retry the failed download. Installed files and original backups were kept.'
 }

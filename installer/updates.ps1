@@ -39,7 +39,7 @@ function GetBetaVersionKey([string]$Value){
  [pscustomobject]@{Numeric=[version]$Matches[1];Stage=$stage;Revision=$revision}
 }
 # The persisted setting selects release assets, never source-code branch archives.
-function GetOptiShadeUpdate([string]$Current='0.21.4',[switch]$ReportErrors,[ValidateSet('stable','beta')][string]$InstalledChannel='stable'){
+function GetOptiShadeUpdate([string]$Current='0.21.6',[switch]$ReportErrors,[ValidateSet('stable','beta')][string]$InstalledChannel='stable'){
  [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
  try{
   $channel=GetOptiShadeUpdateChannel
@@ -61,7 +61,7 @@ function GetOptiShadeUpdate([string]$Current='0.21.4',[switch]$ReportErrors,[Val
   $candidates|Sort-Object Numeric,Stage,Revision -Descending|Select-Object -First 1
  }catch{if($ReportErrors){throw 'Could not check the selected update channel on GitHub. Check your connection and try again.'};return $null}
 }
-function GetOptiShadePreviousReleases([string]$Current='0.21.4'){
+function GetOptiShadePreviousReleases([string]$Current='0.21.6'){
  [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
  $releases=Invoke-RestMethod 'https://api.github.com/repos/GamingWithGravy/OptiShade/releases?per_page=100' -Headers @{'User-Agent'='OptiShade-revert'} -TimeoutSec 12
  foreach($release in $releases){
@@ -74,7 +74,7 @@ function GetOptiShadePreviousReleases([string]$Current='0.21.4'){
   [pscustomobject]@{Version=$version;Url=$url.AbsoluteUri;SHA256=$assets[0].digest.Substring(7);Notes=[string]$release.body;Rollback=$true;Channel='stable';Prerelease=$false;ReleaseUrl="https://github.com/GamingWithGravy/OptiShade/releases/tag/$($release.tag_name)"}
  }
 }
-function ShowOptiShadeRevert($Owner,[string]$Current='0.21.4'){
+function ShowOptiShadeRevert($Owner,[string]$Current='0.21.6'){
  [xml]$markup=@'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="Revert update" Width="650" Height="520" WindowStartupLocation="CenterOwner" WindowStyle="None" AllowsTransparency="True" Background="Transparent" Foreground="#F3EFFB" FontFamily="Segoe UI" ResizeMode="NoResize">
  <Border CornerRadius="20" Background="#171020" BorderBrush="#40314F" BorderThickness="1" Padding="28"><Grid>

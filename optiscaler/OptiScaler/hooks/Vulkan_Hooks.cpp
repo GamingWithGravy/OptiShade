@@ -45,7 +45,7 @@ extern "C" __declspec(dllexport) void OptiShadeVulkanNrReset()
 extern "C" __declspec(dllexport) int OptiShadeVulkanNrSubmit(const osvtaa::Frame* frame)
 {
     if (!OptiShadeVulkanNrRequested()) return -1;
-    if (!frame || frame->version != 1 || frame->size != sizeof(*frame) ||
+    if (!frame || frame->version != 2 || frame->size != sizeof(*frame) ||
         frame->device != (uint64_t)_device || !_instance || !_PD || !frame->commands ||
         !frame->color || !frame->colorView || !frame->depth || !frame->depthView ||
         !frame->motion || !frame->motionView || frame->width < 64 || frame->height < 64 ||

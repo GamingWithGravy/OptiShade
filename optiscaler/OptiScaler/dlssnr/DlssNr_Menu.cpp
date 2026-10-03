@@ -5,6 +5,7 @@
 #include "DlssNr.h"
 #include "DlssNr_ExposureScan.h"
 #include "DlssNrNative.h"
+#include "NrObservationConfig.h"
 
 
 #include <Config.h>
@@ -130,7 +131,7 @@ void RenderMenu(Config* config, float menuResScale)
 
         bool enabled = config->DlssNrEnabled.value_or_default();
         if (ImGui::Checkbox("Enable Neural Rendering", &enabled))
-            config->DlssNrEnabled = enabled;
+            DlssNr::SetEnabled(enabled);
         ImGui::TextDisabled("Tuning is saved; neural rendering always starts off.");
         ImGui::TextDisabled("TAA / Vulkan NR is unavailable in this emergency build.");
         const bool taaFallback = false;
@@ -190,15 +191,15 @@ void RenderMenu(Config* config, float menuResScale)
         }
         bool deferredDlss = config->DlssNrDeferredDlss.value_or_default();
         int precisionChoice = config->DlssNrPrecision.value_or_default() == 4 ? 1 : 0;
-        const char* precisions[] = { "NVIDIA (FP8)", "Experimental (FP8+NVFP4 hybrid)" };
-        if (ImGui::Combo("Model precision", &precisionChoice, precisions, IM_ARRAYSIZE(precisions)))
-            config->DlssNrPrecision = precisionChoice == 1 ? 4u : 0u;
-        HelpMarker("NVIDIA: original FP8 model (default), with some sensitive operations kept at higher precision.\nExperimental: this fork's FP8+NVFP4 hybrid for RTX 50 GPUs; output may differ slightly.");
-        if (precisionChoice > 0)
-        {
-            ImGui::TextUnformatted(enabled && DlssNrNative::IsActive() ? "Hybrid: active" : "Hybrid: inactive");
-            ImGui::TextWrapped("Loading may pause the game and look like a freeze. Please wait.");
+        const auto hybridUnavailable = DlssNrNative::HybridAvailability();
+        if(ImGui::BeginCombo("Model precision",precisionChoice ? "Experimental hybrid (requested)" : "NVIDIA (FP8)")) {
+            if(ImGui::Selectable("NVIDIA (FP8)",precisionChoice==0)) config->DlssNrPrecision=0u;
+            ImGui::BeginDisabled(!hybridUnavailable.empty());
+            if(ImGui::Selectable("Experimental (FP8+NVFP4 hybrid)",precisionChoice==1)) config->DlssNrPrecision=4u;
+            ImGui::EndDisabled();ImGui::EndCombo();
         }
+        if(!hybridUnavailable.empty()) ImGui::TextWrapped("%s",hybridUnavailable.c_str());
+        else if(precisionChoice) ImGui::TextWrapped("Hybrid requested. Effective precision: %s. Recorded launches alone do not confirm completed output.",DlssNrNative::IsActive()?"hybrid recorded":"original FP8 / preparing");
         // Keep failure details in the log without displaying changing kernel counters in the menu.
         auto hybridStatus = DlssNrNative::Status();
         hybridStatus = hybridStatus.substr(0, hybridStatus.find(" |"));
@@ -251,77 +252,25 @@ void RenderMenu(Config* config, float menuResScale)
             DlssNr::SetMemoryPressureOverride(memoryOverride);
         HelpMarker("Allows NR below the recommended free VRAM reserve. May cause stutters or crashes.\nResets when the game closes. Device-loss and model-error checks remain active.");
 
-        // Either backend. The two keep separate state, and on a native Vulkan game the D3D12 side
-        // is never touched -- so asking only that one reports "waiting for the upscaler" over a pass
-        // that is demonstrably running.
-        const bool vulkan = DlssNr::IsRunningVk();
-
-        // Turning the pass off does not release the model, so the feature handle stays alive and
-        // IsRunning keeps answering yes. Reporting a cost from that was wrong in the way that matters
-        // most: the toggle is how anyone A/Bs this, so the one moment the number is read is the one
-        // moment it describes the frame before last.
-        if (!enabled)
-        {
-            ImGui::TextDisabled("NR off.");
-        }
-        else if (!DlssNr::IsRunning() && !vulkan)
-        {
+        const auto observed = DlssNr::Observation();
+        if (!observed.requested) ImGui::TextDisabled("NR off.");
+        else if (observed.recent) {
+            ImGui::TextWrapped("%s: %s",optishade::nr_observation::Name(observed.owner.route),
+                observed.composed ? "GPU composition completed." : "Model work completed; no visible composition confirmed.");
+            if (!observed.visible) ImGui::TextDisabled("Model changes are hidden; model processing still has a cost.");
+            if (observed.gpuMilliseconds) ImGui::Text("GPU elapsed: %.2f ms",*observed.gpuMilliseconds);
+            else ImGui::TextDisabled("Timing not available yet.");
+        } else {
             const auto feature = State::Instance().currentFeature;
             const bool nativeVk = feature && feature->Api() == API::Vulkan && !feature->IsWithDx12();
             const char* reason = nativeVk ? DlssNr::FailureReasonVk() : DlssNr::FailureReason();
-
-            if (reason[0] != 0)
-            {
-                ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.35f, 1.0f), "Off for this session: %s.", reason);
-                ImGui::SameLine();
-
-                if (nativeVk)
-                    ImGui::TextUnformatted("Restart the game to retry native Vulkan NR.");
-                else if (ImGui::SmallButton("Retry"))
-                    DlssNr::RetryAfterFailure();
-            }
-            else if (feature && feature->Api() == API::DX11 && !feature->IsWithDx12())
-            {
-                ImGui::TextWrapped("NR needs the D3D12 bridge on D3D11. Choose an upscaler marked w/Dx12 and restart.");
-            }
-            else if (nativeVk && config->DlssNrDeferredDlss.value_or_default())
-            {
-                ImGui::TextWrapped("Disable Generate before SR, apply after SR (DLSS) to use native Vulkan NR.");
-            }
-            else if (enabled && !taaFallback)
-                ImGui::TextUnformatted("No upscaler frames received. Enable a supported upscaler in the game. Games without a compatible connection cannot run this pass; installing DLLs alone will not help.");
-        }
-        else
-        {
-            // The elapsed time belongs here rather than only in the upscaler's breakdown: that tooltip needs
-            // OptiScaler's own upscaler to have run, and with native DLSS passing through there is
-            // nothing in it to hang this off.
-            // Either backend's timer. They measure the same thing by different means, and only one
-            // of them is running.
-            const auto ms = vulkan ? DlssNr::LastGpuTimeVk() : DlssNr::LastGpuTime();
-
-            // With "Apply the model" off the pass STILL RUNS (so Hold-frame A/B can toggle its edit on
-            // a frozen frame) -- it only outputs the clean frame.
-            // Enable Neural Rendering off stops the work.
-            const char* runSuffix =
-                !config->DlssNrApplyModel.value_or_default() ? "  (model running, edit hidden)" : "";
-
-            if (ms.has_value())
-                ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1.0f), "Running%s - %.2f ms elapsed%s",
-                                   vulkan ? " natively on Vulkan" : "", ms.value(), runSuffix);
-            else if (vulkan)
-                // Measured but not yet read: the first few frames are still in the query ring.
-                ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1.0f), "Running natively on Vulkan - %llu frames%s",
-                                   DlssNr::FramesVk(), runSuffix);
-            else
-                ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1.0f), "Running.%s", runSuffix);
-
-            ImGui::SameLine();
-            ImGui::TextDisabled("(?)");
-            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                ImGui::SetTooltip("Time between the start and end of NR on the GPU, including delays while other work runs.\nCompare FPS to check the effect on game performance.");
-            if (finishedPicture)
-                ImGui::TextDisabled("Includes time shared with other GPU work.");
+            if (reason && *reason) {
+                ImGui::TextWrapped("NR stopped: %s",reason);
+                if (!nativeVk && ImGui::SmallButton("Retry")) DlssNr::RetryAfterFailure();
+            } else ImGui::TextWrapped(observed.evaluated
+                ? "NR evaluation recorded; waiting for recent GPU completion from this route."
+                : "NR requested; waiting for valid inputs and an evaluation from this route.");
+            ImGui::TextDisabled("Timing not available yet.");
         }
 
         ImGui::Spacing();

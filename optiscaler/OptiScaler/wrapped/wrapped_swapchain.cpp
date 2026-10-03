@@ -1,4 +1,5 @@
-#include "pch.h"
+﻿#include "pch.h"
+#include "../../../shared/SourceMfgOutput.h"
 #include "wrapped_swapchain.h"
 #include "../../../shared/D3D12QueueWait.h"
 #include <dlssnr/DlssNr.h>
@@ -128,6 +129,7 @@ void ReportD3D12LiveObjects(ID3D12Device* device)
 static HRESULT LocalPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags,
                             const DXGI_PRESENT_PARAMETERS* pPresentParameters, IUnknown* pDevice, HWND hWnd, bool isUWP)
 {
+    if(!(Flags & DXGI_PRESENT_TEST))optishade::mfg::source::ObservePresent(pSwapChain);
     if (State::Instance().isShuttingDown || !MenuOverlayDx::IsPrimarySwapchain(hWnd,pSwapChain,(Flags & DXGI_PRESENT_TEST)==0))
     {
         if (pPresentParameters == nullptr)

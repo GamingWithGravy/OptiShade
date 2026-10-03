@@ -43,5 +43,7 @@ namespace reshade::openxr
 		api::resource _side_by_side_texture = {};
 		const std::vector<api::resource> *_swapchain_images = nullptr;
 		uint32_t _swap_index = 0;
+		uint64_t _observation_layout = 0;
+		uint32_t _observation_changes = 0;
 	};
 }

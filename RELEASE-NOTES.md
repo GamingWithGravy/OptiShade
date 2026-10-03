@@ -1,0 +1,86 @@
+# OptiShade 0.21.6 Stable
+Approval draft. Shared entries apply to both channels; Beta-only entries require the opt-in Beta build. These notes cover changes since 0.21.4 Stable and 0.21.5-beta.1 Beta.
+
+## Fixes
+
+### Shared — Stable and Beta
+
+- **Attempted fix:** Menu flickering, ghosting and GPU-related instability. The overlay now waits for its previous GPU work before reusing rendering resources or cleaning them up.
+
+- Corrected MFG setup wording to follow the installed channel: Stable describes its retained RTX 40 provider and source-receipt repair; Beta no longer says preparation has already happened before installation.
+- Fixed missing Hybrid runtime assets in the installer: the exact verified kernel, parameter builders and size contracts are now included. This repairs the missing-file failure; actual Hybrid rendering still needs target confirmation.
+- Fixed the missing JPEG-quality workflow: quality is exposed, saved and passed to the screenshot encoder, with invalid values rejected or safely defaulted when loading.
+- Memory-pressure retry and disabling its session override now force a fresh budget check before the next NR dispatch, instead of reusing a recent admission check.
+- Fixed valid installer file lists being rejected by Windows PowerShell.
+- Fixed retries after partial effects downloads losing track of completed packs, while preserving installed packs and edited shaders.
+- Fixed inconsistent handling of invalid installation paths so discovery and setup use the same checks.
+- Hardened installation records against partial writes and malformed data. Recovery now stops with useful context instead of resetting ownership records or original backups.
+- Fixed repair handling for duplicate records of the same owned MFG file; conflicting original backups still require review.
+- Fixed preset control when a separate VR session starts first, while keeping its settings separate from the desktop look.
+- Reworked preset changes and live effect edits so desktop and linked headset targets track their own pending changes and replay edits after reloads.
+- Fixed screenshot request cleanup during runtime replacement, reloads and cancelled captures, preventing an old request from remaining stuck or reporting a later capture as its own.
+- Fixed plain-text authentication tokens being missed when diagnostic text is redacted.
+
+### Beta only
+
+- **Attempted fix:** TAA + frame-generation flicker. Estimated-motion history now resets when frame-generation settings or depth interpretation change, and poor motion matches are rejected.
+- **Attempted fix:** X-Plane grain and speckling. Added the same poor-motion rejection and reset neural history when the guide history changes.
+
+- Repaired main-view selection and recovery around X-Plane/Vulkan secondary windows, so pop-outs do not automatically take over the main effects target.
+- Corrected the new source-MFG backend’s output ownership and replacement handling, including retiring old viewports and rejecting stale acknowledgements after the presentation target changes.
+
+## Improvements
+
+### Shared — Stable and Beta
+
+- Reduced repeated memory-budget diagnostics while preserving the first warning, periodic occurrence counts and pressure/device-failure errors. Existing bounded log rotation is retained; no measured FPS gain is claimed.
+- Multi-install updates now stop for unavailable or unsupported recorded locations before changing any game. Existing checks for locked games, space and original backups remain in place.
+- Returning to Stable now reviews Beta-only X-Plane installations first. It can restore their recorded OptiShade files while preserving presets; an X-Plane-only setup keeps the Beta manager for Play and Restore.
+- Update recovery now records where a version change stopped, including download, installation and manager cleanup, making interrupted updates easier to diagnose.
+- Version changes recheck the reviewed installation plan before applying it, stopping if installation records changed after review. Existing identity-checked previous-manager cleanup is retained.
+- Preset status now checks that requested effects and edits have reached the active target, distinguishing loading or missing effects from processing.
+- Improved neural-model selection on multi-GPU systems using the observed rendering adapter where available, with checks against stale or incompatible adapter information.
+- MFG save feedback now distinguishes a queued write from a completed settings save. Existing pending/accepted/frame-timing distinctions are retained; a saved multiplier is not proof of generated output.
+- Neural-rendering observations now track current work more closely and avoid presenting stale timing as current activity.
+- Improved owned MFG repair, backup validation and duplicate-provider protection. Controls remain tied to the verified active backend and its supported capabilities.
+- Diagnostic collection has tighter size limits and collection deadlines, with clearer reporting when information is omitted or collection stops early.
+- Expanded crash discovery and rendering-session information in diagnostics to help investigate missing effects, device selection and interrupted frame generation.
+
+### Beta only
+
+- Updated experimental DLAA activation and TAA working-size handling for unusual resolutions and ultrawide displays. Simulator image-quality confirmation remains outstanding.
+- Improved the X-Plane launch path and local Vulkan-layer setup used by the Beta manager.
+
+## Changes
+
+### Shared — Stable and Beta
+
+- Portable version changes now give explicit separate-folder instructions: keep the old folder and Data as recovery, copy Data to the new portable folder, then update supported games through Setup.
+- Updated bundled component notices and package verification, including checks that the installer contains the intended channel’s files.
+
+### Beta only
+
+- Experimental TAA/neural-rendering guide processing now uses built-in shaders instead of relying on a downloaded image-effect helper.
+- Eligible source-MFG migration retires the recorded legacy provider and backs up its settings. The separate upstream menu is absent only where this headless backend actually owns the installation.
+
+**Stable behaviour retained:** Fresh Stable installs keep the established RTX 40 MFG provider. Stable does not newly activate the experimental RTX 20/30/40 backend; already-recorded source-backend installations can be repaired. Native RTX 50 and ordinary AMD/Intel paths retain their existing scope.
+
+## New additions
+
+### Shared — Stable and Beta
+
+- Added an optional hardware-temperature overlay, controlled from Settings & status. It stays visible during gameplay, can be repositioned with the menu open, and saves its preference. Supported NVIDIA sensors are read directly; CPU and other temperatures use a running Libre Hardware Monitor provider. Unsupported readings show Unavailable.
+
+- Added “Link headset look to desktop”, with the option to retain a separate VR preset. Save or discard pending edits before changing the link.
+- Added separate desktop/headset effect status, including not connected, loading, separate-profile and processing states.
+- Added snapshot folder, PNG/JPEG and JPEG-quality options in the in-game UI, plus a “Take screenshot” button. Captures still go inside an Optishade Snapshots folder; Browse screenshots follows the saved location.
+- Added a per-game GPU choice for model downloads when automatic selection is ambiguous. The choice is labelled as user-selected, not proof of the active renderer.
+- Added download-cache recovery that preserves the old cache locally before retrying, without removing installed files or original backups.
+
+### Beta only
+
+- Added the experimental source-built RTX 20/30/40 MFG backend for supported MSFS installations, controlled through OptiShade. It offers override off, Follow game, Fixed and capability-dependent Dynamic modes; available multipliers follow the active runtime.
+
+Testing scope: repaired implementation paths have local production-code and package evidence. Real RTX 20/30/40 generated output, affected headset combinations, X-Plane/pop-outs, DLAA/ultrawide quality and HDR/VR capture still need target testing. No claim is made that every MFG case stuck at 2x or every crash is fixed. The new attempts for TAA/native-FG flicker, ghost menus, GPU instability and XP12 speckling still need confirmation in affected simulators; the specific post-Beta crash remains unconfirmed; The missing Hybrid asset packaging is repaired; actual Hybrid output remains a target test.
+
+Please report issues in Discord and post reviewed diagnostic ZIPs in the correct channels. I am no longer responding to support requests in DMs.

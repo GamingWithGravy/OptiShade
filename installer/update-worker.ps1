@@ -1,8 +1,21 @@
 ﻿param([Parameter(Mandatory=$true)][string]$Config)
 $ErrorActionPreference='Stop'
+function SaveUpdateOutcome([string]$Phase,[string]$Reason=''){
+ try{
+  $parent=[IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($Config))
+  $part=$parent;while($part){if((Get-Item -LiteralPath $part -Force).Attributes -band [IO.FileAttributes]::ReparsePoint){return};$part=[IO.Path]::GetDirectoryName($part)}
+  $out=Join-Path $parent 'outcome.json';$temp=$out+'.'+[guid]::NewGuid().ToString('N')+'.tmp'
+  $json=@{Schema=1;Phase=$Phase;At=[DateTime]::UtcNow.ToString('o');Reason=$Reason.Substring(0,[Math]::Min(1024,$Reason.Length))}|ConvertTo-Json
+  [IO.File]::WriteAllText($temp,$json,[Text.UTF8Encoding]::new($true))
+  if(Test-Path -LiteralPath $out){[IO.File]::Replace($temp,$out,[System.Management.Automation.Language.NullString]::Value)}else{[IO.File]::Move($temp,$out)}
+ }catch{Write-Warning 'The update outcome could not be saved.'}
+}
+SaveUpdateOutcome 'Bootstrap'
+try{
 Add-Type -AssemblyName PresentationFramework
 . "$PSScriptRoot/update-lifecycle.ps1"
-$settings=Get-Content -LiteralPath $Config -Raw -Encoding UTF8|ConvertFrom-Json
+if((Get-Item -LiteralPath $Config).Length -gt 1MB){throw 'Update request exceeds the supported size.'}
+try{$settings=ReadOptiShadeJson $Config 'Update request JSON' -MaxBytes 1048576}catch{throw 'Update request JSON is invalid. Reopen the manager and choose the version again; no installation was changed.'}
 $script:target=[IO.Path]::GetFullPath($settings.Installer)
 $desktop=if($settings.Desktop){[string]$settings.Desktop}else{[Environment]::GetFolderPath('DesktopDirectory')}
 if([string]::IsNullOrWhiteSpace($desktop) -or -not [IO.Path]::IsPathRooted($desktop) -or -not (Test-Path -LiteralPath $desktop -PathType Container)){throw 'Your Desktop folder is unavailable. Reconnect it and retry the update.'}
@@ -24,14 +37,15 @@ $window.FindName('DoneClose').Add_Click({$window.Close()})
 $window.FindName('DragHeader').Add_MouseLeftButtonDown({$window.DragMove()})
 $window.FindName('Version').Text=if($settings.Rollback){'Reverting to Version '+(GetOptiShadeDisplayVersion $settings.Version)}else{'Updating to Version '+(GetOptiShadeDisplayVersion $settings.Version)}
 $window.FindName('Notes').Text=$settings.Notes
+}catch{SaveUpdateOutcome 'Bootstrap failed' $_.Exception.Message;throw}
 $script:started=$false;$script:updating=$true
 $script:rollbackLogs=@()
-function SuspendRollbackLogs {
+function SuspendRollbackLogs([string]$ResolvedStore) {
  # Older updaters mistake generated, untracked logs for foreign graphics loaders.
  # Temporarily park only these two logs; never DLLs, INIs or tracked files.
- $records=Join-Path $env:LOCALAPPDATA 'OptiShade/Games'
+ $records=Join-Path $ResolvedStore 'Games'
  foreach($record in Get-ChildItem -LiteralPath $records -Filter manifest.json -Recurse -File -ErrorAction SilentlyContinue){
-  $m=Get-Content -LiteralPath $record.FullName -Raw|ConvertFrom-Json
+  $m=ReadOptiShadeJson $record.FullName 'Installation receipt JSON'
   if($m.Status -ne 'Installed'){continue}
   if([version]$settings.Version -lt [version]'0.21' -and (Test-Path -LiteralPath (Join-Path $m.Game 'X-Plane.exe'))){throw 'Restore X-Plane original files before installing a version below 0.21.'}
   $game=[IO.Path]::GetFullPath($m.Game);$check=$game
@@ -51,6 +65,7 @@ function SuspendRollbackLogs {
  }
 }
 function RunUpdateStage([string]$Executable,[string]$Mode){
+ SaveUpdateOutcome $Mode
  $receipt=Join-Path (Split-Path $Config) ([guid]::NewGuid().ToString('N')+'.result')
  $job=Start-Process -FilePath $Executable -ArgumentList @($Mode,('"'+$receipt+'"')) -WindowStyle Hidden -PassThru
  # Retain the process handle so ExitCode remains available after the child exits.
@@ -82,15 +97,17 @@ $window.Add_ContentRendered({
   }
   foreach($drive in $space.Keys){if(([IO.DriveInfo]::new($drive)).AvailableFreeSpace -lt $space[$drive]){throw "Not enough disk space on $drive. Free at least $([math]::Ceiling($space[$drive]/1MB)) MB for downloading and staging the update, then retry. No installed files were changed."}}
   [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
+  SaveUpdateOutcome 'Downloading'
   $window.FindName('Status').Text='Downloading OptiShade Manager...';$window.FindName('Progress').IsIndeterminate=$true
   $web.Headers['User-Agent']='OptiShade-updater';$task=$web.DownloadFileTaskAsync($uri,$download);$clock=[Diagnostics.Stopwatch]::StartNew()
   while(-not $task.IsCompleted){if($clock.Elapsed.TotalMinutes -gt 15){$web.CancelAsync();throw 'Download timed out. Your existing manager is unchanged.'};$window.Dispatcher.Invoke([Action]{},[Windows.Threading.DispatcherPriority]::Background);Start-Sleep -Milliseconds 100}
   $task.GetAwaiter().GetResult()
   if(Get-Process FlightSimulator2024,FlightSimulator,X-Plane -ErrorAction SilentlyContinue){throw 'Close all simulators, then retry. No installed files were changed.'}
   if((Get-FileHash -LiteralPath $download -Algorithm SHA256).Hash -ne $settings.SHA256){throw 'Update verification failed. Your existing manager is unchanged.'}
-  if($settings.Rollback){SuspendRollbackLogs}
+  if($settings.Rollback){SuspendRollbackLogs $downloadStore}
   $window.FindName('Status').Text='Checking staged files and installation requirements...'
   $window.FindName('Progress').IsIndeterminate=$false;$window.FindName('Progress').Value=35
+  AssertOptiShadeChannelPlan $settings.InstallationPlan $downloadStore $settings.Version
   RunUpdateStage $download '--check-update'
   $window.FindName('Status').Text='Saving the verified manager to your Desktop...'
   $window.FindName('Progress').Value=55
@@ -104,12 +121,15 @@ $window.Add_ContentRendered({
   $script:target=$destination
   $window.FindName('Status').Text='Updating installed game files and keeping your presets...'
   $window.FindName('Progress').Value=70
+  AssertOptiShadeChannelPlan $settings.InstallationPlan $downloadStore $settings.Version
   RunUpdateStage $script:target '--apply-update'
   $window.FindName('Progress').IsIndeterminate=$false;$window.FindName('Progress').Value=100
+  SaveUpdateOutcome 'Installed; manager cleanup pending'
   $action=if($settings.Rollback){'Rollback'}else{'Update'}
   $store=if($settings.Store){[string]$settings.Store}else{Join-Path $env:LOCALAPPDATA 'OptiShade'}
   $window.FindName('Status').Text='Installation complete. Waiting for the previous manager to close before removing its EXE...'
   $cleanup=CompleteOptiShadeManagerUpdate $previous $settings.PreviousHash $script:target $settings.SHA256 $store $channel { $window.Dispatcher.Invoke([Action]{},[Windows.Threading.DispatcherPriority]::Background) } -Version $settings.Version
+  SaveUpdateOutcome 'Complete'
   $window.FindName('Status').Text="$action complete. The selected OptiShade EXE is on your Desktop:`n$script:target`nUse this EXE from now on.`n$cleanup"
   $window.FindName('OpenLocation').Visibility='Visible'
   Remove-Item -LiteralPath $download -Force
@@ -117,6 +137,7 @@ $window.Add_ContentRendered({
  }catch{
   $window.FindName('Progress').IsIndeterminate=$false
   $detail=$_.Exception.Message
+  SaveUpdateOutcome 'Stopped' $detail
   $friendly=$detail
   if($detail -match '(?s)System\.Management\.Automation\.RuntimeException: (.*?)(?: --->|\r?\n\s+at |$)'){$friendly=$Matches[1].Trim()}
   $window.FindName('Status').Text='Update stopped. '+$friendly

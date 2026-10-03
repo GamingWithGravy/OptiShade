@@ -1,4 +1,5 @@
-﻿# Downloads the same public shader catalogue used by earlier OptiShade previews.
+﻿. "$PSScriptRoot/json-state.ps1"
+# Downloads the same public shader catalogue used by earlier OptiShade previews.
 # Archives are transport files only, never release packages or executable content.
 function DownloadShaderArchive([uri]$Uri,[string]$Destination){
     $urls=@($Uri.AbsoluteUri)
@@ -26,7 +27,7 @@ function InstallAllEffects([string]$Game,[string]$Catalogue,[scriptblock]$Progre
     $packages=@($packages|Where-Object {$_.PresetOnly -ne '1'})
     $data=OwnedPath $Game 'OptiShadeData';$results=@();$index=0
     $previous=@();$report=OwnedPath $Game 'OptiShadeData/Effects-install.json'
-    if(Test-Path -LiteralPath $report){try{$previous=Get-Content -LiteralPath $report -Raw|ConvertFrom-Json}catch{}}
+    if(Test-Path -LiteralPath $report){try{$previous=ReadOptiShadeJson $report 'Effects installation JSON' -Shape Any}catch{}}
     foreach($pkg in $packages){
         $index++;$name=$pkg.PackageName;&$Progress "Installing effects $index/$($packages.Count): $name" ($index-1) $packages.Count
         $done=@($previous|Where-Object {$_.Source -eq $pkg.DownloadUrl -and $_.Status -eq 'Installed'})

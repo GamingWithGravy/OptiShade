@@ -1,6 +1,11 @@
-// OptiShade additions, GPL-3.0-or-later.
+﻿// OptiShade additions, GPL-3.0-or-later.
 #pragma once
+#include "SourceMfgOutput.h"
 #include "MfgControl.h"
+#include "OptiShadeMfgApi.h"
+#include "SourceMfgIdentity.h"
+#include <thread>
+#include <condition_variable>
 #include <windows.h>
 #include <bcrypt.h>
 #include <filesystem>
@@ -140,6 +145,29 @@ inline bool ReadMemory(const fs::path& transportPath,std::string& out){
 }
 }
 
+// Called by the existing post-DllMain startup worker, never by opening the menu.
+// An installed owned source provider reserves the session even if startup fails.
+inline bool StartSourceBackend(){
+ const auto root=file::ExecutableRoot();std::string text;Json receipt;
+ const auto record=root/L"OptiShadeData"/L"MFG"/L"source-backend.json";
+ std::error_code absence;const bool exists=std::filesystem::exists(record,absence);if(!exists&&!absence)return false;
+ if(file::Read(root,record,4096,text)==file::ReadResult::Missing)return false;
+ if(!Parse(text,4096,receipt)||receipt.value("sha256",std::string{})!=kSourceDllSha256||receipt.value("abi",0u)!=source::Abi)return true;
+ // An owned migration must retire the old executable path before activation.
+ for(const wchar_t* name:{L"version.dll",L"RTXMFG.dll",L"RTX40MFGCore.dll",L"RTX40MFG.asi",L"RTX40MFG-UI.addon64"})if(std::filesystem::exists(root/name))return true;
+ const auto path=root/L"OptiShadeData"/L"MFG"/L"OptiShadeMFG.dll";
+ static file::Handle held;static HMODULE loaded=nullptr;
+ if(loaded)return true;
+ file::Parents parents;if(!parents.Open(root,path))return true;
+ file::Handle h(CreateFileW(path.c_str(),GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,nullptr));
+ if(!h||!file::Regular(h.value)||!file::Equal(file::Final(h.value),path)||file::Hash(h.value)!=kSourceDllSha256)return true;
+ loaded=LoadLibraryExW(path.c_str(),nullptr,LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR|LOAD_LIBRARY_SEARCH_SYSTEM32);
+ if(!loaded)return true;held=std::move(h);
+ auto query=reinterpret_cast<source::Query>(GetProcAddress(loaded,"OptiShadeMfgQuery"));auto start=reinterpret_cast<source::Start>(GetProcAddress(loaded,"OptiShadeMfgStart"));
+ source::Status status;if(!query||!start||!query(&status,sizeof(status))||status.abi!=source::Abi)return true;
+ if(start())source::observePresent.store(reinterpret_cast<source::Present>(GetProcAddress(loaded,"OptiShadeMfgObservePresent")),std::memory_order_release);return true;
+}
+
 class Bridge {
     std::mutex mutex;
     Snapshot cached;
@@ -149,7 +177,10 @@ class Bridge {
     std::filesystem::path root,config,status,statusTransport;
     Settings desired;
     Json desiredSeed;
+    bool sourceBackend=false;
+    source::Query sourceQuery=nullptr;
     bool OwnsBackend(){
+        if(sourceBackend)return true;
         // Pinned export supports its original 64-byte prefix as well as the
         // newer 120-byte diagnostic struct; no private backend ABI is invoked.
         struct Query {uint32_t size=64,version=0,owner=0,duplicate=0,unused[6]{};uint64_t frames[3]{};};
@@ -160,6 +191,17 @@ class Bridge {
     bool Trust(){
         if(module&&moduleFile)return true;
         root=file::ExecutableRoot();if(root.empty())return false;
+        HMODULE sourceModule=nullptr;
+        if(GetModuleHandleExW(0,L"OptiShadeMFG.dll",&sourceModule)){
+            std::string recordText;Json record;
+            if(file::Read(root,root/L"OptiShadeData"/L"MFG"/L"source-backend.json",4096,recordText)!=file::ReadResult::Okay||!Parse(recordText,4096,record)||record.value("sha256",std::string{})!=kSourceDllSha256||record.value("abi",0u)!=source::Abi){FreeLibrary(sourceModule);return false;}
+            const auto path=root/L"OptiShadeData"/L"MFG"/L"OptiShadeMFG.dll";
+            wchar_t loadedPath[32768]{};GetModuleFileNameW(sourceModule,loadedPath,32768);
+            file::Handle h(CreateFileW(path.c_str(),GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,nullptr));
+            auto query=reinterpret_cast<source::Query>(GetProcAddress(sourceModule,"OptiShadeMfgQuery"));source::Status v;
+            if(h&&file::Regular(h.value)&&file::Equal(file::Final(h.value),path)&&file::Equal(path,loadedPath)&&file::Hash(h.value)==kSourceDllSha256&&query&&query(&v,sizeof(v))&&v.abi==source::Abi){module=sourceModule;moduleFile=std::move(h);sourceBackend=true;sourceQuery=query;return true;}
+            FreeLibrary(sourceModule);cached.detected=true;return false;
+        }
         for(const wchar_t* name:{L"version.dll",L"RTXMFG.dll"}){
             HMODULE loaded=nullptr;
             if(!GetModuleHandleExW(0,name,&loaded))continue; // Existing module only, never load a DLL.
@@ -196,6 +238,18 @@ class Bridge {
         if(read==file::ReadResult::Failed||(read==file::ReadResult::Okay&&(!Parse(text,4096,saved)||!ReadSettings(saved,cached.settings)))){
             cached.message="The MFG settings file cannot be read safely; existing settings have been kept.";return cached;
         }
+        if(sourceBackend){
+            source::Status v;if(!sourceQuery||!sourceQuery(&v,sizeof(v))||v.size!=sizeof(v)||v.abi!=source::Abi||v.pid!=GetCurrentProcessId()||v.birth!=file::Birth()||v.tick>GetTickCount64()||GetTickCount64()-v.tick>1000){cached.message="Source MFG contract/session unavailable.";return cached;}
+            cached.sourceBuilt=true;cached.live=true;cached.editable=v.family==20||v.family==30||v.family==40;
+            auto& l=cached.status;l.gpuFamily=v.family;l.bridgeReady=v.ready;l.maxMultiplier=v.maximum;l.minMultiplier=v.minimum;l.canDynamic=v.dynamicAvailable;l.legacyPreset=true;
+            l.gameFgOn=v.gameFg;l.setOptionsAccepted=v.accepted;l.requestRevision=v.requestRevision;l.appliedRevision=v.acceptedRevision;
+            l.applied=v.accepted&&v.gameFg;l.pending=v.requestRevision!=v.acceptedRevision;l.appliedMultiplier=v.acceptedMultiplier;l.appliedDynamic=v.acceptedDynamic;
+            l.savedRequestObserved=read==file::ReadResult::Missing||saved.value("optishadeRevision",0u)==v.savedRevision;
+            desired.followGame=v.follow;desired.dynamic=v.dynamic;desired.multiplier=v.multiplier;desired.targetFps=v.target;desired.overrideOff=v.overrideOff;
+            desiredSeed=Json{{"followGame",desired.followGame},{"mode",desired.followGame?"follow":desired.dynamic?"dynamic":"fixed"},{"multiplier",desired.multiplier},{"dynamicTargetFrameRate",desired.targetFps},{"overrideOff",desired.overrideOff},{"optishadeRevision",v.savedRevision}};
+            if(read==file::ReadResult::Missing)cached.settings=desired;
+            cached.message=v.reason;return cached;
+        }
         Json live;auto validStatus=[&]{
             Settings active;Json seed;
             if(!Parse(text,1024*1024,live)||!ReadDesired(live,active,&seed))return false;
@@ -212,10 +266,14 @@ class Bridge {
         return cached;
     }
 public:
-    Bridge()=default;Bridge(const Bridge&)=delete;Bridge& operator=(const Bridge&)=delete;
-    ~Bridge(){if(module)FreeLibrary(module);}
+    std::mutex queueMutex;std::condition_variable wake;std::thread writer;bool stop=false,queued=false,busy=false;Settings queuedSettings;std::string saveResult;
+    Bridge()=default;
+    void StartWriter(){if(writer.joinable())return;writer=std::thread([this]{for(;;){Settings request;{std::unique_lock lock(queueMutex);wake.wait(lock,[&]{return stop||queued;});if(stop)return;request=queuedSettings;queued=false;busy=true;}std::string error;const bool ok=SaveNow(request,error);{std::lock_guard lock(queueMutex);saveResult=ok?"MFG settings saved; waiting for backend acknowledgement.":error;busy=false;}}});}Bridge(const Bridge&)=delete;Bridge& operator=(const Bridge&)=delete;
+    ~Bridge(){{std::lock_guard lock(queueMutex);stop=true;}wake.notify_one();if(writer.joinable())writer.join();if(module)FreeLibrary(module);}
+    bool Save(const Settings& requested,std::string& error){{std::lock_guard stateLock(mutex);if(!cached.verified||!cached.live||!cached.editable){error=cached.message.empty()?"No verified MFG session is available.":cached.message;return false;}}std::lock_guard lock(queueMutex);if(queued||busy){error="Previous MFG save is still running.";return false;}StartWriter();queuedSettings=requested;queued=true;saveResult="MFG save queued.";wake.notify_one();error.clear();return true;}
+    std::string SaveResult(){std::lock_guard lock(queueMutex);return saveResult;}
     Snapshot Refresh(){std::lock_guard lock(mutex);if(lastRead&&GetTickCount64()-lastRead<250)return cached;try{return RefreshLocked();}catch(...){cached.live=cached.editable=false;cached.message="MFG status could not be read safely.";return cached;}}
-    bool Save(const Settings& requested,std::string& error){
+    bool SaveNow(const Settings& requested,std::string& error){
         std::lock_guard lock(mutex);
         try{
             RefreshLocked();if(!cached.verified||!cached.live||!cached.editable){error=cached.message;return false;}
@@ -226,7 +284,11 @@ public:
             // be running from an environment choice or a subsequently removed
             // config. Recover only known fields from this freshly trusted status.
             if(read==file::ReadResult::Missing){document=desiredSeed;current=desired;if(!document.is_object()){error="Current MFG settings are unavailable.";return false;}}
-            if(!MergeSettings(document,current,requested,cached.status,error))return false;
+            if(!MergeAdapterSettings(sourceBackend,document,current,requested,cached.status,error))return false;
+            if(sourceBackend){
+                if(requested.preset!=current.preset||requested.reflexLimit!=current.reflexLimit||requested.vsyncMode!=current.vsyncMode){error="This source backend does not implement preset/Reflex/VSync controls.";return false;}
+                const auto revision=document.value("optishadeRevision",0u);if(revision==UINT32_MAX){error="MFG revision limit reached.";return false;}document["optishadeRevision"]=revision+1;
+            }
             const auto content=document.dump()+"\n";
             const file::Expected expected{read,original};bool changed=false;
             if(content.size()>4096||!file::Atomic(root,config,content,&expected,&changed)){

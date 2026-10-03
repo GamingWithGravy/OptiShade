@@ -1221,9 +1221,10 @@ sl::Result StreamlineHooks::hkslDLSSGSetOptions(const sl::ViewportHandle& viewpo
         }
     }
 
-    state.dlssgLastSetMode = newOptions.mode;
-
-    return o_slDLSSGSetOptions(viewport, newOptions);
+    const auto result = o_slDLSSGSetOptions(viewport, newOptions);
+    // A rejected request must not become the effective mode used by Reflex.
+    if (result == sl::Result::eOk) state.dlssgLastSetMode = newOptions.mode;
+    return result;
 }
 
 sl::Result StreamlineHooks::hkslDLSSGGetState(const sl::ViewportHandle& viewport, sl::DLSSGState& state,

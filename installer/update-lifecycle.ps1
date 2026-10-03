@@ -1,4 +1,5 @@
-﻿# Keep the app and Desktop names readable. Public asset names also retain the
+﻿. "$PSScriptRoot/json-state.ps1"
+# Keep the app and Desktop names readable. Public asset names also retain the
 # legacy variant understood by already-installed launchers.
 function GetOptiShadeManagerName([string]$Version,[string]$Channel){
  if($Version -notmatch '^\d+\.\d+(?:\.\d+){0,2}(?:-(?:alpha|beta|rc)(?:[.-]?\d+)?)?$' -or $Channel -notin @('stable','beta')){throw 'Invalid manager version or channel.'}
@@ -97,12 +98,12 @@ function WriteOptiShadeManagerReceipt([string]$Installer,[string]$Hash,[string]$
 }
 function CompleteOptiShadeManualInstall([string]$ManifestPath,[string]$Installer,[string]$Version,[string]$Store,$PreviousManifest,[scriptblock]$OnWait={}){
  if($env:OPTISHADE_PORTABLE -eq '1'){return ''}
- $manifest=Get-Content -LiteralPath $ManifestPath -Raw|ConvertFrom-Json
+ $manifest=ReadOptiShadeJson $ManifestPath 'Installation receipt JSON'
  if($manifest.Status -ne 'Installed' -or $manifest.Version -cne $Version -or [IO.Path]::GetFullPath($manifest.Installer) -ne [IO.Path]::GetFullPath($Installer)){throw 'Installation did not confirm this manager. Previous manager retained.'}
  $path=Join-Path $Store 'manager-installed.json';AssertOptiShadeReceiptPath $path
  $previous='';$previousHash='';$notice=''
  if(Test-Path -LiteralPath $path){
-  $record=Get-Content -LiteralPath $path -Raw|ConvertFrom-Json
+  $record=ReadOptiShadeJson $path 'Manager receipt JSON'
   if($record.Schema -ne 1 -or $record.Status -ne 'Installed' -or $record.Channel -notin @('stable','beta') -or $record.SHA256 -notmatch '^[a-fA-F0-9]{64}$' -or -not [IO.Path]::IsPathRooted([string]$record.Installer)){throw 'The previous manager receipt is invalid. Previous manager retained.'}
   $previous=[string]$record.Installer;$previousHash=[string]$record.SHA256
  }elseif($PreviousManifest.Installer -and [IO.Path]::GetFullPath($PreviousManifest.Installer) -ne [IO.Path]::GetFullPath($Installer)){
@@ -112,4 +113,33 @@ function CompleteOptiShadeManualInstall([string]$ManifestPath,[string]$Installer
  $hash=(Get-FileHash -LiteralPath $Installer -Algorithm SHA256).Hash
  $cleanup=CompleteOptiShadeManagerUpdate $previous $previousHash $Installer $hash $Store $channel $OnWait ($Version -replace '^P','')
  return (($notice,$cleanup|Where-Object {$_}) -join ' ')
+}
+
+function NewOptiShadeChannelPlan([string]$Store,[string]$Version){
+ $channel=if($Version -match '-(?:alpha|beta|rc)'){'beta'}else{'stable'}
+ $plan=[ordered]@{Schema=1;Version=$Version;Channel=$channel;Phase='Review';Supported=@();RestoreXPlane=@()}
+ $base=Join-Path $Store 'Games'
+ foreach($file in @(Get-ChildItem -LiteralPath $base -Filter manifest.json -Recurse -File -ErrorAction SilentlyContinue)){
+  AssertOptiShadeReceiptPath $file.FullName
+  if($file.Length -gt 4MB){throw 'Installation receipt exceeds the supported size; no version change was started.'}
+  try{$m=ReadOptiShadeJson $file.FullName 'Installation receipt JSON'}catch{throw 'An installation receipt contains invalid JSON. Restore/update was not started; preserve the receipt and originals for repair.'}
+  if(-not $m.Game -or -not $m.Status -or -not [IO.Path]::IsPathRooted([string]$m.Game)){throw 'An installation receipt has an invalid schema. No version change was started.'}
+  if($m.Status -ne 'Installed'){continue}
+  $name=[IO.Path]::GetFileName([string]$m.LaunchExe)
+  if(-not $name){$name=if(Test-Path -LiteralPath (Join-Path $m.Game 'X-Plane.exe')){'X-Plane.exe'}elseif(Test-Path -LiteralPath (Join-Path $m.Game 'FlightSimulator2024.exe')){'FlightSimulator2024.exe'}elseif(Test-Path -LiteralPath (Join-Path $m.Game 'FlightSimulator.exe')){'FlightSimulator.exe'}else{''}}
+  $entry=@{Game=[string]$m.Game;Receipt=$file.FullName;ReceiptHash=(Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash}
+  if($channel -eq 'stable' -and $name -ieq 'X-Plane.exe'){$plan.RestoreXPlane+=,$entry}
+  elseif($name -in @('FlightSimulator.exe','FlightSimulator2024.exe','X-Plane.exe')){$plan.Supported+=,$entry}
+  else{throw 'A recorded installed game cannot be identified. Review that installation in Setup before changing versions.'}
+ }
+ return [pscustomobject]$plan
+}
+
+function AssertOptiShadeChannelPlan($Plan,[string]$Store,[string]$Version){
+ if(-not $Plan -or $Plan.Schema -ne 1 -or $Plan.Version -cne $Version){throw 'The reviewed installation plan is missing or invalid. Reopen the manager and review the version change again.'}
+ $current=NewOptiShadeChannelPlan $Store $Version
+ if($current.RestoreXPlane.Count){throw 'An X-Plane installation still needs review before changing to stable. No update was applied.'}
+ $expected=@($Plan.Supported|ForEach-Object {([string]$_.Receipt).ToLowerInvariant()+'|'+([string]$_.ReceiptHash).ToUpperInvariant()}|Sort-Object)
+ $observed=@($current.Supported|ForEach-Object {([string]$_.Receipt).ToLowerInvariant()+'|'+([string]$_.ReceiptHash).ToUpperInvariant()}|Sort-Object)
+ if(($expected -join "`n") -cne ($observed -join "`n")){throw 'An installation changed after the version-change review. Reopen the manager to review it again. No update was applied.'}
 }

@@ -71,6 +71,7 @@ constexpr uint32_t kDlssNrMeterGrid = 64;
 // also determines the active colour size; padded colour is copied through a compact work texture.
 struct DlssNrFrameInfo
 {
+    uint64_t ObservationOwner=0, ObservationGeneration=0, ObservationView=0;
     // Which way round depth runs. The game states this when it creates its own upscaler.
     bool DepthInverted = false;
 

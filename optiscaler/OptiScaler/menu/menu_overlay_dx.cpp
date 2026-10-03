@@ -11,6 +11,7 @@
 #include <imgui/imgui_impl_win32.h>
 
 #include "../../../shared/PresentationOwner.h"
+#include "../../../shared/OverlayCompletion.h"
 static optishade::PresentationOwner presentationOwner;
 bool MenuOverlayDx::IsPrimaryWindow(HWND window,bool claim){return presentationOwner.Accept(window,claim);}
 static const void* SwapchainIdentity(IDXGISwapChain* swapchain) {
@@ -30,6 +31,7 @@ void MenuOverlayDx::RetireSwapchain(HWND window, IDXGISwapChain* swapchain) {
 // menu
 static int const NUM_BACK_BUFFERS = 8;
 static int const SRV_HEAP_SIZE = 64;
+static optishade::OverlayCompletion<NUM_BACK_BUFFERS> overlayCompletion;
 static bool _dx11Device = false;
 static bool _dx12Device = false;
 
@@ -145,6 +147,7 @@ static void CleanupRenderTargetDx12(bool clearQueue)
     if (!_isInited || !_dx12Device || State::Instance().isShuttingDown)
         return;
 
+    if(!overlayCompletion.Drain()){LOG_ERROR("Overlay cleanup postponed: GPU work still pending");return;}
     LOG_TRACE("clearQueue: {}", clearQueue);
 
     for (UINT i = 0; i < NUM_BACK_BUFFERS; ++i)
@@ -176,6 +179,7 @@ static void CleanupRenderTargetDx12(bool clearQueue)
             g_pd3dCommandQueue = nullptr;
 
         g_pd3dSrvDescHeapAlloc.Destroy();
+        overlayCompletion.Reset();
 
         // SAFE_RELEASE(g_pd3dDeviceParam);
 
@@ -458,6 +462,12 @@ static void RenderImGui_DX12(IDXGISwapChain* pSwapChainPlain)
         {
             _showRenderImGuiDebugOnce = true;
 
+            // Protect both the swapchain allocator and ImGui's independent upload ring.
+            const UINT pendingBuffer=pSwapChain->GetCurrentBackBufferIndex();
+            if(!overlayCompletion.Prepare(device,static_cast<ID3D12CommandQueue*>(currentSCCommandQueue),pendingBuffer)){
+                static bool warned=false;if(!warned){LOG_ERROR("Overlay waiting for GPU completion; recording deferred");warned=true;}
+                pSwapChain->Release();return;
+            }
             ImGui_ImplDX12_NewFrame();
 
             if (MenuOverlayBase::RenderMenu())
@@ -520,6 +530,7 @@ static void RenderImGui_DX12(IDXGISwapChain* pSwapChainPlain)
 
                 ID3D12CommandList* ppCommandLists[] = { g_pd3dCommandList };
                 ((ID3D12CommandQueue*) currentSCCommandQueue)->ExecuteCommandLists(1, ppCommandLists);
+                if(!overlayCompletion.Submitted(backBufferIdx))LOG_ERROR("Overlay completion signal failed; resources retained until retirement");
             }
         }
         else

@@ -100,6 +100,14 @@ void reshade::openxr::swapchain_impl::on_reset()
 
 void reshade::openxr::swapchain_impl::on_present(uint32_t view_count, const api::resource *view_textures, const api::subresource_box *view_boxes, const uint32_t *view_layers, const std::vector<api::resource> *swapchain_images, uint32_t swap_index)
 {
+	if(view_count==0 || view_count>16)return;
+	uint64_t layout=view_count;
+	for(uint32_t i=0;i<view_count;++i)for(auto v:{view_boxes[i].left,view_boxes[i].top,view_boxes[i].right,view_boxes[i].bottom,view_layers[i]})layout=(layout^v)*1099511628211ull;
+	if(layout!=_observation_layout && _observation_changes<32){
+		_observation_layout=layout;++_observation_changes;
+		reshade::log::message(reshade::log::level::info,"OptiShade OpenXR projection family session=%llu API=%u views=%u layout=%u",static_cast<unsigned long long>(get_native()),static_cast<unsigned>(_device->get_api()),view_count,_observation_changes);
+		for(uint32_t i=0;i<view_count;++i)reshade::log::message(reshade::log::level::info,"OptiShade OpenXR projection view=%u rect=%u,%u,%u,%u arrayLayer=%u",i,view_boxes[i].left,view_boxes[i].top,view_boxes[i].right,view_boxes[i].bottom,view_layers[i]);
+	}
 	const api::resource_desc source_desc = _device->get_resource_desc(view_textures[0]);
 
 	if (source_desc.texture.samples > 1)

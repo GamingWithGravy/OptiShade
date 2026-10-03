@@ -1,5 +1,6 @@
-﻿$ErrorActionPreference='Stop'
-function GetBundledOptiShadeVersion { 'P0.21.4' }
+﻿. "$PSScriptRoot/json-state.ps1"
+$ErrorActionPreference='Stop'
+function GetBundledOptiShadeVersion { 'P0.21.6' }
 function TestBundledUpdateVersion($Manifest){
  try{
   $installed=[regex]::Match([string]$Manifest.Version,'\d+\.\d+(?:\.\d+){0,2}').Value
@@ -59,7 +60,29 @@ function ManifestPath([string]$StateRoot,[string]$Game){
     $bytes=[Text.Encoding]::UTF8.GetBytes((FullPath $Game).ToLowerInvariant());$sha=[Security.Cryptography.SHA256]::Create();$id=[BitConverter]::ToString($sha.ComputeHash($bytes)).Replace('-','').Substring(0,16);$sha.Dispose()
     OwnedPath $StateRoot ('Games/'+$id+'/manifest.json')
 }
-function WriteState($Manifest,[string]$Path){$tmp=$Path+'.tmp';$Manifest|ConvertTo-Json -Depth 8|Set-Content -LiteralPath $tmp -Encoding UTF8;Move-Item -LiteralPath $tmp -Destination $Path -Force}
+function ReadOptiShadeState([string]$Path){
+ $bytes=0
+ for($attempt=0;$attempt -lt 3;$attempt++){
+  try{
+   $item=Get-Item -LiteralPath $Path -Force -ErrorAction Stop;$bytes=$item.Length
+   if($item.PSIsContainer -or $bytes -gt 4MB -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'Invalid receipt size or linked file'}
+   $text=[IO.File]::ReadAllText($item.FullName,[Text.Encoding]::UTF8)
+   $value=$text|ConvertFrom-Json -ErrorAction Stop
+   if($null -eq $value -or $value -is [array] -or $value -isnot [pscustomobject] -or -not $value.Game -or -not $value.Status -or -not [IO.Path]::IsPathRooted([string]$value.Game)){throw 'Invalid ownership receipt schema'}
+   return $value
+  }catch{if($attempt -lt 2){Start-Sleep -Milliseconds 30}}
+ }
+ $digest=try{(Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop).Hash}catch{'unavailable'}
+ throw "Installation receipt could not be read or validated ($([IO.Path]::GetFileName($Path)), $bytes bytes, SHA256 $digest). No receipt or original backup was reset. Repair this recorded installation before retrying."
+}
+function WriteState($Manifest,[string]$Path){
+ $tmp=$Path+'.'+[guid]::NewGuid().ToString('N')+'.tmp'
+ try{
+  $json=$Manifest|ConvertTo-Json -Depth 12
+  [IO.File]::WriteAllText($tmp,$json,[Text.UTF8Encoding]::new($true))
+  if(Test-Path -LiteralPath $Path){[IO.File]::Replace($tmp,$Path,[System.Management.Automation.Language.NullString]::Value)}else{[IO.File]::Move($tmp,$Path)}
+ }finally{if(Test-Path -LiteralPath $tmp){Remove-Item -LiteralPath $tmp -Force}}
+}
 function IsGraphicsMod([string]$Relative,[string]$File){
  if($Relative -match '^(?i:OptiShadeData)[\\/]' -or $Relative -match '^(?i:ReShade(?:64\.dll|\.ini|\.log)|OptiScaler(?:\.dll|\.ini|\.log)|nvngx_dlssnr\.dll|nvngx\.dll_dlssnr\.dll)$' -or $Relative -match '(?i)(dlss5|renodx).*\.addon64$'){return $true}
  if(Test-Path -LiteralPath $File -PathType Leaf){try{$v=[Diagnostics.FileVersionInfo]::GetVersionInfo($File);return "$($v.ProductName) $($v.FileDescription)" -match '(?i)optishade|optiscaler|reshade'}catch{}}
@@ -101,10 +124,10 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
     if($Proxy -notin @('winmm.dll','dxgi.dll','d3d12.dll','version.dll','dbghelp.dll','wininet.dll','winhttp.dll')){throw 'Unsupported installation method.'}
     $Game=FullPath $Game;$Payload=FullPath $Payload;AssertClosed $Game
     if(-not(Test-Path -LiteralPath $Game -PathType Container)){throw 'Choose the game folder first.'}
-    if(Test-Path -LiteralPath (Join-Path $Game 'X-Plane.exe')){throw 'X-Plane installation is removed from 0.21.4. Use the beta channel when available. Existing installations can still be restored.'}
+    if(Test-Path -LiteralPath (Join-Path $Game 'X-Plane.exe')){throw 'X-Plane installation is removed from 0.21.6. Use the beta channel when available. Existing installations can still be restored.'}
     $mp=ManifestPath $StateRoot $Game
     $old=$null;$oldJson=$null
-    if(Test-Path -LiteralPath $mp){$oldJson=Get-Content -LiteralPath $mp -Raw;$old=$oldJson|ConvertFrom-Json;if($old.Status -ne 'Restored' -and -not $ReplaceExisting){throw 'OptiShade is already recorded here. Choose Repair or approve reinstalling it.'};if($old.Status -eq 'Restored'){$old=$null}}
+    if(Test-Path -LiteralPath $mp){$oldJson=Get-Content -LiteralPath $mp -Raw;$old=ReadOptiShadeState $mp;if($old.Status -ne 'Restored' -and -not $ReplaceExisting){throw 'OptiShade is already recorded here. Choose Repair or approve reinstalling it.'};if($old.Status -eq 'Restored'){$old=$null}}
     if($old -and $old.PSObject.Properties['IncludeEffects']){$IncludeEffects=[bool]$old.IncludeEffects}
     elseif($old -and $old.Downloads -eq 'Complete' -and -not(Test-Path -LiteralPath (Join-Path $Game 'OptiShadeData/Shaders'))){$IncludeEffects=$false}
     if($old){CleanModBackupReferences $old (Split-Path $mp);foreach($f in $old.Files){if($f.Backup -and (HashFile (OwnedPath (Split-Path $mp) $f.Backup)) -ne $f.PreviousHash){throw "Original backup is missing or damaged: $($f.Path). Keep the installation and recover its backup before replacing it."}}}
@@ -121,12 +144,26 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
             if(-not $ReplaceExisting -and -not $entry.PSIsContainer -and -not($entry.FullName.StartsWith($presetRoot+'\',[StringComparison]::OrdinalIgnoreCase) -and $entry.Extension -eq '.ini')){throw 'Existing OptiShade files detected. Approve a backed-up reinstall to continue.'}
         }
     }
-    $catalog=Get-Content -LiteralPath (Join-Path $Payload 'files.json') -Raw|ConvertFrom-Json
+    $catalog=ReadOptiShadeJson (Join-Path $Payload 'files.json') 'Payload catalogue JSON' -Shape Array
+    # r5 source setup could record the same MFG file using two slash spellings.
+    # Coalesce only identical ownership chains, using the incoming catalogue's
+    # spelling. Conflicting originals remain a recovery error.
+    if($old -and $old.SourceMfg){
+        foreach($relative in @('OptiShadeData/MFG/OptiShadeMFG.dll','OptiShadeData/MFG/source-backend.json')){
+            $records=@($old.Files|Where-Object {$_.Path.Replace('\','/') -eq $relative})
+            if(-not $records.Count){continue}
+            $chains=@($records|ForEach-Object {([string]$_.Backup)+'|'+([string]$_.PreviousHash)+'|'+([string]$_.Hash)}|Select-Object -Unique)
+            if($chains.Count -ne 1){throw 'Conflicting source MFG ownership records require recovery; original backups were kept.'}
+            $incoming=@($catalog|Where-Object {$_.Path.Replace('\','/') -eq $relative})
+            $record=$records[0];$record.Path=$(if($incoming.Count -eq 1){$incoming[0].Path}else{$relative})
+            $old.Files=@($old.Files|Where-Object {$_.Path.Replace('\','/') -ne $relative})+@($record)
+        }
+    }
     $folder=Split-Path $mp;New-Item -ItemType Directory -Path (Join-Path $folder 'Backups') -Force|Out-Null
     $files=@();$index=0;$transaction=[guid]::NewGuid().ToString('N')
     # Keep the original ownership chain across upgrades. Orphaned data is backed up
     # as pre-existing user data so Restore can recover it instead of deleting it.
-    if($old){$files=@($old.Files|ForEach-Object {@{Path=$_.Path;SourcePath='';Hash=$_.Hash;PreviousHash=$_.PreviousHash;Backup=$_.Backup;Mutable=$_.Mutable;Retained=($_.Path -match '^OptiShadeData[\\/](Presets|Shaders|Textures)[\\/]' -or ($PreserveConfiguration -and $_.Path -match '\.ini$') -or $_.Path -match 'Effects-install\.json$' -or $_.Path -eq 'nvngx_dlssnr.dll' -or ($old.OptionalMfg -and $_.Path -eq 'version.dll'))}})}
+    if($old){$files=@($old.Files|ForEach-Object {@{Path=$_.Path;SourcePath='';Hash=$_.Hash;PreviousHash=$_.PreviousHash;Backup=$_.Backup;Mutable=$_.Mutable;Retained=(($_.Path -in @('OptiShadeData/MFG/source-backend.json','RTXMFG-Universal.json') -and $old.SourceMfg) -or $_.Path -match '^OptiShadeData[\\/](Presets|Shaders|Textures)[\\/]' -or ($PreserveConfiguration -and $_.Path -match '\.ini$') -or $_.Path -match 'Effects-install\.json$' -or $_.Path -eq 'nvngx_dlssnr.dll' -or ($old.OptionalMfg -and $_.Path -eq 'version.dll'))}})}
     elseif($ReplaceExisting -and (Test-Path -LiteralPath $data)){
         foreach($entry in Get-ChildItem -LiteralPath $data -File -Recurse -Force){
             $relative=$entry.FullName.Substring($Game.Length+1);$previous=HashFile $entry.FullName
@@ -134,11 +171,28 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
             $files+=@{Path=$relative;SourcePath='';Hash=$(if($keep){$previous}else{''});PreviousHash='';Backup='';Mutable=$true;Retained=$keep}
         }
     }
+    # Refresh the installed optional provider in the same rollback transaction as
+    # the main loader. Only a recorded MFG destination may be mapped this way.
+    if($old -and $old.OptionalMfg){
+        $provider=@($catalog|Where-Object Path -match '^OptiShadeData[\\/]MFG[\\/]RTXMFG\.dll$')
+        $ownedProvider=@($old.Files|Where-Object Path -eq 'version.dll')
+        if($provider.Count -ne 1 -or $ownedProvider.Count -ne 1 -or $ownedProvider[0].SourcePath -eq 'winmm.dll' -or $ownedProvider[0].Mutable){throw 'Recorded MFG provider cannot be refreshed safely. Review this installation in Setup.'}
+        $current=HashFile (OwnedPath $Game 'version.dll')
+        if($current -and $current -ne $ownedProvider[0].Hash){throw 'Recorded MFG loader changed. Review the conflict in Setup before updating.'}
+        $catalog+=@{Path=$provider[0].Path;Hash=$provider[0].Hash;UpdateDestination='version.dll'}
+    }
+    # Retire unchanged bundled shader/texture assets no longer shipped. Imported
+    # assets (no payload source), edited files and user presets remain untouched.
+    if($old){foreach($previous in $old.Files){
+        if($previous.SourcePath -and $previous.Path -match '^OptiShadeData[\\/](Shaders|Textures)[\\/]' -and $previous.SourcePath -notin $catalog.Path -and (HashFile (OwnedPath $Game $previous.Path)) -eq $previous.Hash){
+            foreach($tracked in @($files|Where-Object Path -eq $previous.Path)){$tracked.Retained=$false;$tracked.Hash=''}
+        }
+    }}
     foreach($entry in $catalog){
         $bundledLook=$entry.Path -match '^OptiShadeData[\\/](Shaders[\\/]Custom[\\/]Gravy_FusionCinema\.fx|Presets[\\/](My look\.ini|Gravy - Fusion Cinema Custom v1\.ini))$'
         $neuralGuides=$entry.Path -match '^OptiShadeData[\\/](Shaders[\\/]OptiShadeTaa[\\/]|Textures[\\/]vort_BlueNoise\.png$|Presets[\\/]X-Plane neural guides\.ini$)'
         if(-not $IncludeEffects -and $entry.Path -match '^OptiShadeData[\\/](Shaders|Textures|Presets)[\\/]' -and -not $bundledLook -and -not $neuralGuides){continue}
-        $source=OwnedPath $Payload $entry.Path;$relative=if($entry.Path -eq 'winmm.dll'){$Proxy}else{$entry.Path};$dest=OwnedPath $Game $relative
+        $source=OwnedPath $Payload $entry.Path;$relative=if($entry.Path -eq 'winmm.dll'){$Proxy}elseif($entry.UpdateDestination){$entry.UpdateDestination}else{$entry.Path};$dest=OwnedPath $Game $relative
         $sourceHash=try{HashFile $source}catch{''}
         if($sourceHash -ne $entry.Hash){throw ("Installer verification failed for $($entry.Path). The extracted file is missing or differs from the packaged copy. No game files have been changed."+(GetDefenderFileEvidence $source)+' Close the manager and download a fresh official installer. Do not replace the DLL from another website.')}
         # Keep download receipts on repair/reinstall; bundled defaults must not erase them.
@@ -179,6 +233,8 @@ function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string
     }
     $manifest=@{Version=(GetBundledOptiShadeVersion);Game=$Game;Installer=(FullPath $Installer);Status='Installing';Files=$files;OwnedDirectories=@('OptiShadeData');IncludeEffects=$IncludeEffects;PreserveThirdParty=$true;Created=(Get-Date -Format o)}
     if($old -and $old.OptionalMfg){$manifest.OptionalMfg=$true;$manifest.OptionalMfgVersion=$old.OptionalMfgVersion}
+    if($old -and $old.SourceMfg){$manifest.SourceMfg=$true;$manifest.SourceMfgRollback=$old.SourceMfgRollback}
+    if($old -and $old.NeuralGpuName){$manifest.NeuralGpuName=$old.NeuralGpuName;$manifest.NeuralGpuSelection=$old.NeuralGpuSelection}
     WriteState $manifest $mp
     try{
         # The entry-point proxy is copied last so an incomplete install cannot start.
@@ -255,7 +311,7 @@ function TestLegacyMutableReShadeLog($Manifest,$Entry,[string]$File){
     return $header -match '(?m)^\d{2}:\d{2}:\d{2}:\d{3}\s+\[\s*\d+\s*\]\s+\|\s*INFO\s*\|\s*Initializing ReShade version\s'
 }
 function RestoreFusion([string]$ManifestPath,[bool]$KeepPresets=$true){
-    $m=Get-Content -LiteralPath $ManifestPath -Raw|ConvertFrom-Json
+    $m=ReadOptiShadeState $ManifestPath
     CleanModBackupReferences $m (Split-Path $ManifestPath)
     if($m.Status -eq 'Restored'){
         AssertClosed $m.Game
@@ -359,7 +415,7 @@ function FindNrRuntime([string]$Installer){
     return $null
 }
 function ImportNrRuntime([string]$ManifestPath,[string]$Source){
-    $m=Get-Content -LiteralPath $ManifestPath -Raw|ConvertFrom-Json;if($m.Status -ne 'Installed'){throw 'Install OptiShade into a game first.'};AssertClosed $m.Game
+    $m=ReadOptiShadeState $ManifestPath;if($m.Status -ne 'Installed'){throw 'Install OptiShade into a game first.'};AssertClosed $m.Game
     $hash=HashFile $Source
     $cards=@(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue|ForEach-Object Name)
     if($cards.Count -and -not($cards -match 'RTX\s*[2345]0')){throw 'This neural-rendering runtime needs a supported NVIDIA RTX card. Use the included FSR/XeSS options on other compatible cards.'}
@@ -418,10 +474,11 @@ function GetSnapshotRemovalPlan([string]$ReceiptRoot='',[string[]]$GameRoots) {
  foreach($receipt in Get-ChildItem -LiteralPath $root -Filter 'OptiShade-*.txt' -File){
   $safe=OwnedPath $root $receipt.Name
   $lines=[IO.File]::ReadAllLines($safe,[Text.Encoding]::UTF8)
-  if($lines.Count -ne 3 -or $lines[2] -notmatch '^[a-fA-F0-9]{64}$'){throw "Invalid SnapShot record: $safe. No snapshot cleanup was performed."}
+  if($lines.Count -notin @(3,4) -or $lines[2] -notmatch '^[a-fA-F0-9]{64}$'){throw "Invalid SnapShot record: $safe. No snapshot cleanup was performed."}
   $file=FullPath $lines[0];$folder=Split-Path $file -Parent;$name=Split-Path $file -Leaf
-  if($PSBoundParameters.ContainsKey('GameRoots') -and (FullPath (Split-Path $folder -Parent)) -notin $GameRoots){continue}
-  if((Split-Path $folder -Leaf) -cne 'Optishade Snapshots' -or $name -notmatch '^OptiShade-\d{8}-\d{6}-\{[a-fA-F0-9-]{36}\}\.png$' -or [IO.Path]::GetFileNameWithoutExtension($name) -cne $receipt.BaseName){throw 'Invalid SnapShot ownership record. Cleanup stopped.'}
+  $captureGame=if($lines.Count -eq 4){FullPath $lines[3]}else{FullPath (Split-Path $folder -Parent)}
+  if($PSBoundParameters.ContainsKey('GameRoots') -and $captureGame -notin $GameRoots){continue}
+  if((Split-Path $folder -Leaf) -cne 'Optishade Snapshots' -or $name -notmatch '^OptiShade-\d{8}-\d{6}-\{[a-fA-F0-9-]{36}\}\.(png|jpg)$' -or [IO.Path]::GetFileNameWithoutExtension($name) -cne $receipt.BaseName){throw 'Invalid SnapShot ownership record. Cleanup stopped.'}
   [void](OwnedPath $folder $name)
   if(Test-Path -LiteralPath $file){
    if((Get-Item -LiteralPath $file).Length -ne [long]$lines[1] -or (HashFile $file) -ne $lines[2]){throw "This snapshot has changed since capture and will not be deleted automatically: $file"}
@@ -436,7 +493,7 @@ function RemoveSelectedOptiShadeData([string]$StateRoot,[string]$Installer,[stri
  $gameRoots=@()
  foreach($record in $records){
   [void](OwnedPath $StateRoot $record.FullName.Substring((FullPath $StateRoot).Length+1))
-  $manifest=Get-Content -LiteralPath $record.FullName -Raw|ConvertFrom-Json
+  $manifest=ReadOptiShadeState $record.FullName
   $gameRoots+=FullPath $manifest.Game
   AssertClosed $manifest.Game
   if($IniFiles -and -not $AppFiles){

@@ -50,6 +50,12 @@ XrResult XRAPI_CALL xrCreateApiLayerInstance(const XrInstanceCreateInfo *pCreate
 		return result;
 	}
 
+	PFN_xrGetInstanceProperties properties=nullptr;
+	get_instance_proc(*pInstance,"xrGetInstanceProperties",reinterpret_cast<PFN_xrVoidFunction*>(&properties));
+	XrInstanceProperties observed{XR_TYPE_INSTANCE_PROPERTIES};
+	if(properties && XR_SUCCEEDED(properties(*pInstance,&observed)))
+		reshade::log::message(reshade::log::level::info,"OptiShade OpenXR layer connected: runtime=%s version=%llu requestedAPI=%llu",observed.runtimeName,static_cast<unsigned long long>(observed.runtimeVersion),static_cast<unsigned long long>(pCreateInfo->applicationInfo.apiVersion));
+
 	// Initialize the instance dispatch table
 	openxr_instance instance = { *pInstance };
 	instance.dispatch_table.GetInstanceProcAddr = get_instance_proc;

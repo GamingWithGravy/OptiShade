@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -654,7 +654,7 @@
     <ClCompile Include="source\openxr\openxr_hooks_swapchain.cpp" />
     <ClCompile Include="source\openxr\openxr_impl_swapchain.cpp" />
     <ClCompile Include="source\platform_utils_windows.cpp" />
-    <ClCompile Include="source\runtime.cpp" />
+    <ClCompile Include="source\runtime.cpp"><ExceptionHandling>Sync</ExceptionHandling></ClCompile>
     <ClCompile Include="source\runtime_api.cpp" />
     <ClCompile Include="source\runtime_gui.cpp" />
     <ClCompile Include="source\runtime_gui_vr.cpp" />

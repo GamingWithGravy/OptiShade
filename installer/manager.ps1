@@ -38,7 +38,7 @@ $form.FindName('SupportDevelopment').Add_Click({
  ShowSupportDevelopment $form $store
  if(Test-Path -LiteralPath (Join-Path $store 'support-hidden.txt')){$form.FindName('SupportDevelopment').Visibility='Collapsed'}
 })
-$buttons=@('Browse','Install','Repair','Restore','Runtime','Retry','Uninstall','Scan','Play','LibraryGames','GamePath','Method','AddGame','HomeNav','LibraryNav','SetupNav','SettingsNav','KeybindsNav','ChangeMenuKey','ChangeHotSwapKey','ClearHotSwapKey','ChangeSnapshotKey','ClearSnapshotKey','BrowseSnapshots','OpenLibrary','CheckCompatibility','TroubleshootingNav','ResetDefaults','ImportZip','RecoveryRepair','RecoveryRestore','CheckUpdates','RevertUpdate','BetaUpdates','SaveMenuKeys','DefaultMenuKeys','LoadMenuKeys','IncludeEffects','OwnIniMode','ChooseOwnIni','ApplyFxChoice','PrepareOlderRtx','PrepareMfg','OpenMsfs2020','OpenXPlane12')|ForEach-Object {$form.FindName($_)}
+$buttons=@('Browse','Install','Repair','Restore','Runtime','Retry','Uninstall','Scan','Play','LibraryGames','GamePath','Method','AddGame','HomeNav','LibraryNav','SetupNav','SettingsNav','KeybindsNav','ChangeMenuKey','ChangeHotSwapKey','ClearHotSwapKey','ChangeSnapshotKey','ClearSnapshotKey','BrowseSnapshots','OpenLibrary','CheckCompatibility','TroubleshootingNav','ResetDefaults','ResetDownloadCache','ImportZip','RecoveryRepair','RecoveryRestore','CheckUpdates','RevertUpdate','BetaUpdates','SaveMenuKeys','DefaultMenuKeys','LoadMenuKeys','IncludeEffects','OwnIniMode','ChooseOwnIni','ApplyFxChoice','PrepareOlderRtx','ChooseNeuralGpu','PrepareMfg','OpenMsfs2020','OpenXPlane12')|ForEach-Object {$form.FindName($_)}
 $form.Icon=[Windows.Media.Imaging.BitmapFrame]::Create([uri](Join-Path $PSScriptRoot 'OptiShade-app.ico'))
 $form.FindName('BrandIcon').Source=[Windows.Media.Imaging.BitmapFrame]::Create([uri](Join-Path $PSScriptRoot 'OptiShade-icon.png'))
 $form.FindName('BrandIcon').Cursor='SizeAll'
@@ -56,6 +56,7 @@ $form.FindName('Minimize').Add_Click({$form.WindowState='Minimized'})
 $script:busy=$false
 $form.FindName('RevertUpdate').Add_Click({
  if($script:busy){return}
+ if($env:OPTISHADE_PORTABLE -eq '1'){[void][Windows.MessageBox]::Show($form,'Portable version changes require a separate portable folder. Keep the existing folder and Data as your recovery copy. Extract the selected version to a new folder, copy Data, and keep portable.txt beside its EXE. Update each supported game in Setup. X-Plane requires the beta manager. No game or channel setting has changed.','Portable version change');return}
  try{$selected=ShowOptiShadeRevert $form;if($selected){StartManagerUpdate $selected -ReturnToStable}}
  catch{$status.Text=$_.Exception.Message;$status.Foreground='#FFBE83'}
 })
@@ -74,21 +75,35 @@ function StartManagerUpdate($Update,[switch]$ReturnToStable){
   return
  }
  if(Get-Process FlightSimulator2024,FlightSimulator,X-Plane -ErrorAction SilentlyContinue){$status.Text='Close all simulators before changing versions.';return}
- if($Update.Rollback -and [version]$Update.Version -lt [version]'0.21'){
-  foreach($record in Get-ChildItem -LiteralPath (Join-Path $store 'Games') -Filter manifest.json -Recurse -File -ErrorAction SilentlyContinue){
-   $installed=Get-Content -LiteralPath $record.FullName -Raw|ConvertFrom-Json
-   if($installed.Status -eq 'Installed' -and (Test-Path -LiteralPath (Join-Path $installed.Game 'X-Plane.exe'))){$status.Text='This build does not support X-Plane 12. Restore X-Plane original files in Setup before reverting to a version below 0.21. No files were changed.';return}
+ $channelPlan=$null;$planPath=$null
+ try{
+  $channelPlan=NewOptiShadeChannelPlan $store ([string]$Update.Version)
+  if($channelPlan.RestoreXPlane.Count){
+   if(-not $channelPlan.Supported.Count){[void][Windows.MessageBox]::Show($form,'Only X-Plane installations are recorded. Stable does not support them. Keep this beta manager for Play and Restore; no installation or manager has been changed.','Return to stable');return}
+   $review="Stable will update $($channelPlan.Supported.Count) supported installation(s). X-Plane is beta-only. Continue by restoring only the recorded OptiShade files for these X-Plane installations first? Presets are kept. If the later update fails, these games remain restored and this beta manager remains usable.`n`n"+($channelPlan.RestoreXPlane.Game -join "`n")
+   if([Windows.MessageBox]::Show($form,$review,'Review return to stable','YesNo','Warning','No') -ne 'Yes'){return}
+   $planPath=Join-Path $store ('Updates/plan-'+[guid]::NewGuid().ToString('N')+'.json');[void][IO.Directory]::CreateDirectory((Split-Path $planPath))
+   $channelPlan.Phase='Restoring approved X-Plane installations';WriteState $channelPlan $planPath
+   foreach($entry in $channelPlan.RestoreXPlane){
+    if((Get-FileHash -LiteralPath $entry.Receipt -Algorithm SHA256).Hash -ne $entry.ReceiptHash){throw 'An installation changed after review. Reopen the version-change dialog.'}
+    RestoreFusion $entry.Receipt -KeepPresets $true
+    $entry['Outcome']='Restored';WriteState $channelPlan $planPath
+   }
+   $channelPlan.Phase='X-Plane restored; manager update not yet applied';WriteState $channelPlan $planPath
   }
- }
+ }catch{if($channelPlan -and $planPath){$channelPlan.Phase='Stopped: '+$_.Exception.Message;WriteState $channelPlan $planPath};$status.Text=$_.Exception.Message;[void][Windows.MessageBox]::Show($form,$status.Text,'Version change stopped');return}
+
  $updateDir=Join-Path $store ('Updates/'+[guid]::NewGuid().ToString('N'));New-Item -ItemType Directory -Path $updateDir -Force|Out-Null
  $worker=Join-Path $updateDir 'update-worker.ps1';Copy-Item -LiteralPath "$PSScriptRoot/update-worker.ps1" -Destination $worker
  Copy-Item -LiteralPath "$PSScriptRoot/dialog-theme.xaml" -Destination (Join-Path $updateDir 'dialog-theme.xaml')
  Copy-Item -LiteralPath "$PSScriptRoot/update-lifecycle.ps1" -Destination (Join-Path $updateDir 'update-lifecycle.ps1')
+ Copy-Item -LiteralPath "$PSScriptRoot/json-state.ps1" -Destination (Join-Path $updateDir 'json-state.ps1')
  $config=Join-Path $updateDir 'update.json';$Update|Add-Member -NotePropertyName Installer -NotePropertyValue $Installer -Force
  $Update|Add-Member -NotePropertyName Desktop -NotePropertyValue ([Environment]::GetFolderPath('DesktopDirectory')) -Force
  $Update|Add-Member -NotePropertyName PreviousHash -NotePropertyValue ((Get-FileHash -LiteralPath $Installer -Algorithm SHA256).Hash) -Force
  $Update|Add-Member -NotePropertyName Store -NotePropertyValue $store -Force
- $Update|ConvertTo-Json|Set-Content -LiteralPath $config -Encoding UTF8
+ $Update|Add-Member -NotePropertyName InstallationPlan -NotePropertyValue $channelPlan -Force
+ WriteState $Update $config
  $hostExe=Join-Path $updateDir 'OptiShade_updater.exe';Copy-Item -LiteralPath "$PSScriptRoot/FusionSetup.exe" -Destination $hostExe
  try{Start-Process -FilePath $hostExe -ArgumentList @('--update-worker',('"'+$config+'"')) -WindowStyle Hidden -Verb RunAs;$form.Close()}
  catch{$status.Text='The updater could not start or administrator access was cancelled. No update was applied. '+$_.Exception.Message}
@@ -120,7 +135,7 @@ $form.FindName('OwnIniMode').Add_Checked({$form.FindName('OwnIniPicker').Visibil
 $form.FindName('IncludeEffects').Add_Checked({$form.FindName('OwnIniPicker').Visibility='Collapsed'})
 $form.FindName('ChooseOwnIni').Add_Click({$d=New-Object Windows.Forms.OpenFileDialog;$d.Filter='ReShade look preset (*.ini)|*.ini';try{if($d.ShowDialog() -eq 'OK'){$script:ownIni=$d.FileName;$form.FindName('OwnIniName').Text=[IO.Path]::GetFileName($d.FileName)}}finally{$d.Dispose()}})
 $form.FindName('ApplyFxChoice').Add_Click({RunAction {
- AssertClosed $path.Text;$mp=ManifestPath $store $path.Text;$m=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json
+ AssertClosed $path.Text;$mp=ManifestPath $store $path.Text;$m=ReadOptiShadeState $mp
  if($m.Status -ne 'Installed'){throw 'Complete the OptiShade installation first.'}
  $relative='';if($form.FindName('OwnIniMode').IsChecked){$relative=SaveOwnPreset $script:ownIni $path.Text (Join-Path $PSScriptRoot 'EffectPackages.ini')}
  $m|Add-Member -NotePropertyName IncludeEffects -NotePropertyValue ([bool]$form.FindName('IncludeEffects').IsChecked) -Force
@@ -129,13 +144,13 @@ $form.FindName('ApplyFxChoice').Add_Click({RunAction {
 }})
 $form.FindName('Install').Add_Click({RunAction {
  if((GetFusionInstallState $store $path.Text) -match '^Installed'){
-  $mp=ManifestPath $store $path.Text;$previous=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json
+  $mp=ManifestPath $store $path.Text;$previous=ReadOptiShadeState $mp
   if(-not(TestBundledUpdateVersion $previous) -and -not(TestOptiShadeChannelChange $previous.Version (GetBundledOptiShadeVersion))){throw 'This manager does not contain a newer version. Use the manager matching the installed version for Repair.'}
   if([Windows.MessageBox]::Show($form,'Update this installation using the files in this manager? Saved presets, settings and original backups are kept. Close the simulator first.','Update OptiShade','YesNo','Question','No') -ne 'Yes'){return}
   $proxy=@($previous.Files|Where-Object SourcePath -eq 'winmm.dll'|Select-Object -First 1).Path
   if(-not $proxy){throw 'The recorded loader is unknown. Update stopped.'}
   $mp=InstallFusion $path.Text $Payload $store $Installer $proxy @(FindFusionConflicts $path.Text) -ReplaceExisting $true -PreserveConfiguration $true
-  $updated=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json
+  $updated=ReadOptiShadeState $mp
   foreach($key in @('LaunchExe','Downloads','OptionalDlss','FxPresetRelative')){if($previous.PSObject.Properties[$key]){$updated|Add-Member -NotePropertyName $key -NotePropertyValue $previous.$key -Force}}
   WriteState $updated $mp;$status.Text='OptiShade updated from this manager. Settings and presets kept. No Restore is required.';CompleteManualManagerInstall $mp $previous;return
  }
@@ -161,29 +176,50 @@ $form.FindName('Install').Add_Click({RunAction {
   $message="ReShade / OptiShade files detected. Remove conflicting files from the game folder, then install OptiShade? Replaced files will be included in the restore backup. Saved INI files are kept.`n`n"+$message
   if([Windows.MessageBox]::Show($form,$message,'Reinstall or replace graphics mods','YesNo','Question','No') -ne 'Yes'){return}
  }
- $manualPrevious=$null;$manualRecord=ManifestPath $store $path.Text;if(Test-Path -LiteralPath $manualRecord){$manualPrevious=Get-Content -LiteralPath $manualRecord -Raw|ConvertFrom-Json}
+ $manualPrevious=$null;$manualRecord=ManifestPath $store $path.Text;if(Test-Path -LiteralPath $manualRecord){$manualPrevious=ReadOptiShadeState $manualRecord}
  $script:manifest=InstallFusion $path.Text $Payload $store $Installer $proxy $replace -ReplaceExisting $existing -IncludeEffects ([bool]$form.FindName('IncludeEffects').IsChecked)
- $m=Get-Content $script:manifest -Raw|ConvertFrom-Json;$m|Add-Member -NotePropertyName LaunchExe -NotePropertyValue $exe -Force;$m|Add-Member -NotePropertyName Downloads -NotePropertyValue 'Pending' -Force;$m|Add-Member -NotePropertyName OptionalDlss -NotePropertyValue ([bool]$optionalDlss) -Force;WriteState $m $script:manifest
+ $m=ReadOptiShadeState $script:manifest;$m|Add-Member -NotePropertyName LaunchExe -NotePropertyValue $exe -Force;$m|Add-Member -NotePropertyName Downloads -NotePropertyValue 'Pending' -Force;$m|Add-Member -NotePropertyName OptionalDlss -NotePropertyValue ([bool]$optionalDlss) -Force;WriteState $m $script:manifest
  SaveFusionCompatibility $path.Text $plan
  if($form.FindName('OwnIniMode').IsChecked){$relative=SaveOwnPreset $script:ownIni $path.Text (Join-Path $PSScriptRoot 'EffectPackages.ini');$m|Add-Member -NotePropertyName FxPresetRelative -NotePropertyValue $relative -Force;WriteState $m $script:manifest}
  FinishOptionalDownloads $m $plan
  CompleteManualManagerInstall $script:manifest $manualPrevious
 }})
-$form.FindName('Restore').Add_Click({RunAction {$m=ManifestPath $store $path.Text;if(-not(Test-Path $m)){throw 'No recorded installation for this game.'};RestoreFusion $m;$status.Text='Game restored. Original files are back and OptiShade game files are removed.';$restored=Get-Content -LiteralPath $m -Raw|ConvertFrom-Json;if($restored.RecoveredShaders){$status.Text+=' Edited shaders saved in: '+$restored.RecoveredShaders}}})
+$form.FindName('Restore').Add_Click({RunAction {$m=ManifestPath $store $path.Text;if(-not(Test-Path $m)){throw 'No recorded installation for this game.'};RestoreFusion $m;$status.Text='Game restored. Original files are back and OptiShade game files are removed.';$restored=ReadOptiShadeState $m;if($restored.RecoveredShaders){$status.Text+=' Edited shaders saved in: '+$restored.RecoveredShaders}}})
 $form.FindName('PrepareMfg').Add_Click({RunAction {
  $mp=ManifestPath $store $path.Text
  if(-not(Test-Path -LiteralPath $mp)){throw 'Install OptiShade in this game first.'}
- if([Windows.MessageBox]::Show($form,'Enable experimental RTX 40 MFG by dashdogy / Michael Robles? This installs a separate loader and hands frame generation to RTXMFG. Competing built-in unlocks will be disabled. Restart the game, enable its DLSS Frame Generation, then use the RTXMFG menu (Backspace). Game support and multipliers vary; RTX 4060/4070 Ti output has not been verified here. Restore OptiShade removes this component.','Optional RTX 40 MFG','YesNo','Question','No') -ne 'Yes'){return}
+ if([Windows.MessageBox]::Show($form,'Prepare or repair MFG for this installation? Stable uses the established RTX 40 provider for new installations and repairs already-recorded source providers. Existing owned files and settings are backed up. Restart and enable native DLSS Frame Generation; installation does not confirm generated output.','Prepare or repair MFG','YesNo','Question','No') -ne 'Yes'){return}
  InstallOptionalMfg $mp $Payload @((GetFusionGpu).Names)
- $status.Text='Optional RTXMFG installed. Restart the game and enable native DLSS Frame Generation. Backspace opens its menu. Begin at 2x, then test higher multipliers. This does not enable the separate Enabler output.'
+ $status.Text='MFG component installed. Restart, enable native DLSS Frame Generation and use Performance > Multi Frame Generation in OptiShade. Installation is not proof of generated output.'
+}})
+$form.FindName('ChooseNeuralGpu').Add_Click({RunAction {
+ $mp=ManifestPath $store $path.Text
+ if(-not(Test-Path -LiteralPath $mp)){throw 'Install OptiShade for this game first.'}
+ AssertClosed $path.Text
+ $record=ReadOptiShadeState $mp
+ $cards=@((GetFusionGpu).Names -split ',\s*'|Where-Object {$_ -match '(?i)NVIDIA.*RTX'})
+ if(-not $cards.Count){throw 'No supported RTX GPU was detected. Ordinary image effects remain available.'}
+ [xml]$markup='<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="Game GPU" Width="580" SizeToContent="Height" WindowStartupLocation="CenterOwner" Background="#171020" Foreground="#F3EFFB"><StackPanel Margin="24"><TextBlock Text="Choose the GPU this game renders on" FontSize="22"/><TextBlock Text="This is your per-game choice, not a detected active renderer. Check the simulator GPU setting. No model is downloaded until you retry downloads, and no GPU drivers are changed." TextWrapping="Wrap" Margin="0,12"/><ComboBox Name="Cards" Margin="0,0,0,16"/><Button Name="Save" Content="Save game GPU choice"/></StackPanel></Window>'
+ $dialog=[Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($markup));$dialog.Owner=$form
+ $dialog.Resources.MergedDictionaries.Add($form.Resources)
+ $picker=$dialog.FindName('Cards');foreach($card in $cards){[void]$picker.Items.Add($card)}
+ if($record.NeuralGpuName -in $cards){$picker.SelectedItem=$record.NeuralGpuName}
+ $dialog.FindName('Save').Add_Click({if($picker.SelectedItem){$dialog.DialogResult=$true}})
+ if($dialog.ShowDialog()){
+  [void](GetNeuralDownload (GetFusionGpu) ([string]$picker.SelectedItem))
+  $record|Add-Member -NotePropertyName NeuralGpuName -NotePropertyValue ([string]$picker.SelectedItem) -Force
+  $record|Add-Member -NotePropertyName NeuralGpuSelection -NotePropertyValue 'User selected; active renderer not observed' -Force
+  WriteState $record $mp
+  $status.Text='Game GPU choice saved. Retry unfinished downloads to acquire its verified model. If the game rendering GPU changes, choose it again.'
+ }
 }})
 $form.FindName('PrepareOlderRtx').Add_Click({RunAction {
  $m=ManifestPath $store $path.Text
  if(-not(Test-Path -LiteralPath $m)){throw 'Install OptiShade in this game first.'}
- $gpu=GetFusionGpu;$selection=GetNeuralDownload $gpu
- if($selection.Family -notmatch '20/30/40'){throw 'This test is for a single detected RTX 20, 30 or 40 GPU. RTX 50 uses its existing runtime.'}
+ $gpu=GetFusionGpu;$gpuRecord=ReadOptiShadeState $m;$selection=GetNeuralDownload $gpu ([string]$gpuRecord.NeuralGpuName)
+ if($selection.Family -notmatch '20/30/40'){throw 'This test is for a selected RTX 20, 30 or 40 GPU. RTX 50 uses its existing runtime.'}
  if([Windows.MessageBox]::Show($form,'Prepare the hash-verified community compatibility model (not NVIDIA-signed) for older RTX hardware? This is experimental and may fail initialization or run too slowly. It is not native RTX 50 support. The test uses one pass and keeps Neural Rendering off at startup. Other picture settings are kept.','Older RTX compatibility test','YesNo','Question','No') -ne 'Yes'){return}
- $record=Get-Content -LiteralPath $m -Raw|ConvertFrom-Json
+ $record=ReadOptiShadeState $m
  $downloadsBefore=$record.Downloads
  if($record.Status -ne 'Installed'){throw 'Complete or repair this installation before preparing the test.'}
  AssertClosed $path.Text
@@ -192,30 +228,30 @@ $form.FindName('PrepareOlderRtx').Add_Click({RunAction {
  EnsureNeuralRuntime $m $gpu $progress
  InstallNvidia $path.Text $progress
  SetOlderRtxTestSettings $path.Text
- $record=Get-Content -LiteralPath $m -Raw|ConvertFrom-Json
+ $record=ReadOptiShadeState $m
  $record|Add-Member -NotePropertyName OptionalDlss -NotePropertyValue $true -Force;WriteState $record $m
  if($downloadsBefore -eq 'Complete'){$record|Add-Member -NotePropertyName Downloads -NotePropertyValue 'Complete' -Force;WriteState $record $m}
  $status.Text='Older RTX model prepared. Use Retry unfinished downloads if other optional packages remain pending. Start DX12 with DLSS, enter a flight, then enable Neural Rendering manually. If it fails, leave it off and export diagnostics. No native older-RTX support is claimed.'
 }})
-$form.FindName('Runtime').Add_Click({RunAction {$m=ManifestPath $store $path.Text;if(-not(Test-Path $m)){throw 'Install OptiShade first.'};$installed=Get-Content $m -Raw|ConvertFrom-Json;$plan=CheckGameCompatibility $installed.LaunchExe;if(-not $plan.DownloadNvidia){throw $plan.NeuralRendering};$d=New-Object Windows.Forms.OpenFileDialog;$d.Title='Choose '+$plan.NeuralRuntime.Expected;$d.Filter='NVIDIA NR model (not the helper)|nvngx_dlssnr.dll';if($d.ShowDialog() -eq 'OK'){ImportNrRuntime $m $d.FileName;$installed|Add-Member -NotePropertyName OptionalDlss -NotePropertyValue $true -Force;$latest=Get-Content $m -Raw|ConvertFrom-Json;$latest|Add-Member -NotePropertyName OptionalDlss -NotePropertyValue $true -Force;WriteState $latest $m;$status.Text='Model file added. It is not running yet: a supported game connection is still required.'};$d.Dispose()}})
+$form.FindName('Runtime').Add_Click({RunAction {$m=ManifestPath $store $path.Text;if(-not(Test-Path $m)){throw 'Install OptiShade first.'};$installed=ReadOptiShadeState $m;$plan=CheckGameCompatibility $installed.LaunchExe;if(-not $plan.DownloadNvidia){throw $plan.NeuralRendering};$d=New-Object Windows.Forms.OpenFileDialog;$d.Title='Choose '+$plan.NeuralRuntime.Expected;$d.Filter='NVIDIA NR model (not the helper)|nvngx_dlssnr.dll';if($d.ShowDialog() -eq 'OK'){ImportNrRuntime $m $d.FileName;$installed|Add-Member -NotePropertyName OptionalDlss -NotePropertyValue $true -Force;$latest=ReadOptiShadeState $m;$latest|Add-Member -NotePropertyName OptionalDlss -NotePropertyValue $true -Force;WriteState $latest $m;$status.Text='Model file added. It is not running yet: a supported game connection is still required.'};$d.Dispose()}})
 $form.FindName('Uninstall').Add_Click({RunAction {
  $choice=ShowUninstallOptions $form;if(-not $choice){return}
  RemoveSelectedOptiShadeData $store $Installer $PSScriptRoot -AppFiles $choice.AppFiles -IniFiles $choice.IniFiles -Snapshots $choice.Snapshots
  if($choice.AppFiles){$script:uninstallDone=$true;$status.Text='OptiShade removed. Your original installer EXE is kept.';$script:busy=$false;$form.Close()}
  else{$status.Text='Selected OptiShade files removed. The app remains installed.'}
 }})
-$form.FindName('Retry').Add_Click({RunAction {$m=Get-Content (ManifestPath $store $path.Text) -Raw|ConvertFrom-Json;if($m.Status -ne 'Installed'){throw 'Install OptiShade first.'};AssertClosed $path.Text;$plan=CheckGameCompatibility $m.LaunchExe;SaveFusionCompatibility $path.Text $plan;FinishOptionalDownloads $m $plan}})
+$form.FindName('Retry').Add_Click({RunAction {$m=ReadOptiShadeState (ManifestPath $store $path.Text);if($m.Status -ne 'Installed'){throw 'Install OptiShade first.'};AssertClosed $path.Text;$plan=CheckGameCompatibility $m.LaunchExe;SaveFusionCompatibility $path.Text $plan;FinishOptionalDownloads $m $plan}})
 $form.FindName('Repair').Add_Click({RunAction {
  $mp=ManifestPath $store $path.Text
  if(-not(Test-Path -LiteralPath $mp)){throw 'No installation record. Use Install to remove conflicting mods and install OptiShade.'}
- $previous=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json
+ $previous=ReadOptiShadeState $mp
  if($previous.Status -notin @('Installed','Installing')){throw 'No repairable installation record. Restore the recorded installation first, then install again.'}
  AssertRepairVersion $previous
  if([Windows.MessageBox]::Show($form,'Repair OptiShade from this installer? Core files will be replaced. Existing configuration and menu keys are kept. Your saved INI presets are kept. Original pre-install backups are preserved.','Repair OptiShade','YesNo','Question','No') -ne 'Yes'){return}
  $proxy=@($previous.Files|Where-Object SourcePath -eq 'winmm.dll'|Select-Object -First 1).Path
  if(-not $proxy){throw 'The recorded loader is unknown. Repair was stopped.'}
  $mp=InstallFusion $path.Text $Payload $store $Installer $proxy @(FindFusionConflicts $path.Text) -ReplaceExisting $true -PreserveConfiguration $true
- $repaired=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json
+ $repaired=ReadOptiShadeState $mp
  foreach($key in @('LaunchExe','Downloads','OptionalDlss','FxPresetRelative')){if($previous.PSObject.Properties[$key]){$repaired|Add-Member -NotePropertyName $key -NotePropertyValue $previous.$key -Force}}
  WriteState $repaired $mp
  $status.Text='OptiShade repaired from the manager. Saved looks and original backups are kept. You can close the manager and start your game.'
@@ -228,7 +264,7 @@ function FinishOptionalDownloads($Manifest,$Plan){
  if(-not $Manifest.PSObject.Properties['IncludeEffects'] -or $Manifest.IncludeEffects){try{$null=InstallAllEffects $path.Text (Join-Path $PSScriptRoot 'EffectPackages.ini') $progress}catch{$issues.Add('Additional FX: '+$_.Exception.Message)}}
  elseif($Manifest.PSObject.Properties['FxPresetRelative'] -and $Manifest.FxPresetRelative){try{$progress.Invoke('Installing the selected INI shader dependencies...');$presetWarning=InstallPresetDependencies (OwnedPath $path.Text $Manifest.FxPresetRelative) $path.Text (Join-Path $PSScriptRoot 'EffectPackages.ini')}catch{$issues.Add('Preset FX: '+$_.Exception.Message)}}
  if($issues.Count){
-  $mp=ManifestPath $store $path.Text;$m=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json
+  $mp=ManifestPath $store $path.Text;$m=ReadOptiShadeState $mp
   $m|Add-Member -NotePropertyName Downloads -NotePropertyValue 'Pending' -Force;WriteState $m $mp
   foreach($issue in $issues){WriteInstallerLog $issue}
   $status.Text='OptiShade is installed. Some optional downloads are unfinished; installed effects can still be used. Choose Retry unfinished downloads. Details: %LOCALAPPDATA%\OptiShade\Installer.log'
@@ -254,7 +290,8 @@ function CheckGameCompatibility([string]$exe){
 }
 $form.FindName('CheckCompatibility').Add_Click({RunAction {$exe=ChooseGameExe;if($exe){$plan=CheckGameCompatibility $exe;$status.Text='Check complete. Found files are clues, not confirmation a feature works in game.'}}})
 $path.Add_TextChanged({$form.FindName('Compatibility').Text='Check this game before installing. Automatic setup also checks again at install time.';RefreshHomeState})
-function CompleteDownloads{$mp=ManifestPath $store $path.Text;$m=Get-Content $mp -Raw|ConvertFrom-Json;$m|Add-Member -NotePropertyName Downloads -NotePropertyValue 'Complete' -Force;WriteState $m $mp;$status.Text='Install complete. You can close the manager and start your game.'}
+$form.FindName('ResetDownloadCache').Add_Click({RunAction {$status.Text=ResetOptiShadeDownloadCache $store}})
+function CompleteDownloads{$mp=ManifestPath $store $path.Text;$m=ReadOptiShadeState $mp;$m|Add-Member -NotePropertyName Downloads -NotePropertyValue 'Complete' -Force;WriteState $m $mp;$status.Text='Install complete. You can close the manager and start your game.'}
 function ShowPage([string]$name){
  if($name -ne 'Keybinds'){CancelSnapshotCapture;$script:capturingHotSwap=$false;$form.FindName('ChangeHotSwapKey').Content='Change'}
  if($name -ne 'Keybinds' -and $script:capturingMenuKey){$script:capturingMenuKey=$false;$form.FindName('ChangeMenuKey').Content='Change'}
@@ -271,12 +308,12 @@ function ShowGames($games){
  $script:libraryGames=$cards;$form.FindName('LibraryGames').ItemsSource=$cards
 }
 function RefreshHomeState{
- $form.FindName('MfgStatus').Text='RTX 40 MFG is installed automatically when compatible. Other GPU families keep their supported native options.'
- try{if($path.Text){$mfgRecord=Get-Content -LiteralPath (ManifestPath $store $path.Text) -Raw|ConvertFrom-Json;if($mfgRecord.AutomaticMfgStatus){$form.FindName('MfgStatus').Text=$mfgRecord.AutomaticMfgStatus}elseif($mfgRecord.OptionalMfg){$form.FindName('MfgStatus').Text='RTX 40 MFG component installed. Enable native DLSS Frame Generation in game; Backspace opens its menu. Multipliers depend on the game and GPU.'}}}catch{}
+ $form.FindName('MfgStatus').Text='Stable prepares the established RTX 40 MFG provider. Existing recorded source providers can be repaired. RTX 50 and other GPUs retain their existing options; actual output depends on the game connection.'
+ try{if($path.Text){$mfgRecord=ReadOptiShadeState (ManifestPath $store $path.Text);if($mfgRecord.AutomaticMfgStatus){$form.FindName('MfgStatus').Text=$mfgRecord.AutomaticMfgStatus}elseif($mfgRecord.OptionalMfg){$form.FindName('MfgStatus').Text='Established RTX 40 MFG component retained. Use the OptiShade Performance panel; game support and multipliers vary.'}}}catch{}
  try{$state=if($path.Text){GetFusionInstallState $store $path.Text}else{'Not installed'}}catch{$state='Invalid path'}
  $installed=$state -match '^Installed';$incomplete=$state -match '^Installation incomplete'
  $upgrade=$false;$channelChange=$false
- if($installed){try{$record=Get-Content -LiteralPath (ManifestPath $store $path.Text) -Raw|ConvertFrom-Json;$channelChange=TestOptiShadeChannelChange $record.Version (GetBundledOptiShadeVersion);$upgrade=(TestBundledUpdateVersion $record) -or $channelChange}catch{}}
+ if($installed){try{$record=ReadOptiShadeState (ManifestPath $store $path.Text);$channelChange=TestOptiShadeChannelChange $record.Version (GetBundledOptiShadeVersion);$upgrade=(TestBundledUpdateVersion $record) -or $channelChange}catch{}}
  $install=$form.FindName('Install');$install.Content=if($channelChange){if((GetBundledOptiShadeVersion) -match '-(?:alpha|beta|rc)'){'Switch to beta'}else{'Switch to stable'}}elseif($upgrade){'Update OptiShade'}elseif($installed){'Already installed'}elseif($incomplete){'Repair required'}else{'Install OptiShade'}
  $install.IsEnabled=(-not $script:busy -and (-not $installed -or $upgrade) -and -not $incomplete -and $state -ne 'Invalid path' -and -not [string]::IsNullOrWhiteSpace($path.Text))
  $form.FindName('ApplyFxChoice').Visibility=if($installed){'Visible'}else{'Collapsed'}
@@ -367,7 +404,7 @@ $form.FindName('Scan').Add_Click({RunAction {
 }})
 $form.FindName('Play').Add_Click({RunAction {
  $mp=ManifestPath $store $path.Text;$exe=$null
- if(Test-Path -LiteralPath $mp){$m=Get-Content $mp -Raw|ConvertFrom-Json;$exe=$m.LaunchExe}
+ if(Test-Path -LiteralPath $mp){$m=ReadOptiShadeState $mp;$exe=$m.LaunchExe}
  if(-not $exe -or -not(Test-Path -LiteralPath $exe)){$exe=ChooseGameExe}
  if($exe){AssertFusionExecutable $exe;if((Split-Path $exe -Leaf) -eq 'X-Plane.exe'){StartOptiShadeXPlane $exe}else{Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe)};$status.Text='Launch requested. X-Plane must be launched using Play here for the OptiShade Vulkan layer. Restore only after closing the game.'}
 }})
@@ -376,8 +413,7 @@ $script:gpu=[pscustomobject]@{Names='Checking';Nvidia=$false;Known=$false}
 $script:startup=[PowerShell]::Create()
 function SaveStartupCache($data){
  New-Item -ItemType Directory -Path $store -Force|Out-Null
- $data|ConvertTo-Json -Depth 7|Set-Content -LiteralPath ($script:cachePath+'.tmp') -Encoding UTF8
- Move-Item -LiteralPath ($script:cachePath+'.tmp') -Destination $script:cachePath -Force
+ WriteState $data $script:cachePath
 }
 [void]$script:startup.AddScript({param($lib,$store,$cache)
  . $lib
@@ -522,7 +558,7 @@ function CaptureActionKey($event,[bool]$KeyUp=$false) {
 $form.Add_PreviewKeyDown({CaptureActionKey $_})
 $form.Add_PreviewKeyUp({CaptureActionKey $_ $true})
 $form.Add_Deactivated({CancelSnapshotCapture})
-$form.FindName('BrowseSnapshots').Add_Click({RunAction {if([string]::IsNullOrWhiteSpace($path.Text)){throw 'Select your game in Setup first.'};$folder=OwnedPath $path.Text 'Optishade Snapshots';[IO.Directory]::CreateDirectory($folder)|Out-Null;Start-Process -FilePath (Join-Path $env:WINDIR 'explorer.exe') -ArgumentList ('"'+$folder+'"')}})
+$form.FindName('BrowseSnapshots').Add_Click({RunAction {if([string]::IsNullOrWhiteSpace($path.Text)){throw 'Select your game in Setup first.'};$parent=$path.Text;$preferences=OwnedPath $path.Text 'OptiShadeData/Snapshot-settings.ini';if(Test-Path -LiteralPath $preferences){if((Get-Item -LiteralPath $preferences).Length -gt 65536){throw 'Snapshot settings are oversized.'};foreach($line in [IO.File]::ReadAllLines($preferences)){if($line -match '^Directory=(.+)$'){$parent=$Matches[1]}}};$folder=OwnedPath $parent 'Optishade Snapshots';[IO.Directory]::CreateDirectory($folder)|Out-Null;Start-Process -FilePath (Join-Path $env:WINDIR 'explorer.exe') -ArgumentList ('"'+$folder+'"')}})
 $form.FindName('LoadMenuKeys').Add_Click({RunAction {RefreshMenuKeys;$status.Text='Showing shortcuts for the selected game folder.'}})
 $form.FindName('SaveMenuKeys').Add_Click({RunAction {
  if($script:capturingMenuKey -or -not $script:menuKeyCandidate){throw 'Press a primary menu key first.'}

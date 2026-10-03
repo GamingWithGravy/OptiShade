@@ -1,10 +1,13 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "menu_common.h"
+#include "../../../shared/SnapshotRequest.h"
+#include "../../../shared/SnapshotStorage.h"
 #include "../../../shared/RenderingCapability.h"
 #include "../../../shared/D3D12Capabilities.h"
 #include <imgui/ImGuiNotify.hpp>
 #include <shellapi.h>
 #include "optishade_effects_ui.inl"
+#include "optishade_hardware.inl"
 #include "optishade_mfg_ui.inl"
 #include <framegen/dlssg/MfgUnlock.h>
 #include <framegen/dlssg/AmpereMfgLoader.h>
@@ -1417,7 +1420,7 @@ void MenuCommon::HandleMenuShortcuts(RenderMenuContext& ctx)
         if (inputDlssNr)
         {
             inputDlssNr = false;
-            config->DlssNrEnabled = !config->DlssNrEnabled.value_or_default();
+            DlssNr::SetEnabled(!config->DlssNrEnabled.value_or_default());
             LOG_DEBUG("Neural Rendering toggle key pressed, setting DlssNrEnabled to {}",
                       config->DlssNrEnabled.value_or_default());
 
@@ -1575,7 +1578,7 @@ void MenuCommon::BeginMenuFrameIfNeeded(RenderMenuContext& ctx)
                                DlssNr::ExposureScan::Where() != DlssNr::ExposureScan::Verdict::Off;
 
     if ((!config->DisableSplash.value_or_default() && now > splashStart && now < splashLimit) ||
-        OptiShadeUI::NeedsStartupFrame() || config->ShowFps.value_or_default() || _isVisible || ImGui::notifications.size() > 0 || scanIndicator ||
+        OptiShadeHardware::Enabled() || OptiShadeUI::NeedsStartupFrame() || config->ShowFps.value_or_default() || _isVisible || ImGui::notifications.size() > 0 || scanIndicator ||
         (config->DlssNrCompare.value_or_default() != 0 && config->DlssNrCompareTags.value_or_default()))
     {
         if (!_isUWP)
@@ -7221,12 +7224,22 @@ void OptiShadeUI::DrawSnapshotKeybind(){
  ImGui::PushTextWrapPos();
  if(SnapshotConflict(value.value_or_default()))ImGui::TextColored(ImVec4(1,.4f,.3f,1),"Choose a key that is not assigned to another OptiShade action.");
  ImGui::PopTextWrapPos();
- auto folder=Util::DllPath().parent_path()/L"Optishade Snapshots";
+ if(ImGui::Button("Take screenshot"))PollSnapshot(true,true);
+ const auto game=Util::DllPath().parent_path();
+ static char destination[4096]{};static bool initialized=false,jpeg=false;static int jpegQuality=90;static std::string preferenceStatus;
+ if(!initialized){try{const auto saved=optishade::snapshot::settings(game);strncpy_s(destination,optishade::snapshot::utf8(saved.parent).c_str(),_TRUNCATE);jpeg=saved.jpeg;jpegQuality=saved.quality;}catch(const std::exception& e){preferenceStatus=e.what();}initialized=true;}
+ ImGui::InputText("Snapshot parent folder",destination,sizeof(destination));
+ int format=jpeg?1:0;if(ImGui::Combo("Image format",&format,"PNG (lossless)\0JPEG (smaller)\0"))jpeg=format==1;
+ if(jpeg)ImGui::SliderInt("JPEG quality",&jpegQuality,1,100,"%d",ImGuiSliderFlags_AlwaysClamp);
+ if(ImGui::Button("Save snapshot options")){try{optishade::snapshot::save_settings(game,{std::filesystem::u8path(destination),jpeg,jpegQuality});preferenceStatus="Snapshot options saved.";}catch(const std::exception& e){preferenceStatus=e.what();}}
+ if(!preferenceStatus.empty())ImGui::TextWrapped("%s",preferenceStatus.c_str());
+ std::filesystem::path folder;
+ try{folder=optishade::snapshot::folder(optishade::snapshot::utf8(optishade::snapshot::settings(game).parent));}catch(...){folder=game/L"Optishade Snapshots";}
  if(ImGui::Button("Browse screenshots")){
   std::error_code ec;std::filesystem::create_directories(folder,ec);
   if(ec||reinterpret_cast<INT_PTR>(ShellExecuteW(nullptr,L"open",folder.c_str(),nullptr,nullptr,SW_SHOWNORMAL))<=32)SnapshotNotice(false,"Could not open the game's Optishade Snapshots folder.");
  }
- ImGui::TextWrapped("Saved as PNG inside Optishade Snapshots in this game's installation folder. Save settings to keep your keybind.");
+ ImGui::TextWrapped("Saved inside Optishade Snapshots under your selected existing folder. HDR captures use PNG to preserve range. Save settings to keep your keybind.");
  ImGui::TextWrapped("Turn Num Lock on for number-pad digits. With Num Lock off they act as navigation keys and may conflict with another shortcut.");
 }
 void OptiShadeUI::DrawHotSwapKeybind(){auto& value=Config::Instance()->PresetHotSwapKey;static auto key=Keybind("Preset hotswap",15);key.Render(value);ImGui::TextWrapped("Save settings to keep this key. Escape cancels; Backspace clears it.");}
@@ -7934,6 +7947,7 @@ void MenuCommon::RenderMainMenuWindow(RenderMenuContext& ctx)
                 ImGui::EndCombo();
             }
             ImGui::TextWrapped("Enlarges menu text and controls. Auto uses 200%% at native 4K. Save settings to keep this choice for this game.");
+            OptiShadeHardware::Settings();
             ImGui::SeparatorText("FPS overlay");
             bool showFps=config->ShowFps.value_or_default();
             if(OptiShadeUI::EffectSwitch("Show FPS",showFps)){config->ShowFps=!showFps;saved=false;}
@@ -8124,6 +8138,7 @@ bool MenuCommon::RenderMenu()
     RenderNotifications(ctx);
     UpdateFrameTimeAverages(ctx);
     RenderPerformanceOverlay(ctx);
+    if(ctx.newFrame)OptiShadeHardware::Draw(_isVisible,ctx.menuResScale);
     RenderExposureScanIndicator(ctx.config->FpsOverlayAlpha.value_or_default());
 
     // 4) Draw the full settings menu last so popups and child windows keep their existing behavior.
