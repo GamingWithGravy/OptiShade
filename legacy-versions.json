@@ -1,0 +1,135 @@
+{
+  "schema": 1,
+  "product": "OptiShade",
+  "description": "Verified 0.x legacy release executables",
+  "versions": [
+    {
+      "version": "0.20.3",
+      "channel": "stable",
+      "assetName": "01-OptiShade-0.20.3.exe",
+      "bytes": 219643392,
+      "sha256": "f1bea0c3b3c050413ea039d21983ee2ee6f8da44561eb4c9e3ca4270ac456eff",
+      "downloadUrl": "https://github.com/GamingWithGravy/OptiShade/releases/download/untagged-dfbaaf068344a952889f/01-OptiShade-0.20.3.exe"
+    },
+    {
+      "version": "0.20.4",
+      "channel": "stable",
+      "assetName": "02-OptiShade-0.20.4.exe",
+      "bytes": 219643904,
+      "sha256": "df9be079761c6799810b926ae198b8b1b5e8343ed70e4d4938528cb9e56e2939",
+      "downloadUrl": "https://github.com/GamingWithGravy/OptiShade/releases/download/untagged-dfbaaf068344a952889f/02-OptiShade-0.20.4.exe"
+    },
+    {
+      "version": "0.20.7",
+      "channel": "stable",
+      "assetName": "03-OptiShade-0.20.7.exe",
+      "bytes": 219736576,
+      "sha256": "512cfc0e8c19be8b13031653fa0c347741420cb6b507ab68a4ff6f9600f2e052",
+      "downloadUrl": "https://github.com/GamingWithGravy/OptiShade/releases/download/untagged-dfbaaf068344a952889f/03-OptiShade-0.20.7.exe"
+    },
+    {
+      "version": "0.20.8",
+      "channel": "stable",
+      "assetName": "04-OptiShade-0.20.8.exe",
+      "bytes": 219771904,
+      "sha256": "54768edd25f2cb1d269f0d2bdeeb7b300a45ff17b969c5a4951be6ab05922547",
+      "downloadUrl": "https://github.com/GamingWithGravy/OptiShade/releases/download/untagged-dfbaaf068344a952889f/04-OptiShade-0.20.8.exe"
+    },
+    {
+      "version": "0.20.9",
+      "channel": "stable",
+      "assetName": "05-OptiShade-0.20.9.exe",
+      "bytes": 219779584,
+      "sha256": "6c0b9c8fd10584630b63d76007a019123f472b24676349a3cb0cde71e420cf7d",
+      "downloadUrl": "https://github.com/GamingWithGravy/OptiShade/releases/download/untagged-dfbaaf068344a952889f/05-OptiShade-0.20.9.exe"
+    },
+    {
+      "version": "0.20.10",
+      "channel": "stable",
+      "assetName": "06-OptiShade-0.20.10.exe",
+      "bytes": 219795968,
+      "sha256": "863fc34d1360249272ff7099cbaba4fc62bfea9a45511df939efedf538957615",
+      "downloadUrl": "https://github.com/GamingWithGravy/OptiShade/releases/download/untagged-dfbaaf068344a952889f/06-OptiShade-0.20.10.exe"
+    },
+    {
+      "version": "0.20.11",
+      "channel": "stable",
+      "assetName": "07-OptiShade-0.20.11.exe",
+      "bytes": 219812352,
+      "sha256": "db49c7ccbd2dc6a5f4ef1d8e7b2f472956257c6f75e6ef2df69b1fa8fb234766",
+      "downloadUrl": "https://github.com/GamingWithGravy/OptiShade/releases/download/untagged-dfbaaf068344a952889f/07-OptiShade-0.20.11.exe"
+    },
+    {
+      "version": "0.20.12",
+      "channel": "stable",
+      "assetName": "08-OptiShade-0.20.12.exe",
+      "bytes": 219840512,
+      "sha256": "81aa0377985188b81016ef6a3338d3d05b76b2c50f429e73a8c929d10ae91e24",
+      "downloadUrl": "https://github.com/GamingWithGravy/OptiShade/releases/download/untagged-dfbaaf068344a952889f/08-OptiShade-0.20.12.exe"
+    },
+    {
+      "version": "0.21.2",
+      "channel": "stable",
+      "assetName": "09-OptiShade-0.21.2.exe",
+      "bytes": 225461760,
+      "sha256": "188fbb266ea38eb84f7967bebf55bbc9cf0d896d73a1c2029e7e4e9c8d2a49a6",
+      "downloadUrl": "https://github.com/GamingWithGravy/OptiShade/releases/download/untagged-dfbaaf068344a952889f/09-OptiShade-0.21.2.exe"
+    },
+    {
+      "version": "0.21.3-beta.3",
+      "channel": "beta",
+      "assetName": "10-OptiShade-0.21.3-beta.3.exe",
+      "bytes": 226061312,
+      "sha256": "1d9f61ba43c34ed0b803b8995c922670a112a858cfbcb72b803061c77406a3d2",
+      "downloadUrl": "https://github.com/GamingWithGravy/OptiShade/releases/download/untagged-dfbaaf068344a952889f/10-OptiShade-0.21.3-beta.3.exe"
+    },
+    {
+      "version": "0.21.3-beta.4",
+      "channel": "beta",
+      "assetName": "11-OptiShade-0.21.3-beta.4.exe",
+      "bytes": 226065408,
+      "sha256": "9996b23605290f9f22a09605a42e7bdd2e221c4a8187dbf6fee1e05244226d86",
+      "downloadUrl": "https://github.com/GamingWithGravy/OptiShade/releases/download/untagged-dfbaaf068344a952889f/11-OptiShade-0.21.3-beta.4.exe"
+    },
+    {
+      "version": "0.21.3",
+      "channel": "stable",
+      "assetName": "12-OptiShade-0.21.3.exe",
+      "bytes": 225581568,
+      "sha256": "a1eaf8a19ba9410d7fdd9675d897a0104cf027f52cd552ed959082104e4b81be",
+      "downloadUrl": "https://github.com/GamingWithGravy/OptiShade/releases/download/untagged-dfbaaf068344a952889f/12-OptiShade-0.21.3.exe"
+    },
+    {
+      "version": "0.21.4",
+      "channel": "stable",
+      "assetName": "13-OptiShade-0.21.4.exe",
+      "bytes": 226819072,
+      "sha256": "73380926b1fcbb2cb7eb1d883a3ec7aa2b2f2062f0023348749953118d63d381",
+      "downloadUrl": "https://github.com/GamingWithGravy/OptiShade/releases/download/untagged-dfbaaf068344a952889f/13-OptiShade-0.21.4.exe"
+    },
+    {
+      "version": "0.21.5-beta.1",
+      "channel": "beta",
+      "assetName": "14-OptiShade-0.21.5-beta.1.exe",
+      "bytes": 227338752,
+      "sha256": "0880347bc108914bdfd462f1eae3d33261d7066ff7eb729aa88fbfcab30a6d67",
+      "downloadUrl": "https://github.com/GamingWithGravy/OptiShade/releases/download/untagged-dfbaaf068344a952889f/14-OptiShade-0.21.5-beta.1.exe"
+    },
+    {
+      "version": "0.21.6",
+      "channel": "stable",
+      "assetName": "15-OptiShade-0.21.6.exe",
+      "bytes": 279110656,
+      "sha256": "8a61f9f7cc80e61955dba959ad618787007b300e150bf632bdc5ce0f53f6d0b1",
+      "downloadUrl": "https://github.com/GamingWithGravy/OptiShade/releases/download/untagged-dfbaaf068344a952889f/15-OptiShade-0.21.6.exe"
+    },
+    {
+      "version": "0.21.7-beta.1",
+      "channel": "beta",
+      "assetName": "16-OptiShade-0.21.7-beta.1.exe",
+      "bytes": 279226880,
+      "sha256": "407ef7d791ee3589aa0b5f861d02da90139b1a24ac33942b37d0ca3264eebea3",
+      "downloadUrl": "https://github.com/GamingWithGravy/OptiShade/releases/download/untagged-dfbaaf068344a952889f/16-OptiShade-0.21.7-beta.1.exe"
+    }
+  ]
+}
