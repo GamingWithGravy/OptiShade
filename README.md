@@ -2,7 +2,7 @@
 
 **Your game, your way.** OptiShade brings game discovery, per-game installation, rendering components, in-game controls and diagnostics together in one Windows app.
 
-> **1.0 public test downloads: coming tomorrow.** This update prepares the component download channels. The installer and launcher executables are intentionally not attached to this repository or its Releases. Component packages will be listed in their own branches once the package feeds and licensing checks are ready. The legacy branch is for older EXE downloads only; it will not contain source, an installer or the launcher.
+> **OptiShade 1.0 is here.** The launcher and installer remain local and are not included in this repository or its Releases. Core, OptiMFG and Image Effects are delivered separately on their own branches. The legacy branch contains older 0.x downloads only.
 
 ## What’s new in 1.0
 
@@ -22,7 +22,7 @@
 
 The public GitHub Releases page is reserved for the small installer when it is ready. The installer downloads and verifies the launcher. The launcher checks separate first-party channels for Core, OptiMFG and Image Effects, then downloads only the component selected for update. Neural Rendering continues to use its pinned NVIDIA/model source. Glass Cockpit and AtmosphereMod continue to use their authors' official sources. Package signatures, hashes, compatibility rules, backups and rollback are required before a channel is considered ready.
 
-For this public test, the channel branches are being prepared. **Do not treat an empty branch as a downloadable or installable package.** This repository currently has no installer or launcher EXE in its Releases.
+The component branches describe their packages and availability. **An empty branch is not a downloadable or installable package.** This repository does not include the launcher or installer EXE.
 
 ## Screenshots
 
@@ -44,7 +44,7 @@ More views: [NVIDIA settings](assets/screenshots/nvidia-settings.jpg) · [Settin
 - OptiMFG is currently intended for supported MSFS 2020/2024 setups. X-Plane 12 OptiMFG is not included in this stable test.
 - Neural Rendering depends on the game's supported frame inputs and model/runtime compatibility. It may remain inactive even when enabled in OptiShade.
 - Game updates, third-party mods, antivirus and permission restrictions can change installation or runtime behavior. Send diagnostics through OptiShade Troubleshooting when reporting a problem.
-- The separate online component channels and the small installer are still being prepared. Do not use private test builds as public release packages.
+- Online component delivery is not yet enabled in the launcher. Do not use private build artifacts as release packages.
 
 ## Credits and licensing
 
