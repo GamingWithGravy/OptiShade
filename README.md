@@ -57,6 +57,10 @@ OptiShade and the original Fusion Engine integration are by **gravy / GamingWith
 - **AtmosphereMod**: **tomwhoca**. OptiShade downloads the official release after the user selects it; the mod is not redistributed here. [Official project](https://github.com/tomwhoca/AtmosphereMod).
 - NVIDIA, AMD, Intel/XeSS, shader authors, SDK maintainers and other contributors retain their respective rights and terms. See [CREDITS.md](CREDITS.md) and the notices distributed with each component.
 
+## Legacy downloads
+
+Older OptiShade 0.x versions are listed in the [legacy branch](https://github.com/GamingWithGravy/OptiShade/tree/legacy) and available from the [Legacy 0.x release](https://github.com/GamingWithGravy/OptiShade/releases/tag/legacy-0.x). Each file has a SHA-256 entry in the catalog.
+
 ## Get support
 
 - [OptiShade Discord](https://discord.gg/sq384cjC4N)
