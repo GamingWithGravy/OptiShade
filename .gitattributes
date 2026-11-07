@@ -1,0 +1,5 @@
+*.dll filter=lfs diff=lfs merge=lfs -text
+*.exe filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
+*.addon64 filter=lfs diff=lfs merge=lfs -text
+*.addon32 filter=lfs diff=lfs merge=lfs -text
