@@ -1,9 +1,7 @@
-# OptiShade Image Effects — Stable component channel
+# OptiShade Image Effects — download channel
 
-**Status: package not published — available tomorrow.**
+This branch currently hosts a **download-only candidate** for transport testing. It is not an installable release, and its package must not be applied to a game.
 
-This branch is reserved for the Image Effects / Look Editor payload. It currently contains no shader package or executable. Do not install this README as a component.
+`download-test.json` identifies the candidate archive by exact byte length and SHA-256. The archive carries its component inventory and applicable notices. Use the local OptiShade Download Test utility to fetch and verify it into a cache.
 
-Shader files come from multiple authors and can carry different licence terms. A future package will contain only files with verified redistribution permissions and will preserve each required copyright, attribution and licence notice. Files with missing or incompatible rights are excluded. The legacy CC BY-NC TAA helper is not part of the planned package.
-
-The signed package and inventory will be added after the local test client can verify, install and roll back the component.
+The candidate is built from OptiShade `1.0.77`, Rebuild R370, source commit `e94315a6387c26c9731dea0ef5d3509fc48892ad`. Shader contents and credits are described by the notices in the package. No launcher or installer is included.

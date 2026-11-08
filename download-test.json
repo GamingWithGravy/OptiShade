@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "componentId": "OptiShade.Effects",
+  "version": "1.0.77-download.370",
+  "channel": "download-only",
+  "installable": false,
+  "buildLabel": "Rebuild R370",
+  "sourceCommit": "e94315a6387c26c9731dea0ef5d3509fc48892ad",
+  "sourceSHA256": "FB737E5C8295FACA6857319638B748DC552833719BFD117B0C2D6A14CFB809A1",
+  "package": {
+    "file": "OptiShade.Effects.tar.gz",
+    "bytes": 182370,
+    "sha256": "79902A7400850AAB768A932BD85B8038F2C7EF352DE183CF261C974A6A191056"
+  }
+}
