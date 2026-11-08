@@ -1,5 +1,7 @@
 # OptiShade Core — component channel
 
-No Core package is published from this candidate build. The local R370 package contains GPL-covered OptiScaler modifications and third-party GPU runtime binaries. The matching corresponding-source bundle and file-level redistribution review are not complete, so publishing its archive would be premature.
+This branch now contains a **download-only candidate** and a matching source archive for transport testing. It is not an installable release and must not be applied to a game.
 
-The channel will remain package-free until the exact source and required notices are published together and every bundled runtime is cleared for redistribution. No launcher or installer is included in this branch.
+`download-test.json` provides exact byte lengths and SHA-256 hashes. The runtime candidate contains only Core-classified files; Neural Rendering, Effects, OptiMFG, Glass Cockpit, and provider payloads are separate. Its corresponding OptiScaler-derived source archive excludes generated build outputs and vendor runtime/model files.
+
+Candidate identity: OptiShade `1.0.77`, Rebuild R370, source commit `e94315a6387c26c9731dea0ef5d3509fc48892ad`. Download does not imply compatibility or live hardware qualification. No launcher or installer is included.
