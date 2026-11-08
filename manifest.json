@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "componentId": "OptiShade.Effects",
+  "version": "1.0.77",
+  "channel": "download-only",
+  "installable": false,
+  "buildVersion": "1.0.77",
+  "sourceCommit": "e94315a6387c26c9731dea0ef5d3509fc48892ad",
+  "sourceTreeSha256": "8A2E48EA3411D24017784C73E61F0F2307CECEF4DC037E1B4DFE5CBA262BAA0E",
+  "package": {
+    "file": "OptiShade.Effects.tar.gz",
+    "bytes": 307637,
+    "sha256": "8a1026e50985b530f1d5e6cb4112d9bc43d88acffb53dd076730349ac564c817"
+  }
+}
