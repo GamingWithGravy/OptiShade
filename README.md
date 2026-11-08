@@ -1,11 +1,7 @@
-# OptiMFG — Stable component channel
+# OptiMFG — download channel
 
-**Status: package not published — available tomorrow.**
+This branch currently hosts **download-only candidates** for transport testing. They are not installable releases and must not be applied to a game.
 
-This branch is reserved for OptiMFG component packages. It currently contains no executable, DLL or installer. Do not install this README as a component.
+`download-test.json` provides exact byte lengths and SHA-256 hashes for the runtime archive and matching source archive. Both are fetched into a local cache by the OptiShade Download Test utility. The source archive contains the pinned source build tree and build provenance; all bundled notices remain authoritative.
 
-The intended OptiMFG package is for supported 64-bit Microsoft Flight Simulator 2020/2024 setups. A compatible in-game Streamline / DLSS Frame Generation path and driver are still required. Installation does not guarantee that a multiplier is active.
-
-Required credits and notices travel with the component. The pinned RTXMFG backend is upstream work by Michael Robles / dashdogy, redistributed unchanged under MIT and accompanied by its third-party notices. OptiShade's controller and integration are separate work. No NVIDIA driver, private model or installer/launcher is included here.
-
-The signed manifest and package will be added after the local test client can verify, install and roll back the component.
+The candidate is built from OptiShade `1.0.77`, Rebuild R370, source commit `e94315a6387c26c9731dea0ef5d3509fc48892ad`. No launcher or installer is included.
