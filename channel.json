@@ -1,0 +1,1063 @@
+{
+  "schema": 1,
+  "componentId": "OptiShade.Core",
+  "version": "1.0.77",
+  "channel": "stable",
+  "publishedUtc": "2026-11-08T07:35:11Z",
+  "sourceCommit": "e94315a6387c26c9731dea0ef5d3509fc48892ad",
+  "launcherRange": {
+    "minInclusive": "1.0.0",
+    "maxExclusive": "2.0.0"
+  },
+  "contracts": {},
+  "dependencies": [],
+  "package": {
+    "branch": "core-stable",
+    "path": "packages/OptiShade.Core-1.0.77.tar.gz",
+    "bytes": 14267057,
+    "sha256": "c62dc5a8d971c1e03cf45e4a7a7b85ab29a5aa19c41d6bab07812326e900fe57"
+  },
+  "files": [
+    {
+      "packagePath": "files.json",
+      "installPath": "files.json",
+      "bytes": 25909,
+      "sha256": "0b365f12b8d8ee3ba9a89f2f534d9f2d7ccc9364c96464031e0f054fc298e319",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK-v2/Kits/OpenSource/nlohmann/LICENSE.MIT",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK-v2/Kits/OpenSource/nlohmann/LICENSE.MIT",
+      "bytes": 1097,
+      "sha256": "6f48a03625699eea99e599744efea0bf9c9dd67a669e65554df1cd726b8a2477",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK-v2/Kits/OpenSource/stb/LICENSE.MIT",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK-v2/Kits/OpenSource/stb/LICENSE.MIT",
+      "bytes": 1086,
+      "sha256": "a042ba7f8ec719e1fd4e03c1f175830e7ee456eb67634a9633d8bd0136500ad2",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK-v2/Kits/OpenSource/vectormath/LICENSE.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK-v2/Kits/OpenSource/vectormath/LICENSE.txt",
+      "bytes": 1789,
+      "sha256": "f752699a99106a2cd194602adda6fcdbd1e2314c072fa08e548f4bc6d4c6e6d0",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/magic_enum/LICENSE",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/magic_enum/LICENSE",
+      "bytes": 1101,
+      "sha256": "807abee0c36b11f5d64c5c2652129b84b41cc9f8f9b8d324e0e53290b2542956",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/nvapi/License.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/nvapi/License.txt",
+      "bytes": 1238,
+      "sha256": "4276d61aeab3d8912ba64123209147c4a0c4fb5d191cc5df1072b1799a06f8e9",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/RTX40MFG-Unlock/LICENSE",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/RTX40MFG-Unlock/LICENSE",
+      "bytes": 1092,
+      "sha256": "8cd8901b591b4c45f7f0f05d2248fb3b362d4769a338d8494a427fd74b6bc0de",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK-v2/Kits/OpenSource/imgui/LICENSE.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK-v2/Kits/OpenSource/imgui/LICENSE.txt",
+      "bytes": 1104,
+      "sha256": "55e058cc5899e6077a819ad1005d6d1f4528f65ae100795c9692f9fa6525a8ce",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/RTX40MFG-Unlock/source/native/third_party/minhook/LICENSE.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/RTX40MFG-Unlock/source/native/third_party/minhook/LICENSE.txt",
+      "bytes": 4446,
+      "sha256": "4f21f857550d7be854da6ea5f2da4e6775ca4e3fbb535e4f3d961c47d0bf3335",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/spdlog/LICENSE",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/spdlog/LICENSE",
+      "bytes": 1354,
+      "sha256": "4ccecab18d1ff0b61174fe3d6c430541625d3ddb865b0d5887db296f883c76e7",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/unordered_dense/LICENSE",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/unordered_dense/LICENSE",
+      "bytes": 1099,
+      "sha256": "55284952bd483a64a38f48069796b813da1085f1360d8d59cfbef6cce802868e",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/vulkan/LICENSE.md",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/vulkan/LICENSE.md",
+      "bytes": 476,
+      "sha256": "f43ba543d73f08f7401d99b697b2b741704eb22b5447a5021fd92b279b297646",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/xess/LICENSE.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/xess/LICENSE.txt",
+      "bytes": 4194,
+      "sha256": "784be42c39a4a4d03cf85d88e15e59d75828fca773ce45b8dbfffbd7eaf208df",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/d3d12/LICENSE",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/d3d12/LICENSE",
+      "bytes": 1093,
+      "sha256": "903df5512f7d02609fed0c780a9b704f5a3eeb6e4d84ebe42a29845c81899a3c",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/d3d12on7/LICENSE.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/d3d12on7/LICENSE.txt",
+      "bytes": 9894,
+      "sha256": "1c29e1d87dac757a11cdf169107b95db11c4503436a4ea8bdb33e874a934f8cf",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/simpleini/LICENCE.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/simpleini/LICENCE.txt",
+      "bytes": 1109,
+      "sha256": "cf85640c89c76dfa913f83c7c8f02682f307833c5955763bca9ca6e27051f213",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK-v2/Kits/OpenSource/amd/memoryallocator/license.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK-v2/Kits/OpenSource/amd/memoryallocator/license.txt",
+      "bytes": 1116,
+      "sha256": "35fb848ae404cf25e94b107c2bb0c18b86b076fc0e18eda9974df3d34abd87bc",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK-v2/Kits/OpenSource/amd/antilag2/LICENSE.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK-v2/Kits/OpenSource/amd/antilag2/LICENSE.txt",
+      "bytes": 1154,
+      "sha256": "bab861253b4ecf6f8f0515cc828297a9b6e4be967704ab6bbaecdf18c70e1c25",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK-v2/Kits/OpenSource/amd/ags/LICENSE.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK-v2/Kits/OpenSource/amd/ags/LICENSE.txt",
+      "bytes": 1113,
+      "sha256": "975c6be76e0bd7ea68819cda55c1b108ee83dfa69c10412167d1e6fa6c397c42",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/framework/cauldron/framework/libs/dxc/LICENSE-MIT.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/framework/cauldron/framework/libs/dxc/LICENSE-MIT.txt",
+      "bytes": 1093,
+      "sha256": "903df5512f7d02609fed0c780a9b704f5a3eeb6e4d84ebe42a29845c81899a3c",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/framework/cauldron/framework/libs/dxc/LICENSE-MS.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/framework/cauldron/framework/libs/dxc/LICENSE-MS.txt",
+      "bytes": 13163,
+      "sha256": "734f72f239fe7b07b4c7203f294c1a7ce27095687278bab7e56d630d7c672963",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/framework/cauldron/framework/libs/imgui/LICENSE.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/framework/cauldron/framework/libs/imgui/LICENSE.txt",
+      "bytes": 1104,
+      "sha256": "44abf9b2498d127928abb6e23b4cda06f6ec3577b34b0c9d4d0672f38b3d6293",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/framework/cauldron/framework/libs/json/License.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/framework/cauldron/framework/libs/json/License.txt",
+      "bytes": 1095,
+      "sha256": "478dcd8feaf2befca0dd124e59aa4dbec91058d32980b71c762aac74b196f353",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/framework/cauldron/framework/libs/memoryallocator/license.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/framework/cauldron/framework/libs/memoryallocator/license.txt",
+      "bytes": 1116,
+      "sha256": "35fb848ae404cf25e94b107c2bb0c18b86b076fc0e18eda9974df3d34abd87bc",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/framework/cauldron/framework/libs/vectormath/LICENSE.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/framework/cauldron/framework/libs/vectormath/LICENSE.txt",
+      "bytes": 1789,
+      "sha256": "f752699a99106a2cd194602adda6fcdbd1e2314c072fa08e548f4bc6d4c6e6d0",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/sdk/LICENSE.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/sdk/LICENSE.txt",
+      "bytes": 1136,
+      "sha256": "c93d509cd69d50698796c9c3274247352736ef122a3197ace2010f0978e21aa6",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/sdk/include/FidelityFX/host/backends/dx12/license.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/sdk/include/FidelityFX/host/backends/dx12/license.txt",
+      "bytes": 1097,
+      "sha256": "f47a55fc1b4fff0e485a4e88af3d14834c05b96f84be28ed86e5541244fea355",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/sdk/tools/ffx_shader_compiler/libs/dxc/LICENSE-LLVM.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/sdk/tools/ffx_shader_compiler/libs/dxc/LICENSE-LLVM.txt",
+      "bytes": 1979,
+      "sha256": "729615317e28dd03907e46f0fc3b5e88f7853cee61d1a1471d2749335516b46f",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/sdk/tools/ffx_shader_compiler/libs/dxc/LICENSE-MIT.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/sdk/tools/ffx_shader_compiler/libs/dxc/LICENSE-MIT.txt",
+      "bytes": 1093,
+      "sha256": "903df5512f7d02609fed0c780a9b704f5a3eeb6e4d84ebe42a29845c81899a3c",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/sdk/tools/ffx_shader_compiler/libs/dxc/LICENSE-MS.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/sdk/tools/ffx_shader_compiler/libs/dxc/LICENSE-MS.txt",
+      "bytes": 13163,
+      "sha256": "734f72f239fe7b07b4c7203f294c1a7ce27095687278bab7e56d630d7c672963",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/sdk/tools/ffx_shader_compiler/libs/MD5/LICENSE",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/sdk/tools/ffx_shader_compiler/libs/MD5/LICENSE",
+      "bytes": 1097,
+      "sha256": "859b90d3cf20c97ecb6446832021a6176e707ac82efb9d49cc8709394cebe053",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/sdk/tools/ffx_shader_compiler/libs/SPIRV-Reflect/LICENSE",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/sdk/tools/ffx_shader_compiler/libs/SPIRV-Reflect/LICENSE",
+      "bytes": 11558,
+      "sha256": "1eb85fc97224598dad1852b5d6483bbcf0aa8608790dcc657a5a2a761ae9c8c6",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/sdk/tools/ffx_shader_compiler/libs/tiny-process-library/LICENSE",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/sdk/tools/ffx_shader_compiler/libs/tiny-process-library/LICENSE",
+      "bytes": 1116,
+      "sha256": "81fbfd6aef77b2672d238874a78122e63c7b43d8cf5d8c936760f5f1e50b6ae3",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK-v2/Kits/OpenSource/amd/acs/LICENSE.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK-v2/Kits/OpenSource/amd/acs/LICENSE.txt",
+      "bytes": 1136,
+      "sha256": "5c813072b64c6a84d50339660b205c8497a104231deab93e88ee963538387df5",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/d3d911on12/LICENSE.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/d3d911on12/LICENSE.txt",
+      "bytes": 1093,
+      "sha256": "903df5512f7d02609fed0c780a9b704f5a3eeb6e4d84ebe42a29845c81899a3c",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/framework/cauldron/framework/libs/dxc/LICENSE-LLVM.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/framework/cauldron/framework/libs/dxc/LICENSE-LLVM.txt",
+      "bytes": 1979,
+      "sha256": "729615317e28dd03907e46f0fc3b5e88f7853cee61d1a1471d2749335516b46f",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/glad/LICENSE",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/glad/LICENSE",
+      "bytes": 3077,
+      "sha256": "ec2b8bbf86d22622b9bbadf36a6cb7032c0f5b8c4a1766d4db05bf41b4dc451d",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/imgui/examples/libs/glfw/COPYING.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/imgui/examples/libs/glfw/COPYING.txt",
+      "bytes": 956,
+      "sha256": "3d63403fef9242cbfd31ce987464fffdc88a874685236c187b4a110978b31654",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Tools/component-policy.ps1",
+      "installPath": "OptiShadeData/Tools/component-policy.ps1",
+      "bytes": 6523,
+      "sha256": "78e509adf6c48337d381fdd87260d112af10c7648e8a07216793f871c383e1c8",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Tools/consent.ps1",
+      "installPath": "OptiShadeData/Tools/consent.ps1",
+      "bytes": 9736,
+      "sha256": "d387cd099c4ac184111dad7c1e6cba7a0a7bfdf7e01f81950315c05f353c381e",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Tools/EffectPackages.ini",
+      "installPath": "OptiShadeData/Tools/EffectPackages.ini",
+      "bytes": 26813,
+      "sha256": "9dad3753efd5b9cdb97f53e2710e3c98606d6566a89f37a9bf14bf81827f1ca7",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Tools/executable.ps1",
+      "installPath": "OptiShadeData/Tools/executable.ps1",
+      "bytes": 13790,
+      "sha256": "034aac9b94c43d2ef881384688663ddaf372a0bdbd8ca3dbefdf60aacc6cd26c",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Tools/gpu-identity.ps1",
+      "installPath": "OptiShadeData/Tools/gpu-identity.ps1",
+      "bytes": 8123,
+      "sha256": "543bbd8eee7945c45c4b29f9780535d45fa660e2e974f43a99b4f4059f02bf6e",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Tools/GpuIdentityClient.cs",
+      "installPath": "OptiShadeData/Tools/GpuIdentityClient.cs",
+      "bytes": 7926,
+      "sha256": "eb8a55cb260c5bee79d6b5554d311d8a0b89eb46a8c0732c7dfec7441042ef19",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Tools/compatibility.ps1",
+      "installPath": "OptiShadeData/Tools/compatibility.ps1",
+      "bytes": 20530,
+      "sha256": "d05c56e587c7b9ec3a45c38e308d19adc138ebeba57c23919cd12e2db718a93a",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Tools/import-effects.ps1",
+      "installPath": "OptiShadeData/Tools/import-effects.ps1",
+      "bytes": 13787,
+      "sha256": "aa9ec48713afab584ed6756905af13942f9d8a2deb92923ca4a462f6c4f11944",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Tools/neural-model-policy.json",
+      "installPath": "OptiShadeData/Tools/neural-model-policy.json",
+      "bytes": 2178,
+      "sha256": "0d19b7632cb0bf1f9b6992ec41a60f567529bd5b5d12e21c50200f3beaaa4cd6",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Tools/OptiShade-Troubleshooter.exe",
+      "installPath": "OptiShadeData/Tools/OptiShade-Troubleshooter.exe",
+      "bytes": 568320,
+      "sha256": "3e7a3a89b9b679263af406ff4b00e6e91245e919368d62ed163c22d309c96157",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Tools/OptiShadeSensors.exe",
+      "installPath": "OptiShadeData/Tools/OptiShadeSensors.exe",
+      "bytes": 25600,
+      "sha256": "206150997576d47ba0b449d2f8c697ce19b03311677e910293ae6fc36e6a292c",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Tools/ownership.ps1",
+      "installPath": "OptiShadeData/Tools/ownership.ps1",
+      "bytes": 136296,
+      "sha256": "618d445999e7af20992c69c1ce95927ede796c1d2978950b8e42d0c742aaafda",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Tools/store-paths.ps1",
+      "installPath": "OptiShadeData/Tools/store-paths.ps1",
+      "bytes": 1416,
+      "sha256": "0635aad5c10190748fc151680dbcd2660c92e873bafedecaf36ff3db72a5cc5e",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Tools/StandardHeaders/ReShade.fxh",
+      "installPath": "OptiShadeData/Tools/StandardHeaders/ReShade.fxh",
+      "bytes": 4374,
+      "sha256": "bfa89183cfeb99968a58e751cd23afa2f5ff56332b3cf7f08f23e39879badc70",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Tools/json-state.ps1",
+      "installPath": "OptiShadeData/Tools/json-state.ps1",
+      "bytes": 2037,
+      "sha256": "5d34ee7e95aa85f95156fe8c6f787a87543dac25585d6a16a2d2d6756b384803",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Tools/anti-cheat.ps1",
+      "installPath": "OptiShadeData/Tools/anti-cheat.ps1",
+      "bytes": 24796,
+      "sha256": "c2f7a3449d05a305afa83baf4c7857b436bd1077245516b3bb1ab18990810aa6",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Tools/anti-cheat-rules.json",
+      "installPath": "OptiShadeData/Tools/anti-cheat-rules.json",
+      "bytes": 7484,
+      "sha256": "3b1734377eef203ed464b2f750601365fc97a6f3653fa1fecb13f666007f9d93",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Presets/My look.ini",
+      "installPath": "OptiShadeData/Presets/My look.ini",
+      "bytes": 32,
+      "sha256": "f467e4dec1e2a30f3c5efb691677a05c04944e521396c823035ccca957e1e2f9",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/jxl_simple_lossless/LICENSE",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/jxl_simple_lossless/LICENSE",
+      "bytes": 1535,
+      "sha256": "2c783d8d5d952bd0726292e56ad1f3f247f370667809497a8020b8c2915ba470",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/minhook/LICENSE.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/minhook/LICENSE.txt",
+      "bytes": 4446,
+      "sha256": "4f21f857550d7be854da6ea5f2da4e6775ca4e3fbb535e4f3d961c47d0bf3335",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/openvr/LICENSE",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/openvr/LICENSE",
+      "bytes": 1515,
+      "sha256": "9e6d1480fb68e86ceafed312f7e67dadcdc2a99b350b710d624b8f0f0f1a2329",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/openxr/LICENSE",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/openxr/LICENSE",
+      "bytes": 11560,
+      "sha256": "3ddf9be5c28fe27dad143a5dc76eea25222ad1dd68934a047064e56ed2fa40c5",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/openxr/src/external/jnipp/LICENSE",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/openxr/src/external/jnipp/LICENSE",
+      "bytes": 1091,
+      "sha256": "4057416bf9f4a9dc2cc3fef280d20337856d5363fcc6a6fa6f79c0ea760bf549",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/openxr/src/external/jsoncpp/LICENSE",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/openxr/src/external/jsoncpp/LICENSE",
+      "bytes": 2769,
+      "sha256": "ecf1a272af5d660ed0054701b5662e6a9f208b56502dc67983fce60a657d58b2",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/spirv/LICENSE",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/spirv/LICENSE",
+      "bytes": 1334,
+      "sha256": "dbb7f012478c842e49e14bc4060d1b25463ce34a9d4602e029493c8b6e97bbfb",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/stb/LICENSE",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/stb/LICENSE",
+      "bytes": 2547,
+      "sha256": "11dd149dbc50748419a22fcec275b5bcfb4c2d86d9fba8802e5c4ffd40c94609",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/stb/data/herringbone/license.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/stb/data/herringbone/license.txt",
+      "bytes": 203,
+      "sha256": "9346f129210dd57634ea90713cc4aaea3dba3c0794fcae7e34f941b7ed5b6ddc",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/utfcpp/LICENSE",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/utfcpp/LICENSE",
+      "bytes": 1361,
+      "sha256": "beb8e42e9d6b4284e03304d05a81a0755200a965fc8d0a5e0aea1e84cf805d6e",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/vma/LICENSE.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/vma/LICENSE.txt",
+      "bytes": 1118,
+      "sha256": "e5fc8b0b0357a75d63649c8f2552576aaa6941c361a013710bb53afc64d3a8aa",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/Shaders/00/README.md",
+      "installPath": "OptiShadeData/Licenses/Shaders/00/README.md",
+      "bytes": 785,
+      "sha256": "84caf5f35ae07ce10c3e9e3f4edf71ebb71526c2929b8bc8a67b39cd366c2a21",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/Shaders/01/LICENSE",
+      "installPath": "OptiShadeData/Licenses/Shaders/01/LICENSE",
+      "bytes": 1098,
+      "sha256": "0e5b126ea6e4ac32f6b7d76a6e21b89329e20040641f515332b9713c9a72c91e",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/Shaders/01/README.md",
+      "installPath": "OptiShadeData/Licenses/Shaders/01/README.md",
+      "bytes": 7529,
+      "sha256": "61394beca9ad4850b474d6ab975eef80d4181661b5b2289b472c5ef06b67d334",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OpenXR/OptiShade_XR.json",
+      "installPath": "OptiShadeData/OpenXR/OptiShade_XR.json",
+      "bytes": 305,
+      "sha256": "ab4d6f63e069cc8b143be7dc21f6c748c56f4fdf437423c12b7cbab5480a839c",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/imgui/LICENSE.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/reshade/deps/imgui/LICENSE.txt",
+      "bytes": 1104,
+      "sha256": "55e058cc5899e6077a819ad1005d6d1f4528f65ae100795c9692f9fa6525a8ce",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/framework/cauldron/framework/libs/AGS/LICENSE.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/framework/cauldron/framework/libs/AGS/LICENSE.txt",
+      "bytes": 1136,
+      "sha256": "c93d509cd69d50698796c9c3274247352736ef122a3197ace2010f0978e21aa6",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/framework/cauldron/framework/libs/acs/LICENSE.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/framework/cauldron/framework/libs/acs/LICENSE.txt",
+      "bytes": 1136,
+      "sha256": "c93d509cd69d50698796c9c3274247352736ef122a3197ace2010f0978e21aa6",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/LICENSE.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/FidelityFX-SDK/LICENSE.txt",
+      "bytes": 1136,
+      "sha256": "c93d509cd69d50698796c9c3274247352736ef122a3197ace2010f0978e21aa6",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/FidelityFX-v1.md",
+      "installPath": "OptiShadeData/Licenses/FidelityFX-v1.md",
+      "bytes": 1142,
+      "sha256": "a335c2bb2bd28184b9a30b6e35b0c7e4aa7826abd1c388fc2aa02405e9d04f03",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/FidelityFX-v2.md",
+      "installPath": "OptiShadeData/Licenses/FidelityFX-v2.md",
+      "bytes": 61784,
+      "sha256": "f0da09d71ad5c82759a179e774535d4a829e5c96c49294167c1152402b2cb400",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/FusionCinema-GPL3.txt",
+      "installPath": "OptiShadeData/Licenses/FusionCinema-GPL3.txt",
+      "bytes": 35823,
+      "sha256": "230184f60bae2feaf244f10a8bac053c8ff33a183bcc365b4d8b876d2b7f4809",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/Hybrid-assets.json",
+      "installPath": "OptiShadeData/Licenses/Hybrid-assets.json",
+      "bytes": 2875,
+      "sha256": "03554c1d256f9cea0f1fb74f0cc4014400c9ad3c24a671307a060e63f1a27bdc",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSE",
+      "installPath": "OptiShadeData/Licenses/LICENSE",
+      "bytes": 35823,
+      "sha256": "230184f60bae2feaf244f10a8bac053c8ff33a183bcc365b4d8b876d2b7f4809",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSE.md",
+      "installPath": "OptiShadeData/Licenses/LICENSE.md",
+      "bytes": 1772,
+      "sha256": "ea569bee74863daa6e371f9b0bececcaa5c1eb70763a8a25137d42b092559548",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/DirectX.txt",
+      "installPath": "OptiShadeData/Licenses/DirectX.txt",
+      "bytes": 13147,
+      "sha256": "5239850894610071566f7ecee0b751fde43c862032d92b99d7d0f596b3433ebd",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSING.md",
+      "installPath": "OptiShadeData/Licenses/LICENSING.md",
+      "bytes": 6198,
+      "sha256": "48c444dd2cb4f8037e2480e68beabb4190ca703eedcf32544d16253d2fab0fbb",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/OptiScaler-GPL3.txt",
+      "installPath": "OptiShadeData/Licenses/OptiScaler-GPL3.txt",
+      "bytes": 35823,
+      "sha256": "230184f60bae2feaf244f10a8bac053c8ff33a183bcc365b4d8b876d2b7f4809",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/OPTISHADE_LICENSING.md",
+      "installPath": "OptiShadeData/Licenses/OPTISHADE_LICENSING.md",
+      "bytes": 11405,
+      "sha256": "73f115caf2ffa04659c365aa02be8f0dcb68f119c48eab0ecd6f36646ec8364d",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/OptiShade-TAA-THIRD-PARTY.txt",
+      "installPath": "OptiShadeData/Licenses/OptiShade-TAA-THIRD-PARTY.txt",
+      "bytes": 1329,
+      "sha256": "1ad1eab62a32778ef6a516440557754bc4f18e41a297fe3c1fb86937030a4e93",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/RenoDX_ATTRIBUTION.txt",
+      "installPath": "OptiShadeData/Licenses/RenoDX_ATTRIBUTION.txt",
+      "bytes": 2976,
+      "sha256": "1d2f2b2f8cf5c9acfe2eaaa2d2c22face87bd19f7df85453079a28e7123ae727",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/ReShade-BSD3.txt",
+      "installPath": "OptiShadeData/Licenses/ReShade-BSD3.txt",
+      "bytes": 1490,
+      "sha256": "d2bb5eb908e9aa7ac2f7f4cf6441d62e1f6ac1256cf22bb5289516c9f30e5f0a",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/vort-Shaders-MIT.txt",
+      "installPath": "OptiShadeData/Licenses/vort-Shaders-MIT.txt",
+      "bytes": 1089,
+      "sha256": "562a1a335ad0815f60b3b27394d1619951d4b125f4f2161f98e8ca088c67778a",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/NOTICE.md",
+      "installPath": "OptiShadeData/Licenses/NOTICE.md",
+      "bytes": 5739,
+      "sha256": "cfbbdc9107879cdbb24a53159ffc7dd48a7f6265f076c634e461f0f930fc5952",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/BRANDING.md",
+      "installPath": "OptiShadeData/Licenses/BRANDING.md",
+      "bytes": 4352,
+      "sha256": "e5bbbd860747abf8379fa8735f4e8f22c0cb526cd4c8cc10e8db76ab3d107274",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/BRANDING-LICENSE.md",
+      "installPath": "OptiShadeData/Licenses/BRANDING-LICENSE.md",
+      "bytes": 1180,
+      "sha256": "da5cfece15aba5b057744398921648bfd30d243c01e2db641cbda780d15e8bc6",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/AMD-ADL.txt",
+      "installPath": "OptiShadeData/Licenses/AMD-ADL.txt",
+      "bytes": 1366,
+      "sha256": "df9b9f1e66d1b489d728123472643ae590afdd0c5fa953338d3acf0611f23b9b",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "nvngx.dll_dlssnr.dll",
+      "installPath": "nvngx.dll_dlssnr.dll",
+      "bytes": 168448,
+      "sha256": "b684dd956ffeff827bd3ced8b78d37fef9545b1d4fb2d94db2e7a3188adcdb99",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiScaler.ini",
+      "installPath": "OptiScaler.ini",
+      "bytes": 391,
+      "sha256": "0fdaea5c4cc9ceb36b2c2e68f82ec2bf751675ab97e2897572df952984e2a719",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "ReShade.ini",
+      "installPath": "ReShade.ini",
+      "bytes": 563,
+      "sha256": "f7d83bcab0f45f78335a6b07526699f904a2dd5f69c30b224be9871c8c5fc0e0",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "ReShade32.dll",
+      "installPath": "ReShade32.dll",
+      "bytes": 4718080,
+      "sha256": "59b270a80dde1bfdfdc4cdd3c4b232654bb84f0a3b2fa4ac54ee72673799bf1f",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "ReShade64.dll",
+      "installPath": "ReShade64.dll",
+      "bytes": 5934592,
+      "sha256": "56f694012be293c41c24002cba3368e0e28de4b60b12ccda7d139cac466b4eac",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "winmm.dll",
+      "installPath": "winmm.dll",
+      "bytes": 27518464,
+      "sha256": "2b49119e092e547ce0a52128f9f11766291514bc5f3173ef298bf76001032afc",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/BuildIdentity.json",
+      "installPath": "OptiShadeData/BuildIdentity.json",
+      "bytes": 3356,
+      "sha256": "f1ae56daec264d62340a9ee237ae86165c7aaa4136505482c065d7413c6cf852",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/dependency-state.ini",
+      "installPath": "OptiShadeData/dependency-state.ini",
+      "bytes": 17,
+      "sha256": "8e1f105f92504fad42f6fb81b82fdeee61d697d13ca5c6045d8e0a99b02f89f6",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Effects-install.json",
+      "installPath": "OptiShadeData/Effects-install.json",
+      "bytes": 413,
+      "sha256": "e3c3237e25244c26e45eb9b8e77808ab21e9a68a8498e8fd76bcd6c7ee214343",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Cache/.keep",
+      "installPath": "OptiShadeData/Cache/.keep",
+      "bytes": 26,
+      "sha256": "81b28b842512114b6bcce348e80eca9ff07695397469f59e91c7b3e6473b8098",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Engine/D3D12_OptiScaler/D3D12Core.dll",
+      "installPath": "OptiShadeData/Engine/D3D12_OptiScaler/D3D12Core.dll",
+      "bytes": 3351064,
+      "sha256": "07d286c306f8117321422affd9e6388c12d0fb4be1c7fc689d9e899324feeb24",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Engine/Routes/OptiShadeGeneric.dll",
+      "installPath": "OptiShadeData/Engine/Routes/OptiShadeGeneric.dll",
+      "bytes": 624128,
+      "sha256": "b9f2c6706fc391dacf82a384f21abe450fa08b5108252b4f651b3793c0918c20",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Engine/Routes/OptiShadeMSFS2020.dll",
+      "installPath": "OptiShadeData/Engine/Routes/OptiShadeMSFS2020.dll",
+      "bytes": 620544,
+      "sha256": "9550e9cc1a5051b52ce7db4eb621f2da749eb14ae24f0f94a5dd5d23eda417b7",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Engine/Routes/OptiShadeMSFS2024.dll",
+      "installPath": "OptiShadeData/Engine/Routes/OptiShadeMSFS2024.dll",
+      "bytes": 624128,
+      "sha256": "dc1ed7ac5b178ca47870212e2e376bb6c44773a498d1490ee947768a10af624e",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Engine/Routes/OptiShadeXPlane12.dll",
+      "installPath": "OptiShadeData/Engine/Routes/OptiShadeXPlane12.dll",
+      "bytes": 635904,
+      "sha256": "d3ff517bfdea21626de467a75a75eef2c7d81037e7ca91f6eff6e6323c9c014f",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/XeSS.txt",
+      "installPath": "OptiShadeData/Licenses/XeSS.txt",
+      "bytes": 4194,
+      "sha256": "784be42c39a4a4d03cf85d88e15e59d75828fca773ce45b8dbfffbd7eaf208df",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/GlassCockpit/ImGui.txt",
+      "installPath": "OptiShadeData/Licenses/GlassCockpit/ImGui.txt",
+      "bytes": 1083,
+      "sha256": "c80c5789748d955c4a650562baa0d750494e2c7128c2ca66aaebe2e3c4e198bf",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/GlassCockpit/LICENSE",
+      "installPath": "OptiShadeData/Licenses/GlassCockpit/LICENSE",
+      "bytes": 35149,
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/GlassCockpit/LICENSE.txt",
+      "installPath": "OptiShadeData/Licenses/GlassCockpit/LICENSE.txt",
+      "bytes": 35149,
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Magic-enum.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Magic-enum.txt",
+      "bytes": 1101,
+      "sha256": "807abee0c36b11f5d64c5c2652129b84b41cc9f8f9b8d324e0e53290b2542956",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/MinHook-effects.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/MinHook-effects.txt",
+      "bytes": 4446,
+      "sha256": "4f21f857550d7be854da6ea5f2da4e6775ca4e3fbb535e4f3d961c47d0bf3335",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Nlohmann.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Nlohmann.txt",
+      "bytes": 1097,
+      "sha256": "b9715282b2f1db1359a919bb3a542dd4362fd9e38ae72d421367eb11abe62eec",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/NVAPI.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/NVAPI.txt",
+      "bytes": 1238,
+      "sha256": "4276d61aeab3d8912ba64123209147c4a0c4fb5d191cc5df1072b1799a06f8e9",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/OpenVR.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/OpenVR.txt",
+      "bytes": 1515,
+      "sha256": "9e6d1480fb68e86ceafed312f7e67dadcdc2a99b350b710d624b8f0f0f1a2329",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/OptiShade-R10-repair-provenance.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/OptiShade-R10-repair-provenance.txt",
+      "bytes": 2584,
+      "sha256": "222769393aa93ddb35e51974396a69d1a4f9283f6b01a7a7aebe153be601a702",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Spdlog.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Spdlog.txt",
+      "bytes": 1354,
+      "sha256": "4ccecab18d1ff0b61174fe3d6c430541625d3ddb865b0d5887db296f883c76e7",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/SPIRV.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/SPIRV.txt",
+      "bytes": 1334,
+      "sha256": "dbb7f012478c842e49e14bc4060d1b25463ce34a9d4602e029493c8b6e97bbfb",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/STB.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/STB.txt",
+      "bytes": 2547,
+      "sha256": "11dd149dbc50748419a22fcec275b5bcfb4c2d86d9fba8802e5c4ffd40c94609",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Streamline.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Streamline.txt",
+      "bytes": 1150,
+      "sha256": "561b8e8c25d10c0cd27cf396f8bd36a29a2a7ea6e88044a1d2d7443d872d8e51",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Streamline1.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Streamline1.txt",
+      "bytes": 1145,
+      "sha256": "24f4b4eff3643cd5badf3047f478741655210e00ccd7854613a578881657c6b6",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Unordered-dense.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Unordered-dense.txt",
+      "bytes": 1099,
+      "sha256": "55284952bd483a64a38f48069796b813da1085f1360d8d59cfbef6cce802868e",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/UTFCPP.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/UTFCPP.txt",
+      "bytes": 1361,
+      "sha256": "beb8e42e9d6b4284e03304d05a81a0755200a965fc8d0a5e0aea1e84cf805d6e",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/VMA.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/VMA.txt",
+      "bytes": 1118,
+      "sha256": "e5fc8b0b0357a75d63649c8f2552576aaa6941c361a013710bb53afc64d3a8aa",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/directx_agility_sdk/LICENSE.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Additional/optiscaler/external/directx_agility_sdk/LICENSE.txt",
+      "bytes": 13147,
+      "sha256": "5239850894610071566f7ecee0b751fde43c862032d92b99d7d0f596b3433ebd",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/JXL-simple.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/JXL-simple.txt",
+      "bytes": 1535,
+      "sha256": "2c783d8d5d952bd0726292e56ad1f3f247f370667809497a8020b8c2915ba470",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Tools/StandardHeaders/ReShadeUI.fxh",
+      "installPath": "OptiShadeData/Tools/StandardHeaders/ReShadeUI.fxh",
+      "bytes": 10144,
+      "sha256": "b95eef44289c97ff027e5c70ec579f5fbb3c375037544c4f2913c4f33c7d5d53",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/index.json",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/index.json",
+      "bytes": 20813,
+      "sha256": "d46c2c87f67f81243888e70009c9185c322b0915624103a19f878ab14f8faf9f",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/ImGui-effects.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/ImGui-effects.txt",
+      "bytes": 1104,
+      "sha256": "55e058cc5899e6077a819ad1005d6d1f4528f65ae100795c9692f9fa6525a8ce",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/GlassCockpit/MinHook.txt",
+      "installPath": "OptiShadeData/Licenses/GlassCockpit/MinHook.txt",
+      "bytes": 4446,
+      "sha256": "4f21f857550d7be854da6ea5f2da4e6775ca4e3fbb535e4f3d961c47d0bf3335",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/GlassCockpit/NOTICE.md",
+      "installPath": "OptiShadeData/Licenses/GlassCockpit/NOTICE.md",
+      "bytes": 2983,
+      "sha256": "3a93c11ad06bdd3e40242547d945d6636ea026fa1b894f7041f048236165bfff",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/GlassCockpit/PROVENANCE.json",
+      "installPath": "OptiShadeData/Licenses/GlassCockpit/PROVENANCE.json",
+      "bytes": 1068,
+      "sha256": "6b32a3ed1f29c90774522d0c43803c0b3f2fdd301d5b28a1196138ef96472cde",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/GlassCockpit/ReShade.txt",
+      "installPath": "OptiShadeData/Licenses/GlassCockpit/ReShade.txt",
+      "bytes": 1490,
+      "sha256": "d2bb5eb908e9aa7ac2f7f4cf6441d62e1f6ac1256cf22bb5289516c9f30e5f0a",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/GlassCockpit/THIRD_PARTY_NOTICES.md",
+      "installPath": "OptiShadeData/Licenses/GlassCockpit/THIRD_PARTY_NOTICES.md",
+      "bytes": 1327,
+      "sha256": "50582e60dfad0b80556f5cc61c4ed32801231be7d2c00fcc6935b57ef540c999",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LegacyNR/LICENSE.txt",
+      "installPath": "OptiShadeData/Licenses/LegacyNR/LICENSE.txt",
+      "bytes": 1210,
+      "sha256": "1ce240e402901fb81eb82a60a6bafd2fb913cd5746860b0a4ec52a5acb49ced7",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LegacyNR/UPSTREAM.md",
+      "installPath": "OptiShadeData/Licenses/LegacyNR/UPSTREAM.md",
+      "bytes": 2516,
+      "sha256": "72336b7f719ac3e248dd2983286a1f86a7fa77dd29f3f593bc0c73e8d50ebe89",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/GPL-3.0.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/GPL-3.0.txt",
+      "bytes": 35823,
+      "sha256": "230184f60bae2feaf244f10a8bac053c8ff33a183bcc365b4d8b876d2b7f4809",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/OPTISHADE-PROPRIETARY.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/OPTISHADE-PROPRIETARY.txt",
+      "bytes": 4100,
+      "sha256": "f9fc42f9d8d6eebc3ebe8526df66d42e852887f21a99cf5d4abc9ae3077e776c",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ReShade-BSD-3-Clause.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ReShade-BSD-3-Clause.txt",
+      "bytes": 1490,
+      "sha256": "d2bb5eb908e9aa7ac2f7f4cf6441d62e1f6ac1256cf22bb5289516c9f30e5f0a",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Detours.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/Detours.txt",
+      "bytes": 1122,
+      "sha256": "f854ae8aabc0404652b48a2b3bf7f21ec174c69d73f5596934c20884eb0639ef",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/FidelityFX-older-families.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/FidelityFX-older-families.txt",
+      "bytes": 4048,
+      "sha256": "53233b8b2e5dffde06df7a37452d903995849f1f74e4d1941931a2d7f998afae",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/FPNG.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/FPNG.txt",
+      "bytes": 1294,
+      "sha256": "e1a14e8a44bb6dec4b131aed8ef7e71abc93aaf10be933ff4d25dcfd468c7385",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/FreeType.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/FreeType.txt",
+      "bytes": 6912,
+      "sha256": "650737ec7589c35600de73b0db88dafb314f7e32e7e3cf38d0c87ceb1a7ed31b",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/GLAD.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/GLAD.txt",
+      "bytes": 3077,
+      "sha256": "ec2b8bbf86d22622b9bbadf36a6cb7032c0f5b8c4a1766d4db05bf41b4dc451d",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Licenses/LICENSES/ThirdParty/ImGui-runtime.txt",
+      "installPath": "OptiShadeData/Licenses/LICENSES/ThirdParty/ImGui-runtime.txt",
+      "bytes": 1104,
+      "sha256": "55e058cc5899e6077a819ad1005d6d1f4528f65ae100795c9692f9fa6525a8ce",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Vulkan/OptiShade.json",
+      "installPath": "OptiShadeData/Vulkan/OptiShade.json",
+      "bytes": 365,
+      "sha256": "dc2b133b5017951b7ea7f9596fc933ae6b7dcf21fca9667774cf1e185f2464ec",
+      "preconditionSha256": ""
+    }
+  ],
+  "signature": {
+    "algorithm": "Ed25519",
+    "keyId": "optishade-release-2026",
+    "value": "DZJQJxRoOOOJh1SEltzLJSjKD/4jeOtDw2RwXIUTpHFalqEtJG5uGuolY1pLu88NEFYfxPaphCmDHZQcbVb0Dg=="
+  }
+}
