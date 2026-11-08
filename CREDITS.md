@@ -28,7 +28,8 @@ OptiShade is assembled from independently maintained software and content. This 
 - **Effects:** publish only files with a checked redistribution licence; include per-file attribution/notices and exclude non-commercial or unclear-rights files.
 - **Glass Cockpit:** keep the existing official-source install/update method and required creator credit/notices.
 - **AtmosphereMod:** do not upload its ZIP, binaries or source to OptiShade branches.
-- **Legacy:** EXE downloads only after confirming that each candidate is a public release, not a private test rebuild; never include source, installer or launcher in that branch.
+- **Legacy:** EXE downloads only after confirming that each candidate is a public release, not an unpublished development build; never include source, installer or launcher in that branch.
 
 This document is a practical distribution checklist. The individual licence files shipped beside each package remain authoritative.
+
 

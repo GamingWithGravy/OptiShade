@@ -8,7 +8,7 @@
 
 - **Game library and per-game setup.** Scan or add games, choose an installation method where supported, and select optional components for each game. OptiShade records managed files and keeps backups so repair and uninstall can restore the original files.
 - **Anti-cheat checks and warnings.** OptiShade checks known game protection indicators and shows a warning before installation where protection is detected or uncertain. Detection cannot guarantee a game's rules or predict every anti-cheat response. Installing into a protected game is the user's choice and risk.
-- **Component management.** The Update Manager separates manager updates from installed game components. The long-term delivery design gives OptiShade Core, OptiMFG and Image Effects independent versions and update channels. Online channel downloads are being prepared for this test; the current public page does not yet provide the packages.
+- **Component management.** The Update Manager separates manager updates from installed game components. The long-term delivery design gives OptiShade Core, OptiMFG and Image Effects independent versions and update channels. Separate component download channels are being brought online; each branch states whether its package is downloadable and installable.
 - **OptiMFG.** Optional live frame-generation controls for supported Microsoft Flight Simulator 2020/2024 installations. The game must provide a compatible DLSS Frame Generation / Streamline path. Results depend on the game, GPU, driver and active provider; a listed multiplier is not proof that generated frames are being presented.
 - **Image Effects and Look Editor.** Manage shader effects and presets separately from the game's upscaler and frame-generation settings.
 - **Neural Rendering controls and diagnostics.** OptiShade can configure supported Neural Rendering paths and reports whether supported inputs and output are observed. A setting being enabled or a model being installed does not itself prove that rendering is active.
@@ -41,7 +41,7 @@ More views: [NVIDIA settings](assets/screenshots/nvidia-settings.jpg) · [Settin
 ## Known limits
 
 - Compatibility varies by game, graphics API, GPU, driver and installed rendering provider. OptiShade does not guarantee support for every game or anti-cheat configuration.
-- OptiMFG is currently intended for supported MSFS 2020/2024 setups. X-Plane 12 OptiMFG is not included in this stable test.
+- OptiMFG is currently intended for supported MSFS 2020/2024 setups. X-Plane 12 OptiMFG is not included in this release.
 - Neural Rendering depends on the game's supported frame inputs and model/runtime compatibility. It may remain inactive even when enabled in OptiShade.
 - Game updates, third-party mods, antivirus and permission restrictions can change installation or runtime behavior. Send diagnostics through OptiShade Troubleshooting when reporting a problem.
 - Online component delivery is not yet enabled in the launcher. Do not use private build artifacts as release packages.
@@ -68,4 +68,5 @@ Older OptiShade 0.x versions are listed in the [legacy branch](https://github.co
 - [OptiShade repository](https://github.com/GamingWithGravy/OptiShade)
 
 When reporting an issue, include the game, GPU, graphics API, component versions and the steps that led to it. Use the built-in diagnostics tool to send the relevant logs privately.
+
 
