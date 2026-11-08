@@ -1,7 +1,7 @@
-# OptiShade Core — component channel
+# OptiShade Core 1.0.77
 
-This branch now contains a **download-only candidate** and a matching source archive for transport testing. It is not an installable release and must not be applied to a game.
+This branch provides the current stable Core package and corresponding OptiScaler source archive. The package download is available for channel validation; remote installation and rollback are not enabled, so the package is deliberately marked `installable: false`.
 
-`download-test.json` provides exact byte lengths and SHA-256 hashes. The runtime candidate contains only Core-classified files; Neural Rendering, Effects, OptiMFG, Glass Cockpit, and provider payloads are separate. Its corresponding OptiScaler-derived source archive excludes generated build outputs and vendor runtime/model files.
+Download paths are listed in [`manifest.json`](manifest.json). The runtime archive includes only Core-classified files, with required third-party notices and build identity. Image Effects, OptiMFG and Neural Rendering payloads remain separate. The corresponding-source archive is supplied for GPL-covered OptiScaler-derived portions.
 
-Candidate identity: OptiShade `1.0.77`, Rebuild R370, source commit `e94315a6387c26c9731dea0ef5d3509fc48892ad`. Download does not imply compatibility or live hardware qualification. No launcher or installer is included.
+The launcher and installer executables are not included here or in Releases.
