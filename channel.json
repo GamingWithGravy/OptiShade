@@ -1,0 +1,249 @@
+{
+  "schema": 1,
+  "componentId": "OptiShade.OptiMFG",
+  "version": "1.0.77",
+  "channel": "stable",
+  "publishedUtc": "2026-11-08T07:35:13Z",
+  "sourceCommit": "e94315a6387c26c9731dea0ef5d3509fc48892ad",
+  "launcherRange": {
+    "minInclusive": "1.0.0",
+    "maxExclusive": "2.0.0"
+  },
+  "contracts": {},
+  "dependencies": [
+    {
+      "componentId": "OptiShade.Core",
+      "minimumVersion": "1.0.0"
+    }
+  ],
+  "package": {
+    "branch": "optimfg-stable",
+    "path": "packages/OptiShade.OptiMFG-1.0.77.tar.gz",
+    "bytes": 2919195,
+    "sha256": "71ef6331840f49e0f6b7e8e4cc6edcbd94cf5c3c7d9b55fefeb44bf8858431a1"
+  },
+  "files": [
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/backends/headless/files.json",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/backends/headless/files.json",
+      "bytes": 493,
+      "sha256": "457167057bf97cb46f5c36ef00c2411882992184125d4d8b52545ca1c7e35c84",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/backends/headless/RTX40MFG.asi",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/backends/headless/RTX40MFG.asi",
+      "bytes": 10752,
+      "sha256": "5f2876d6f45d47a44ee5714bb3f9c5669320928ed09972e9e4502ed49c2493d3",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/backends/headless/RTX40MFGCore.dll",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/backends/headless/RTX40MFGCore.dll",
+      "bytes": 391168,
+      "sha256": "28451ce64eaf4ebb5f8406f6b43e14f779fcf9258d47d051ef63896a5419ab85",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/backends/headless/version.dll",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/backends/headless/version.dll",
+      "bytes": 2435816,
+      "sha256": "28a1c573e66b8419d7ffd329a1cfec44f33ce1345fd61fbd941d6ef00f0ed2f3",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/backends/headless/version.ini",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/backends/headless/version.ini",
+      "bytes": 131,
+      "sha256": "adf5513dbbc4a2d55b580b73a98dedc366eeabe072e7a2e3c4bc84d65d62826f",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/concrt140.dll",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/concrt140.dll",
+      "bytes": 324208,
+      "sha256": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/licenses/ImGui.txt",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/licenses/ImGui.txt",
+      "bytes": 1104,
+      "sha256": "55e058cc5899e6077a819ad1005d6d1f4528f65ae100795c9692f9fa6525a8ce",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/licenses/MinHook.txt",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/licenses/MinHook.txt",
+      "bytes": 4365,
+      "sha256": "d5c2224982b0b95a16b098a561335fa93f3eaf4d0aa964b7843edb986df78dc8",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/licenses/nlohmann-json.txt",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/licenses/nlohmann-json.txt",
+      "bytes": 1076,
+      "sha256": "46a65cffd1ea955132d95a8dd921640714a8d6b537d2e4e482d31145ae95b603",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/licenses/NVAPI.txt",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/licenses/NVAPI.txt",
+      "bytes": 1248,
+      "sha256": "84726b60c17fe0f71f92a6c074c3d4087370886eba5d21ccc4ec55db37d6c8ba",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/licenses/OptiShade-GPL-3.0.txt",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/licenses/OptiShade-GPL-3.0.txt",
+      "bytes": 35823,
+      "sha256": "230184f60bae2feaf244f10a8bac053c8ff33a183bcc365b4d8b876d2b7f4809",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/licenses/PresentMon.txt",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/licenses/PresentMon.txt",
+      "bytes": 1067,
+      "sha256": "4c949341b1893c8c6ad82f7fb4eedf622cd1fd9c22a9af8f19b2dac19d1947b6",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/licenses/RTX-backend-MIT.txt",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/licenses/RTX-backend-MIT.txt",
+      "bytes": 1130,
+      "sha256": "004534cd49b0a6084dad4e5cdb526b398d7c210b4bb10af95240b60c81a008da",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/licenses/RTX-backend-source-changes.patch",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/licenses/RTX-backend-source-changes.patch",
+      "bytes": 25896,
+      "sha256": "e7feb84efbf5bc6ce485a2776bb6dd34f885e5a0321575f4279e07362f4c7e99",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/licenses/Streamline-header-notice.txt",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/licenses/Streamline-header-notice.txt",
+      "bytes": 2201,
+      "sha256": "e1e81a7428d15b30db37587e9469bd68a56d630d820a4accec0aee3b17e157dd",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/licenses/UltimateASILoader.txt",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/licenses/UltimateASILoader.txt",
+      "bytes": 1067,
+      "sha256": "ceca73c504e39084b0b80d2a437aea9988313d1915418d3c629c3e4a8313f5a1",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/msvcp140_1.dll",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/msvcp140_1.dll",
+      "bytes": 35952,
+      "sha256": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/msvcp140_2.dll",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/msvcp140_2.dll",
+      "bytes": 280200,
+      "sha256": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/msvcp140_atomic_wait.dll",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/msvcp140_atomic_wait.dll",
+      "bytes": 50304,
+      "sha256": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/msvcp140_codecvt_ids.dll",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/msvcp140_codecvt_ids.dll",
+      "bytes": 31872,
+      "sha256": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/msvcp140.dll",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/msvcp140.dll",
+      "bytes": 557728,
+      "sha256": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/OptiMFG_Controller.exe",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/OptiMFG_Controller.exe",
+      "bytes": 162304,
+      "sha256": "ca6efbfc6e2dfb6b840d80518ddfc2bbad4608c2dbf6e9315985dc644367c256",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/OptiMFG_Live.exe",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/OptiMFG_Live.exe",
+      "bytes": 864768,
+      "sha256": "e9e413262b4e4ce6099ca98c80b44e2eec308383856f47995e589d5a81fe9002",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/OptiMFG_LiveCtl.exe",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/OptiMFG_LiveCtl.exe",
+      "bytes": 55296,
+      "sha256": "c9fb2a2ed0fb675b8fc3d30b96478e28621eb4f7fcce53547bc01930dd1add72",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/OptiMFG_LiveHelper_v4.dll",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/OptiMFG_LiveHelper_v4.dll",
+      "bytes": 304640,
+      "sha256": "e4a35b990e3cd1bd7a175982357863414bc2bad93be17bc6d9d146faf9607597",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/PresentMon.exe",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/PresentMon.exe",
+      "bytes": 980320,
+      "sha256": "b2a706bc6ad475749e3b7e3409263aa1e6906d45bdcf993f6dbc0f660188f1af",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/README.txt",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/README.txt",
+      "bytes": 3908,
+      "sha256": "559591790572f2a7e23a14af747913e14c6176debe93eeec9c3c8df48dfec7b0",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/vccorlib140.dll",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/vccorlib140.dll",
+      "bytes": 352384,
+      "sha256": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/vcruntime140_1.dll",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/vcruntime140_1.dll",
+      "bytes": 49792,
+      "sha256": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/vcruntime140_threads.dll",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/vcruntime140_threads.dll",
+      "bytes": 38528,
+      "sha256": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/OptiMFG/Runtime/vcruntime140.dll",
+      "installPath": "OptiShadeData/OptiMFG/Runtime/vcruntime140.dll",
+      "bytes": 124544,
+      "sha256": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "preconditionSha256": ""
+    }
+  ],
+  "signature": {
+    "algorithm": "Ed25519",
+    "keyId": "optishade-release-2026",
+    "value": "r/OZEu4BpCn/bt2NUGi07vceX9IN/xktzoaYAzzhUZrKj1gscvmoqs/NdA747Q5GfY2gvFJLyiqG4mdZDVgSDQ=="
+  }
+}
