@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "componentId": "OptiShade.OptiMFG",
+  "version": "1.0.77",
+  "channel": "download-only",
+  "installable": false,
+  "buildVersion": "1.0.77",
+  "sourceCommit": "e94315a6387c26c9731dea0ef5d3509fc48892ad",
+  "sourceTreeSha256": "8A2E48EA3411D24017784C73E61F0F2307CECEF4DC037E1B4DFE5CBA262BAA0E",
+  "package": {
+    "file": "OptiShade.OptiMFG.tar.gz",
+    "bytes": 2919185,
+    "sha256": "9f4b0b9a0e9d4153c7a09f03e38ecac1370903a41e0747a0efd29b513b3e372e"
+  },
+  "sourcePackage": {
+    "file": "OptiShade.OptiMFG-source.tar.gz",
+    "bytes": 294127,
+    "sha256": "6d5a201ac0ffc000173b182d368bf3704afc668ed9d6934a29a6e01099129c23"
+  }
+}
