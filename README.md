@@ -1,7 +1,9 @@
-# OptiMFG 1.0.77
+# OptiMFG 1.0.78
 
-This branch provides the stable OptiMFG runtime package and its backend source and provenance archive. Remote installation and rollback are not enabled, so the package is deliberately marked `installable: false`.
+Signed OptiMFG runtime package for the OptiShade launcher. The launcher reads [`channel.json`](channel.json), checks its signature, then downloads and verifies `packages/OptiShade.OptiMFG-1.0.78.tar.gz` and every file in it before installing.
 
-The runtime keeps its required upstream licences and notices. Package inventory and SHA-256 values are listed in [`manifest.json`](manifest.json). OptiMFG currently targets the supported Microsoft Flight Simulator runtime; this package does not include the OptiShade launcher or installer.
+Changes in 1.0.78:
+- RTX 40: fixes a crash when a game restarts Streamline (the frame-generation plugin was kept loaded and used a plugin that had been unloaded).
+- OptiMFG Live: fixes a crash after Enable FPS capture (administrator).
 
-The launcher and installer executables are not included here or in Releases.
+The runtime keeps its required upstream licences and notices. The launcher and installer are not included here.
