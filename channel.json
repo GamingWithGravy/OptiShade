@@ -1,0 +1,23 @@
+{
+  "payload": {
+    "schema": 1,
+    "componentId": "OptiShade.Launcher",
+    "version": "1.0.78",
+    "channel": "stable",
+    "sourceCommit": "e1c67f8f37417eb1face08474f9f4b167907e141",
+    "contracts": {
+      "launcher": "standalone-exe/v1"
+    },
+    "dependencies": [],
+    "package": {
+      "path": "launcher/1.0.78/OptiShade.exe",
+      "bytes": 11641344,
+      "sha256": "a1536662b9a2f18901a42ac95a80d03b44d7d8a76dab62152b4bf6196913bc74"
+    }
+  },
+  "signature": {
+    "algorithm": "Ed25519",
+    "keyId": "optishade-release-2026",
+    "value": "RL33BRMWJAzJOFLsawtqUf220A8+Farh7GFRekGL+dZV+GATNg5hdPFj5JyuVEVjd5IdtHAkE/zr3fgkXKTyCQ=="
+  }
+}
