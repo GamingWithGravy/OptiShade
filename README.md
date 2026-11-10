@@ -2,8 +2,6 @@
 
 **Your game, your way.** OptiShade brings game discovery, per-game installation, rendering components, in-game controls and diagnostics together in one Windows app.
 
-> **OptiShade 1.0 is here.** The launcher and installer remain local and are not included in this repository or its Releases. Core, OptiMFG and Image Effects are delivered separately on their own branches. The legacy branch contains older 0.x downloads only.
-
 ## What’s new in 1.0
 
 - **Game library and per-game setup.** Scan or add games, choose an installation method where supported, and select optional components for each game. OptiShade records managed files and keeps backups so repair and uninstall can restore the original files.
