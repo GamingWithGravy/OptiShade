@@ -2,11 +2,19 @@
 
 **Your game, your way.** OptiShade brings game discovery, per-game installation, rendering components, in-game controls and diagnostics together in one Windows app.
 
+## Download
+
+**[Download the OptiShade installer](https://github.com/GamingWithGravy/OptiShade/releases/latest)** from the latest release.
+
+Run `OptiShade-Installer.exe`, read and accept the User Agreement, and choose your shortcut and start-up options. The installer downloads the signed OptiShade launcher, checks it and sets it up for your Windows user. If an earlier OptiShade test build is found, it offers a clean up that keeps your ini files, snapshots and settings.
+
+The installer is not code-signed yet, so Windows SmartScreen may show a warning the first time it runs. Choose **More info**, then **Run anyway**. Each release lists the installer's SHA-256 so you can check your download.
+
 ## What’s new in 1.0
 
 - **Game library and per-game setup.** Scan or add games, choose an installation method where supported, and select optional components for each game. OptiShade records managed files and keeps backups so repair and uninstall can restore the original files.
 - **Anti-cheat checks and warnings.** OptiShade checks known game protection indicators and shows a warning before installation where protection is detected or uncertain. Detection cannot guarantee a game's rules or predict every anti-cheat response. Installing into a protected game is the user's choice and risk.
-- **Component management.** The Update Manager separates manager updates from installed game components. Core, OptiMFG and Image Effects each have an independent stable 1.0.77 download branch with SHA-256 manifests. Remote component installation and rollback are not yet enabled, so these packages are marked download-only.
+- **Component management.** The Update Manager separates launcher updates from installed game components. Core, OptiMFG and Image Effects each update independently from signed channels, and every download is checked before anything is installed.
 - **OptiMFG.** Optional live frame-generation controls for supported Microsoft Flight Simulator 2020/2024 installations. The game must provide a compatible DLSS Frame Generation / Streamline path. Results depend on the game, GPU, driver and active provider; a listed multiplier is not proof that generated frames are being presented.
 - **Image Effects and Look Editor.** Manage shader effects and presets separately from the game's upscaler and frame-generation settings.
 - **Neural Rendering controls and diagnostics.** OptiShade can configure supported Neural Rendering paths and reports whether supported inputs and output are observed. A setting being enabled or a model being installed does not itself prove that rendering is active.
@@ -16,11 +24,11 @@
 - **In-game controls and monitoring.** Open the OptiShade interface, configure supported controls and view available runtime status without leaving the game.
 - **NVIDIA settings page.** Review and save supported per-game driver profile options before launching. Driver availability and behavior can vary; saved values do not prove a runtime feature loaded.
 
-## How component updates are intended to work
+## How updates work
 
-The public GitHub Releases page is reserved for the small installer when it is ready. The installer downloads and verifies the launcher. The launcher checks separate first-party channels for Core, OptiMFG and Image Effects, then downloads only the component selected for update. Neural Rendering continues to use its pinned NVIDIA/model source. Glass Cockpit and AtmosphereMod continue to use their authors' official sources. Package signatures, hashes, compatibility rules, backups and rollback are required before a channel is considered ready.
+The Releases page holds the small installer. The installer downloads and verifies the launcher from the `launcher-stable` branch. The launcher then checks its own signed channels (`launcher-stable`, `core-stable`, `effects-stable` and `optimfg-stable`) about every 10 minutes, updates itself without a full reinstall, and downloads only the components you choose to update. Every channel is signed, and every package and file is checked against its SHA-256 before it is used. Neural Rendering uses its pinned NVIDIA model source; Glass Cockpit and AtmosphereMod use their authors' official releases.
 
-The component branches contain their versioned packages, inventories, hashes and applicable source or licence notices. Packages are not yet installable through the launcher. This repository does not include the launcher or installer EXE.
+The component branches contain their versioned packages, inventories, hashes and applicable source or licence notices.
 
 ## Screenshots
 
@@ -42,7 +50,6 @@ More views: [NVIDIA settings](assets/screenshots/nvidia-settings.jpg) · [Settin
 - OptiMFG is currently intended for supported MSFS 2020/2024 setups. X-Plane 12 OptiMFG is not included in this release.
 - Neural Rendering depends on the game's supported frame inputs and model/runtime compatibility. It may remain inactive even when enabled in OptiShade.
 - Game updates, third-party mods, antivirus and permission restrictions can change installation or runtime behavior. Send diagnostics through OptiShade Troubleshooting when reporting a problem.
-- Online component delivery is not yet enabled in the launcher. Do not use private build artifacts as release packages.
 
 ## Credits and licensing
 
