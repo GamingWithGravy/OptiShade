@@ -1,10 +1,10 @@
 {
   "schema": 1,
   "componentId": "OptiShade.OptiMFG",
-  "version": "1.0.78",
+  "version": "1.0.79",
   "channel": "stable",
-  "publishedUtc": "2026-11-09T21:28:06Z",
-  "sourceCommit": "e1c67f8f37417eb1face08474f9f4b167907e141",
+  "publishedUtc": "2026-11-10T09:44:53Z",
+  "sourceCommit": "9302b348f7e4a534dbb2d97258d8ae708a8bc0c9",
   "launcherRange": {
     "minInclusive": "1.0.0",
     "maxExclusive": "2.0.0"
@@ -18,16 +18,16 @@
   ],
   "package": {
     "branch": "optimfg-stable",
-    "path": "packages/OptiShade.OptiMFG-1.0.78.tar.gz",
-    "bytes": 2920692,
-    "sha256": "caf3729c4c34022a30f01044ba2bae0a27583522c0dcc2de4ef954efb24b9606"
+    "path": "packages/OptiShade.OptiMFG-1.0.79.tar.gz",
+    "bytes": 2919891,
+    "sha256": "0a7373b77591c15e16215a628c16d1b05e20b576c1537b217406b819c3c5a8bc"
   },
   "files": [
     {
       "packagePath": "OptiShadeData/OptiMFG/Runtime/backends/headless/files.json",
       "installPath": "OptiShadeData/OptiMFG/Runtime/backends/headless/files.json",
       "bytes": 493,
-      "sha256": "3673e54b0c9418b76679d3a80f61784b85b1589933d698f38c8b190fd1455a25",
+      "sha256": "457167057bf97cb46f5c36ef00c2411882992184125d4d8b52545ca1c7e35c84",
       "preconditionSha256": ""
     },
     {
@@ -40,8 +40,8 @@
     {
       "packagePath": "OptiShadeData/OptiMFG/Runtime/backends/headless/RTX40MFGCore.dll",
       "installPath": "OptiShadeData/OptiMFG/Runtime/backends/headless/RTX40MFGCore.dll",
-      "bytes": 438272,
-      "sha256": "eb6532c5d0a4dbff67dd38952dd61665db333358036e5b0c7eb675f54d0a9971",
+      "bytes": 391168,
+      "sha256": "28451ce64eaf4ebb5f8406f6b43e14f779fcf9258d47d051ef63896a5419ab85",
       "preconditionSha256": ""
     },
     {
@@ -244,6 +244,6 @@
   "signature": {
     "algorithm": "Ed25519",
     "keyId": "optishade-release-2026",
-    "value": "3p77+WwEs+Qk83uwpqVssqWb5iZtMgKOcolbO2Hk02JqYOG8wmxhlwEgSV+azMqZn7+9m76JS8fu4Yg8UioYDA=="
+    "value": "aRfXX6XF84WWuCsOxMS21TQ/5fpK+dnvpM8HMVbGkpzqomE/yiHSpUOBF6CuK25cQjsNOgQLYB4gGOYb85WLBg=="
   }
 }
