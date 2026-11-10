@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "componentId": "OptiShade.Providers.Intel",
+  "version": "1.0.77",
+  "channel": "stable",
+  "publishedUtc": "2026-11-08T07:35:13Z",
+  "sourceCommit": "e94315a6387c26c9731dea0ef5d3509fc48892ad",
+  "launcherRange": {
+    "minInclusive": "1.0.0",
+    "maxExclusive": "2.0.0"
+  },
+  "contracts": {},
+  "dependencies": [
+    {
+      "componentId": "OptiShade.Core",
+      "minimumVersion": "1.0.0"
+    }
+  ],
+  "package": {
+    "branch": "providers-intel-stable",
+    "path": "packages/OptiShade.Providers.Intel-1.0.77.tar.gz",
+    "bytes": 73165007,
+    "sha256": "08644a148099e56c968c8560a5a5701114f9f4c6e673d77f753f8ee0e628e89c"
+  },
+  "files": [
+    {
+      "packagePath": "OptiShadeData/Engine/libxell.dll",
+      "installPath": "OptiShadeData/Engine/libxell.dll",
+      "bytes": 415368,
+      "sha256": "d2030dcd694fda8f2ec7e044b13e6db8f0b56d4ba9113a5efad334e3f3ded8c7",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Engine/libxess_dx11.dll",
+      "installPath": "OptiShadeData/Engine/libxess_dx11.dll",
+      "bytes": 156016,
+      "sha256": "c7cfe86f0c9d94e4fb3696d3cd5035e2bbb6a8b1b0572f8b7395a4cdfd0c625e",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Engine/libxess_fg.dll",
+      "installPath": "OptiShadeData/Engine/libxess_fg.dll",
+      "bytes": 22957432,
+      "sha256": "ec5e0c65e075570c6ede72618bb666d0be0c2e10b2ea9762c0fe8cb8e375ab27",
+      "preconditionSha256": ""
+    },
+    {
+      "packagePath": "OptiShadeData/Engine/libxess.dll",
+      "installPath": "OptiShadeData/Engine/libxess.dll",
+      "bytes": 77795704,
+      "sha256": "251659dd84a3e84de67c886a4186e01f3eca49b00641906fe38bb6b807e5d5b7",
+      "preconditionSha256": ""
+    }
+  ],
+  "signature": {
+    "algorithm": "Ed25519",
+    "keyId": "optishade-release-2026",
+    "value": "zWHMuYO42UAWSdoLOqm/JaP2mEGPv5JRVa0GTNlZxTsJ9l3MyT9o47UoPvasH25AYyFejdfmhVXTQDPRLefiCA=="
+  }
+}
