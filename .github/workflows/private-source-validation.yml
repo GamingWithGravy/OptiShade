@@ -1,0 +1,51 @@
+name: Private source validation
+on:
+  push:
+    branches: [private-rebuild-ui-2026-10-12, private-auto-compatibility-2026-10-20]
+  pull_request:
+    branches: [private-test40-2026-10-12]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Portable source, policy and headless native UI regressions
+        run: |
+          python3 tests/reconstruction/run_tests.py --powershell pwsh --report test-results/reconstruction.json
+          git diff --check
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: private-portable-reconstruction-test-results
+          path: test-results/reconstruction.json
+          retention-days: 7
+          if-no-files-found: warn
+  windows-regressions:
+    runs-on: windows-2022
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Windows installer, process identity and D3D10/D3D12 WARP regressions
+        shell: cmd
+        run: |
+          call Beta\legacy-nr\upstream\tools\vcvars.bat x64
+          if errorlevel 1 exit /b 1
+          where cl
+          if errorlevel 1 exit /b 1
+          python tests/reconstruction/run_tests.py --compiler cl --report test-results/reconstruction-windows.json
+          exit /b %ERRORLEVEL%
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: private-windows-reconstruction-test-results
+          path: test-results/reconstruction-windows.json
+          retention-days: 7
+          if-no-files-found: warn

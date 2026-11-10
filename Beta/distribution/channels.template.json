@@ -1,0 +1,18 @@
+{
+  "schema": 2,
+  "repository": "GamingWithGravy/OptiShade",
+  "note": "Local template only. No branches, releases, or assets have been created or changed. The public Releases page is reserved for the bootstrap installer. Each other channel is published from its own branch in this repository. Package files use ordinary GitHub branch downloads; no Git LFS quota is required while each file stays under 100 MiB.",
+  "channels": {
+    "launcher": { "stableBranch": "launcher-stable", "betaBranch": "launcher-beta", "componentId": "OptiShade.Launcher", "manifest": "channel.json", "packageTransport": "github-raw", "maximumBytes": 103809024 },
+    "core": { "stableBranch": "core-stable", "betaBranch": "core-beta", "componentId": "OptiShade.Core", "manifest": "channel.json", "packageTransport": "github-raw", "maximumBytes": 103809024 },
+    "optimfg": { "stableBranch": "optimfg-stable", "betaBranch": "optimfg-beta", "componentId": "OptiShade.OptiMFG", "manifest": "channel.json", "packageTransport": "github-raw", "maximumBytes": 103809024 },
+    "effects": { "stableBranch": "effects-stable", "betaBranch": "effects-beta", "componentId": "OptiShade.Effects", "manifest": "channel.json", "packageTransport": "github-raw", "maximumBytes": 103809024 },
+    "providersAmd": { "stableBranch": "providers-amd-stable", "betaBranch": "providers-amd-beta", "componentId": "OptiShade.Providers.AMD", "manifest": "channel.json", "packageTransport": "github-raw", "maximumBytes": 103809024 },
+    "providersIntel": { "stableBranch": "providers-intel-stable", "betaBranch": "providers-intel-beta", "componentId": "OptiShade.Providers.Intel", "manifest": "channel.json", "packageTransport": "github-raw", "maximumBytes": 103809024 }
+  },
+  "thirdParty": {
+    "neuralRendering": "existing-pinned-download-method",
+    "glassCockpit": "official-publisher-release-api",
+    "atmosphereMod": "official-publisher-release-api"
+  }
+}

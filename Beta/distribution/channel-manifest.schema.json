@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://optishade.invalid/schema/channel-v1.json",
+  "title": "OptiShade signed branch channel manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["payload", "signature"],
+  "properties": {
+    "payload": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "componentId", "version", "channel", "sourceCommit", "contracts", "dependencies", "package"],
+      "properties": {
+        "schema": { "const": 1 },
+        "componentId": { "enum": ["OptiShade.Launcher", "OptiShade.Core", "OptiShade.OptiMFG", "OptiShade.Effects"] },
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$", "maxLength": 64 },
+        "channel": { "enum": ["stable", "beta"] },
+        "sourceCommit": { "type": "string", "pattern": "^[a-fA-F0-9]{40,64}$" },
+        "contracts": { "type": "object", "maxProperties": 32, "additionalProperties": { "type": "string", "maxLength": 96 } },
+        "dependencies": { "type": "array", "maxItems": 16, "uniqueItems": true },
+        "package": {
+          "type": "object", "additionalProperties": false,
+          "required": ["path", "bytes", "sha256"],
+          "properties": {
+            "path": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]{1,240}$" },
+            "lfsOid": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+            "bytes": { "type": "integer", "minimum": 1, "maximum": 103809024 },
+            "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" }
+          }
+        }
+      }
+    },
+    "signature": {
+      "type": "object", "additionalProperties": false,
+      "required": ["algorithm", "keyId", "value"],
+      "properties": {
+        "algorithm": { "const": "Ed25519" },
+        "keyId": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,64}$" },
+        "value": { "type": "string", "contentEncoding": "base64", "minLength": 80, "maxLength": 128 }
+      }
+    }
+  }
+}

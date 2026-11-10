@@ -1,0 +1,4 @@
+Official unchanged test fixture. Source: https://github.com/IFreemz/msfs2024-glass-cockpit-dlss-fix/releases/tag/v1.0.4
+Asset: glass-cockpit-dlss-fix.addon64
+SHA256: 1ADF8771FB050572D01D0628D9E7A75A60F07BB890AD98D770FD7CD0DB4EAFAA
+Not part of game payload; bundled official addon unchanged. See Beta/installer/GlassCockpit for project license/notice.

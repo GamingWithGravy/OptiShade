@@ -1,0 +1,16 @@
+[
+  {
+    "Name": "Standard effects",
+    "Source": "https://github.com/crosire/reshade-shaders/archive/slim.zip",
+    "Effects": 5,
+    "Status": "Installed",
+    "Delivery": "Bundled offline"
+  },
+  {
+    "Name": "SweetFX by CeeJay.dk",
+    "Source": "https://github.com/CeeJayDK/SweetFX/archive/master.zip",
+    "Effects": 27,
+    "Status": "Installed",
+    "Delivery": "Bundled offline"
+  }
+]

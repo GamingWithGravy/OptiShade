@@ -1,0 +1,14 @@
+{
+  "FixedFileInfo": {
+    "FileVersion": {"Major": 1, "Minor": 0, "Patch": 85, "Build": 0},
+    "ProductVersion": {"Major": 1, "Minor": 0, "Patch": 85, "Build": 0}
+  },
+  "StringFileInfo": {
+    "CompanyName": "created by gravy",
+    "FileDescription": "OptiShade Installer",
+    "ProductName": "OptiShade Installer",
+    "FileVersion": "1.0.85",
+    "ProductVersion": "1.0.85"
+  },
+  "IconPath": "OptiShade.ico"
+}

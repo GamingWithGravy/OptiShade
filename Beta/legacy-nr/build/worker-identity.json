@@ -1,0 +1,1084 @@
+{
+    "Schema":  1,
+    "Kind":  "OptiShadeLegacyWorkerBuild",
+    "InputsSHA256":  "94B31DA8A0623623C8EB95476396272FD4DE857E75C2D8829448D393C11D835C",
+    "Sources":  {
+                    "SHA256":  "379D08C62885CBCACEF058A47501F639378F80859917D5F18BC6F5558F33CFE6",
+                    "Files":  [
+                                  {
+                                      "Path":  "legacy-nr/build-host64.bat",
+                                      "Size":  1115,
+                                      "SHA256":  "71F941AB9146E6DFF38678B363E1180B196AC7314CA2F19088E90B7E1E16B8A3"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/build-identity.ps1",
+                                      "Size":  16486,
+                                      "SHA256":  "C364285EB9914EE92DE843663B5D4BEFDC1B3C0BCAA8206412FB4DB7F377E5CC"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/build.ps1",
+                                      "Size":  2105,
+                                      "SHA256":  "0FB529551B444F0520C0BF1D2E93287DB2C372892C884148961F1039B3468F60"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/host/dlss5-feed-host64.cpp",
+                                      "Size":  250200,
+                                      "SHA256":  "0D0AD121AA18037CC2B8E1573F4F0F8805409A833975BD445BE084D1860DB953"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_control.h",
+                                      "Size":  11867,
+                                      "SHA256":  "48A0C67819EC18F114C5D381135E82748DC9BBEC08E92BB1C5A53E73864C39DB"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_crash.h",
+                                      "Size":  17638,
+                                      "SHA256":  "56A0F8E44C5956B0C2F9A10A21AEAAA84A0BE38EACF682C58A4EE77A0B6ECA7A"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_d3d10.h",
+                                      "Size":  14545,
+                                      "SHA256":  "AAA346899A33F0620D53968797F874AD195A838FD0F82FF3EBEAEF2A94349F44"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_d3d10_guides.h",
+                                      "Size":  18909,
+                                      "SHA256":  "412B19154A791AF6D707C49F5257795CC4680CB85BE223A70E2B6A65F3D12272"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_depthsrc.h",
+                                      "Size":  9211,
+                                      "SHA256":  "DBEA7A279B2A292F632AC4AEC976BF557B0DED19DD8C80FD4FB8C90FE97A77E5"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_dfc.h",
+                                      "Size":  7010,
+                                      "SHA256":  "E049CF4B1DB6616CBDBD7CE8E87F4711922CF00D1C8ED027C0E2A9B9F77AAE96"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_fmt.h",
+                                      "Size":  5623,
+                                      "SHA256":  "6A834D309FFBA2D0454DF2363F8C8D98149D1E18A5B2D72627E3CF8AA30FD53E"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_fsr1.h",
+                                      "Size":  10350,
+                                      "SHA256":  "0295EC42CA6D733441BD272DF42A445B7A42FAA7D4C4E168064D4296524FDFCA"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_gl.h",
+                                      "Size":  38557,
+                                      "SHA256":  "E8A2F50ED362C78D5F591DAF65EBFE86936AFAF7C8DA0235FFEC3BA2130C58C0"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_hold12.h",
+                                      "Size":  18571,
+                                      "SHA256":  "8B05327E317C3714AE78D0CAFF1C0037827A7424ADC2494CB23AA70C5F36E94D"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_ipc.h",
+                                      "Size":  22463,
+                                      "SHA256":  "0865C13B05F5343C264536E91BB586441CAB62DE26E96CF1038161739E9CBA76"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_ldr.h",
+                                      "Size":  3059,
+                                      "SHA256":  "F74D8529B592F59E771F855FD5F8F720E15B8235408AD17B4253E1A9FA861200"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_ngx.h",
+                                      "Size":  28376,
+                                      "SHA256":  "3ABC0417B42CA9A2374B6860AC4DA71254845CB6F49E8344636A8F4EE3937D86"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_ngx_trust.h",
+                                      "Size":  16404,
+                                      "SHA256":  "61747723339CF54EE9859D411AD99FBC190EDAB2A17CBFFB0CBEE5B150F259DE"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_opti.h",
+                                      "Size":  21267,
+                                      "SHA256":  "C0FB46241AB4D42B60F3C6319A26B6BA5A8181A62AC736448E1156D4521E1BC5"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_pq12.h",
+                                      "Size":  11407,
+                                      "SHA256":  "5CF962AA6A32CE0D56E1B14BE0C3722118B647471F397BAAB53C5771F3155BC3"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_preparation.h",
+                                      "Size":  7645,
+                                      "SHA256":  "D5DB81A5267F5EEBF68B98D1A1D64D6BB8352983FDE7EF9C8E0A92FE78FFCE66"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_vk.h",
+                                      "Size":  28970,
+                                      "SHA256":  "BA2547C39DB8004C2D86E4B79FE357DC49AAF6142DCD57C3F10CC80296F23115"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_vk_hook.h",
+                                      "Size":  26972,
+                                      "SHA256":  "1405371926DDC4331CD981079B4C98D892DFD94238543B387B51523C992B13C6"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_vk_present64.h",
+                                      "Size":  7719,
+                                      "SHA256":  "795ECE277B95CC06746189305659FCBA2E96D0B20F7FA052E2D5C3A92A400EAD"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_vk_present_order.h",
+                                      "Size":  480,
+                                      "SHA256":  "EE636794B32CF5664941126663CBA2B8A8CEE3773F3327A5F0D40A1CD28694D8"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/src/feed_vk_probe64.h",
+                                      "Size":  9779,
+                                      "SHA256":  "192C094B39AA971A276EE3EF8C514D4D08F64FBD470DDF1C8F87A5B4544D2DD7"
+                                  },
+                                  {
+                                      "Path":  "legacy-nr/upstream/tools/vcvars.bat",
+                                      "Size":  1850,
+                                      "SHA256":  "271DCB349D11B430A67FE51E479103C777F8D17CC721E8A1C72281C8658F01B9"
+                                  },
+                                  {
+                                      "Path":  "optiscaler/external/nlohmann/json.hpp",
+                                      "Size":  978962,
+                                      "SHA256":  "5F09D1EEBE9B3557F21DF155869AF13BCDE79B74A0748F82CA946E8CC088AAA0"
+                                  },
+                                  {
+                                      "Path":  "reconstruction/generate_provider_policy.py",
+                                      "Size":  8030,
+                                      "SHA256":  "FCD29C8C544F6E67BEF1ACCDB60E51BC52875BF23C7581CA95A1C48B9AE45C91"
+                                  },
+                                  {
+                                      "Path":  "reshade/res/shaders/optishade_guides.dxbc.h",
+                                      "Size":  66228,
+                                      "SHA256":  "94A30D20F275EC82F666B18D05954825D537A8CECB386BB8D9F77F9677875777"
+                                  },
+                                  {
+                                      "Path":  "reshade/res/shaders/optishade_guides.generated.h",
+                                      "Size":  181844,
+                                      "SHA256":  "7FA12FCD48CD8DF3FE81BBAF4D0F52D9F047E492669E50DCD9DD6A1705E04142"
+                                  },
+                                  {
+                                      "Path":  "reshade/res/shaders/optishade_guides.glsl.h",
+                                      "Size":  9986,
+                                      "SHA256":  "12E58613705C661FDF33D973C1B63B25A86E1F0CCCC6EEC5435F6BD43CA31445"
+                                  },
+                                  {
+                                      "Path":  "reshade/res/shaders/optishade_guides.hlsl",
+                                      "Size":  3590,
+                                      "SHA256":  "4A05904EF44B81E310698D17C91A8D95FAB763A0C8787C364CEF255F902B8E26"
+                                  },
+                                  {
+                                      "Path":  "shared/AtomicConfigWrite.h",
+                                      "Size":  2071,
+                                      "SHA256":  "0F58CABE19CD11E15ECD7E92641C81B14A145100C92A3F1839F8691CB4C40D90"
+                                  },
+                                  {
+                                      "Path":  "shared/AutoCompatibility.h",
+                                      "Size":  16317,
+                                      "SHA256":  "DA389D5F7BA23ADB92FBEFE98CA873F82045E1EFAD4014ABF86F8AE4CE0A896C"
+                                  },
+                                  {
+                                      "Path":  "shared/AutoDiagnostics.h",
+                                      "Size":  1891,
+                                      "SHA256":  "52FF2EDCC849982D39295C28B2FFEF271BE627F25C56546804DF86DB4810505D"
+                                  },
+                                  {
+                                      "Path":  "shared/BackendSelection.h",
+                                      "Size":  2358,
+                                      "SHA256":  "B3F9802A4EDD81B3D8CB265C0C148F26A857D20EC740A7774E89CAB053DE2D75"
+                                  },
+                                  {
+                                      "Path":  "shared/BackgroundStatus.h",
+                                      "Size":  4715,
+                                      "SHA256":  "A0C9E373DC56D84EA762FDA31D49191B80A9F769D8EAFC113BD2E49B9AF80544"
+                                  },
+                                  {
+                                      "Path":  "shared/BaseMipCopy.h",
+                                      "Size":  2762,
+                                      "SHA256":  "195B1DD5B1DEB89F93AF73AFE83FB3863E4C54A8D79C53245510ED56ACCE3597"
+                                  },
+                                  {
+                                      "Path":  "shared/BoundedLogSink.h",
+                                      "Size":  2376,
+                                      "SHA256":  "EB27B88CFE710E70AB70F9ED578948FFC58459B2BD507B806C89F62373F28820"
+                                  },
+                                  {
+                                      "Path":  "shared/BuildDisplayLabel.h",
+                                      "Size":  1810,
+                                      "SHA256":  "770A3C38B4DEFCEAA3F3654E3B6F342B43D2A69C10732DE9499FBE3E46258027"
+                                  },
+                                  {
+                                      "Path":  "shared/CockpitControls.h",
+                                      "Size":  892,
+                                      "SHA256":  "128997AC0F93153054F2BBE6C11AFFCFE42AABB9290DD6CE1E6EB67624CBA5BF"
+                                  },
+                                  {
+                                      "Path":  "shared/CoreGuideRelay.h",
+                                      "Size":  893,
+                                      "SHA256":  "9C6044D3A2006D056AE55DC5E335B827E31FC44ABC837D7D084B3DE59D51968D"
+                                  },
+                                  {
+                                      "Path":  "shared/D3D11Adapter.h",
+                                      "Size":  650,
+                                      "SHA256":  "BA9C7EF88E20718074E1C6DA8ABB4D5A3106729C80BB1D95015705E579A2027B"
+                                  },
+                                  {
+                                      "Path":  "shared/D3D12Capabilities.h",
+                                      "Size":  2456,
+                                      "SHA256":  "800B3ADF1263B744E6102ABE2DBD67B8DC2674E93C15C0F36F5E14803432DBB2"
+                                  },
+                                  {
+                                      "Path":  "shared/D3D12CreateDeviceScope.h",
+                                      "Size":  1269,
+                                      "SHA256":  "C78C893EA382F2F0B54DB43F1634BB9434129550BED9994401CE8B2978CFC005"
+                                  },
+                                  {
+                                      "Path":  "shared/D3D12FrameContext.h",
+                                      "Size":  3450,
+                                      "SHA256":  "8B240E1F1E443B9ADC14DA22E9CDF5591F9A20B58FF2A3547B62E60E1873A1D3"
+                                  },
+                                  {
+                                      "Path":  "shared/D3D12QueueWait.h",
+                                      "Size":  2299,
+                                      "SHA256":  "2650840C1BE105C35252408EB7C382A2D1ACD356E1C596ECFBBC50E1D261FA0D"
+                                  },
+                                  {
+                                      "Path":  "shared/D3D12RestoreCall.h",
+                                      "Size":  4232,
+                                      "SHA256":  "3313E0677A1F9AFA99DB5E91DBBD75303F5C4490B39FE5AB40A1054F1412B8F1"
+                                  },
+                                  {
+                                      "Path":  "shared/D3D12SubmissionRegistry.h",
+                                      "Size":  12170,
+                                      "SHA256":  "4C119051E687222559EDCCC9C748E9C53585E2BACE7344779C8147A2D26B6E56"
+                                  },
+                                  {
+                                      "Path":  "shared/DeferredModuleUnloads.h",
+                                      "Size":  3763,
+                                      "SHA256":  "D696AF12D19BC6BDDFF5B1011C6B880254A7F8D892681143CC06013F979F811E"
+                                  },
+                                  {
+                                      "Path":  "shared/DeferredSrQuality.h",
+                                      "Size":  1943,
+                                      "SHA256":  "29B5FF3182CEDA71C43618BFF65DA5870530DC004384A77256124E1D8DA74DBA"
+                                  },
+                                  {
+                                      "Path":  "shared/DiagnosticRateLimit.h",
+                                      "Size":  877,
+                                      "SHA256":  "976FA77CBEFC3640A5944820FAE65A4EAB452CFFDB7E4C8BBE8BF0A5F0E9E08C"
+                                  },
+                                  {
+                                      "Path":  "shared/DlssRuntimeSelection.h",
+                                      "Size":  1239,
+                                      "SHA256":  "095F6D5280A03B0784181BA3840FF4D032A32659265203C99D2240902884D1D7"
+                                  },
+                                  {
+                                      "Path":  "shared/EffectEditorCache.h",
+                                      "Size":  2991,
+                                      "SHA256":  "E0F40CEEB47B655B4999027DAC6DEA15AB0D11652144F337C7AE3BCF111C733F"
+                                  },
+                                  {
+                                      "Path":  "shared/EffectNumericUi.h",
+                                      "Size":  3674,
+                                      "SHA256":  "2411A13D0C63F82682F0C34BCA7AE19B133E661BFE595C57F8D96228D025BE64"
+                                  },
+                                  {
+                                      "Path":  "shared/EffectReadiness.h",
+                                      "Size":  699,
+                                      "SHA256":  "E4FCD6D1771D03390FA910597FFD6B902EA0D2D30AAE869E05FC7E126ABBA6CC"
+                                  },
+                                  {
+                                      "Path":  "shared/EffectsBridge.h",
+                                      "Size":  2950,
+                                      "SHA256":  "AE55702986CCE1992F06D14AC1845507A9C639E9A908D096A55EB4CD4934000C"
+                                  },
+                                  {
+                                      "Path":  "shared/EffectsSyncPolicy.h",
+                                      "Size":  3609,
+                                      "SHA256":  "854DA8912D3BACAD99A71E588020FE734DD0EA315AC3A1FA5C1F3CDB898CC2C2"
+                                  },
+                                  {
+                                      "Path":  "shared/ExternalFgObserver.h",
+                                      "Size":  3583,
+                                      "SHA256":  "93D85AB2415389ACA13F51C0E3082760FCD63FC8B53FF15ADE798DE011FAD4CC"
+                                  },
+                                  {
+                                      "Path":  "shared/ExternalFgTelemetry.h",
+                                      "Size":  4554,
+                                      "SHA256":  "8AB751DD847125A991CA36D21086BCB084339E83294B86C96C07222CD6B25336"
+                                  },
+                                  {
+                                      "Path":  "shared/FfxQueryContract.h",
+                                      "Size":  666,
+                                      "SHA256":  "2FB8AF0BB31C81613A08220035F728BB2E74EA62AF39FED3C05A14FFDA88C0C8"
+                                  },
+                                  {
+                                      "Path":  "shared/FgSrParameterIsolation.h",
+                                      "Size":  1244,
+                                      "SHA256":  "A0E9EFFF5BDDD1D1939A4B00062BC7C138C7A93338611F0C57499E7C95C08947"
+                                  },
+                                  {
+                                      "Path":  "shared/FormatViewContract.h",
+                                      "Size":  12301,
+                                      "SHA256":  "761EA3F3433544DE4F4814032713DBCA308075A5CDA8A26178A212344313E0F5"
+                                  },
+                                  {
+                                      "Path":  "shared/FrameConstants.h",
+                                      "Size":  1990,
+                                      "SHA256":  "06CE2D8B3FE93AF9019F523401DFDD800B297456E6F54F83262C33886F8E6FED"
+                                  },
+                                  {
+                                      "Path":  "shared/GpuProgressTrace.h",
+                                      "Size":  3135,
+                                      "SHA256":  "CD904A1AFAC62EDCFB8CB939AD1F9AB5B1FFFF360E5FF944B71F98BB2D04CA61"
+                                  },
+                                  {
+                                      "Path":  "shared/GuideDepthTransfer.h",
+                                      "Size":  2708,
+                                      "SHA256":  "CA91977D8AF1B626F5E5BC64894459C1FF55B1995394189AEBB6D997961970C4"
+                                  },
+                                  {
+                                      "Path":  "shared/GuideExtent.h",
+                                      "Size":  1458,
+                                      "SHA256":  "773C699737B956E6CCF473DA821DCEF288E8E4C7B1E798E2BF3B0A400421B0AD"
+                                  },
+                                  {
+                                      "Path":  "shared/GuideHistory.h",
+                                      "Size":  571,
+                                      "SHA256":  "850F9647DD9C8EED84D74A60595703054B70FD9413DFB114CA8A7B752F05F382"
+                                  },
+                                  {
+                                      "Path":  "shared/HardwareMonitorDisplay.h",
+                                      "Size":  1088,
+                                      "SHA256":  "224127351D4ACFBB7187D48337BCF5B76A66E41763FA3C5B355DF8F67C06B274"
+                                  },
+                                  {
+                                      "Path":  "shared/HardwareRenderGpu.h",
+                                      "Size":  670,
+                                      "SHA256":  "BE76B046FF0A5FC6F89A74915428C605E079EA4DAA7FA3C9F2E2FC1EA03F7D47"
+                                  },
+                                  {
+                                      "Path":  "shared/HardwareSensorProcess.h",
+                                      "Size":  3130,
+                                      "SHA256":  "099E7D45111410014F4E4689D2B6EF48C726F274E12AD3DFBBD765C330F04D40"
+                                  },
+                                  {
+                                      "Path":  "shared/HardwareTelemetry.h",
+                                      "Size":  2776,
+                                      "SHA256":  "6A439CA55C0C256C62833B65F0BCC42003F3856C015134AD22200C3FDDD18358"
+                                  },
+                                  {
+                                      "Path":  "shared/InputHandleFilter.h",
+                                      "Size":  981,
+                                      "SHA256":  "01779247A8A5D81F9B1EFD69513223EB59E3CD39CAE88213CB6E7904EE86A4D2"
+                                  },
+                                  {
+                                      "Path":  "shared/LastSession.h",
+                                      "Size":  16015,
+                                      "SHA256":  "C0B570607F5A8291A86A5CE34E4E70AE82560CB30DEA0FD2177DA74DE8875082"
+                                  },
+                                  {
+                                      "Path":  "shared/LegacyNrGuideBridge.h",
+                                      "Size":  4111,
+                                      "SHA256":  "2A1C11B6B5FC89775D797419470182149BBF133F062E3883F626C61F951DBF60"
+                                  },
+                                  {
+                                      "Path":  "shared/LowLatencyInputSetting.h",
+                                      "Size":  922,
+                                      "SHA256":  "FA097875B3BF2C965271C24A2D0DE2F3C583BE3DAB0F0110B91358F974BF4918"
+                                  },
+                                  {
+                                      "Path":  "shared/MenuGeometry.h",
+                                      "Size":  6675,
+                                      "SHA256":  "8ADC5EBA88FC9BC03742DBDCF52CC83D220930968F35DF20C393B4DBD03AB657"
+                                  },
+                                  {
+                                      "Path":  "shared/MenuGeometryIni.h",
+                                      "Size":  1903,
+                                      "SHA256":  "E2E4969A1C3A083DE198C264BC217C1D0E63DA2F1EBC3A2237A7916C36DD840C"
+                                  },
+                                  {
+                                      "Path":  "shared/MenuSettingsDraft.h",
+                                      "Size":  3200,
+                                      "SHA256":  "38B9D92C90CB2FFA66327C4A9628EED71F8ED886523CC61A3B32AFEE42949314"
+                                  },
+                                  {
+                                      "Path":  "shared/MfgBackgroundStatus.h",
+                                      "Size":  2591,
+                                      "SHA256":  "D5C7984498B67C1FA8E72936476F1D0CD9AC0F50DE14E3C7C456F39EC5B34188"
+                                  },
+                                  {
+                                      "Path":  "shared/MfgControl.h",
+                                      "Size":  15438,
+                                      "SHA256":  "03440019893B18A8AF2E54D93383B448863E8380FAE3EF2FF66D6819FD592EB0"
+                                  },
+                                  {
+                                      "Path":  "shared/MfgControlWin.h",
+                                      "Size":  26703,
+                                      "SHA256":  "A31DE2EA1C22393BE0BE2BC45EC773CAB0842DD561C912333D84B69B314D84F5"
+                                  },
+                                  {
+                                      "Path":  "shared/MfgDraft.h",
+                                      "Size":  3281,
+                                      "SHA256":  "A25EA3E46565A9BEA4D846ACFA594EC0AAD1C295D2554A399916733607945B7D"
+                                  },
+                                  {
+                                      "Path":  "shared/NativeFgAssembly.h",
+                                      "Size":  5920,
+                                      "SHA256":  "8F53E50A02379A2928523CA1901A457A02574F4A0829164BD589D8F64F5C0CC4"
+                                  },
+                                  {
+                                      "Path":  "shared/NativeFgCapabilityCache.h",
+                                      "Size":  1065,
+                                      "SHA256":  "99FAB73843DEA0A54208CE7EDEB3C1FC95D2DD3707AF224E45DAD8667F966ED1"
+                                  },
+                                  {
+                                      "Path":  "shared/NativeFgLifetime.h",
+                                      "Size":  376,
+                                      "SHA256":  "E2427CC8CC88055DF625FB8657BED203B31C3E597549D6DC918544C307DC83B0"
+                                  },
+                                  {
+                                      "Path":  "shared/NativeFgPresentBoundary.h",
+                                      "Size":  8258,
+                                      "SHA256":  "1F75CAC0F81F04912FB14E29BA32E46DA1906DBEBC4124DF5C2FB5A28441DC11"
+                                  },
+                                  {
+                                      "Path":  "shared/NativeFgRetry.h",
+                                      "Size":  1288,
+                                      "SHA256":  "BBFBE87C08150DE4C058F1EDC164771997F8051A3D7CBE5309605779B0B56CFB"
+                                  },
+                                  {
+                                      "Path":  "shared/NativeFgStateQuery.h",
+                                      "Size":  6132,
+                                      "SHA256":  "8F3EA08F2ECCF3AFA53FF8E1D4516B4387564E048689C27141320DEDAC36643C"
+                                  },
+                                  {
+                                      "Path":  "shared/NativeFgTagReplacement.h",
+                                      "Size":  485,
+                                      "SHA256":  "4B9A2378DAE1CCBA6538885A381034A9D07AA9F02E30659FD551498B25EF021E"
+                                  },
+                                  {
+                                      "Path":  "shared/NativeMfgControl.h",
+                                      "Size":  13913,
+                                      "SHA256":  "FA27D08F8344E31B2A602D1643983234A8896866F8D827491E7736FC60DB9C3F"
+                                  },
+                                  {
+                                      "Path":  "shared/NeuralModelPath.h",
+                                      "Size":  574,
+                                      "SHA256":  "0F6D34E213C521B85BC50803DDF84739F01D0D13D5BAA4E5C176DF173C547C01"
+                                  },
+                                  {
+                                      "Path":  "shared/NeuralModelPolicy.generated.h",
+                                      "Size":  1561,
+                                      "SHA256":  "D2624BEC6FFD2DAE512E59B555404130A98414BAAC2DBCC7EE88770E0E339EAA"
+                                  },
+                                  {
+                                      "Path":  "shared/NeuralRuntimePreparationWin.h",
+                                      "Size":  6742,
+                                      "SHA256":  "CCDA277120A288571F1E77B2CFA67A470B4C2A7D3309C4B49FB2106DA22EC0A7"
+                                  },
+                                  {
+                                      "Path":  "shared/NeuralRuntimeReceipt.h",
+                                      "Size":  2462,
+                                      "SHA256":  "7DA8C75ED117AE3662098DDAA0A8987B77348CE7B9AE6922465F1F4613064681"
+                                  },
+                                  {
+                                      "Path":  "shared/NrAdmission.h",
+                                      "Size":  3406,
+                                      "SHA256":  "D0B2CF3CE932BDDC2B99965341C3B39E426DF0C04AE2380BA20CC8C9978F1CE1"
+                                  },
+                                  {
+                                      "Path":  "shared/NrCreationCompletion.h",
+                                      "Size":  1486,
+                                      "SHA256":  "399B2638CE4E964E781BB9DA29ED9071181DCC71A060D929E5EF87B5CE8EB82A"
+                                  },
+                                  {
+                                      "Path":  "shared/NrDeferredEvents.h",
+                                      "Size":  2602,
+                                      "SHA256":  "F3F70C183DEA0C9792F97F7E475D1BE27D134D66352FDB51F424FC4481926DF5"
+                                  },
+                                  {
+                                      "Path":  "shared/NrGpuLifetime.h",
+                                      "Size":  4664,
+                                      "SHA256":  "A6F44559143AA247CA99000F25A0148CE72C90174D6A253C8A024BE470103F15"
+                                  },
+                                  {
+                                      "Path":  "shared/NrMemoryBudget.h",
+                                      "Size":  2108,
+                                      "SHA256":  "6D51DD26B51834A9FABA889BB741C86986DA5FB0F07FB74FCD08911C625893D0"
+                                  },
+                                  {
+                                      "Path":  "shared/NrObservation.h",
+                                      "Size":  14551,
+                                      "SHA256":  "26D1A061E84B2319C86BBB001A41FE56F261C1CE9EB2AA405486CA79F65C35BD"
+                                  },
+                                  {
+                                      "Path":  "shared/NrRecordingDevice.h",
+                                      "Size":  617,
+                                      "SHA256":  "A3A0A6DD36B7270666B96017E1E6AF1CF725FEA38B04E64D3920C8F1755CCE1D"
+                                  },
+                                  {
+                                      "Path":  "shared/NrSessionControl.h",
+                                      "Size":  869,
+                                      "SHA256":  "ACEBF2460E95E5602E2B15D713990C7FBF34018B2680034E4F9A4990F6EE9C4F"
+                                  },
+                                  {
+                                      "Path":  "shared/NrSourcePolicy.h",
+                                      "Size":  2359,
+                                      "SHA256":  "20AF6022B0D2EA4E8E263A1B217579C04B5CA364B377CEF3C91791D0FC068FD2"
+                                  },
+                                  {
+                                      "Path":  "shared/NrSubmissionOutcome.h",
+                                      "Size":  2845,
+                                      "SHA256":  "DBC347EEEAA0D2EFA5C081C92E84F16D8AFA3C34A78E2B4AA0B6DA8232725185"
+                                  },
+                                  {
+                                      "Path":  "shared/OptiShadeMfgApi.h",
+                                      "Size":  1117,
+                                      "SHA256":  "A3D7BD8ED051EBE578C60147AC7DF7E31DF92CF7C851EC2F67CB75F2803A65E7"
+                                  },
+                                  {
+                                      "Path":  "shared/OptiShadeStreamlinePolicy.h",
+                                      "Size":  940,
+                                      "SHA256":  "4268CBEEC6C1D641A05484D90DF4E3E8C73D643C9DCCCB9E26F6974BA56584C6"
+                                  },
+                                  {
+                                      "Path":  "shared/OptiShadeVersion.h",
+                                      "Size":  715,
+                                      "SHA256":  "B749554C43CC331F8229FBBA338BB308610484D8D4613C16A69B6035CFC4D253"
+                                  },
+                                  {
+                                      "Path":  "shared/OutputDomain.h",
+                                      "Size":  3289,
+                                      "SHA256":  "AF5E8F8811F2B31278EEB29D9B25CB3219AF4E534BA7A229E61B571477DF81D8"
+                                  },
+                                  {
+                                      "Path":  "shared/OutputLifecycle.h",
+                                      "Size":  1691,
+                                      "SHA256":  "6AD364443429BC11D67F786F0802CEF74A1E268985C86DB0AAABD114E75C177C"
+                                  },
+                                  {
+                                      "Path":  "shared/OverlayCallbacks.h",
+                                      "Size":  525,
+                                      "SHA256":  "ED00AEC00B9481E1BE4A878E73AA88A768474F4EF6C4391DD6518FD0365338AC"
+                                  },
+                                  {
+                                      "Path":  "shared/OverlayCompletion.h",
+                                      "Size":  2684,
+                                      "SHA256":  "4885464AE090E93FE19DDF420DD7CE9DA39DE97404660323FBC24D7C9B8562AE"
+                                  },
+                                  {
+                                      "Path":  "shared/OverlayInputAdmission.h",
+                                      "Size":  4318,
+                                      "SHA256":  "80B6C61C38275E0FEE2ACD524EA1E33BF2803724C7792D6E8705725F3A66F4DA"
+                                  },
+                                  {
+                                      "Path":  "shared/OverlayLoadScope.h",
+                                      "Size":  767,
+                                      "SHA256":  "DB1B891E5E42824E57AFA123005170DC289DFFF658541A1C845BBD23DFB669F5"
+                                  },
+                                  {
+                                      "Path":  "shared/OverlayPreparation.h",
+                                      "Size":  1591,
+                                      "SHA256":  "902038CBB121351C04086D67B57427651CA45D677FC1BE2935395A52067443B4"
+                                  },
+                                  {
+                                      "Path":  "shared/OverlayRetry.h",
+                                      "Size":  413,
+                                      "SHA256":  "BB1E2119845C89F6F20A4699B84EA4239B71A368E49532248C0EC1D533166002"
+                                  },
+                                  {
+                                      "Path":  "shared/OverlaySubmissionLock.h",
+                                      "Size":  554,
+                                      "SHA256":  "42CE5AD802B1BAA32DFB0F0562B694110AF602A4CE2FC8B950EF7A4BA572280B"
+                                  },
+                                  {
+                                      "Path":  "shared/PanelActionPolicy.h",
+                                      "Size":  1660,
+                                      "SHA256":  "4FE45D48C9E8E0CD70E0F7CF786D9B967FDB4344869F48F832B41CA25AC7D0D3"
+                                  },
+                                  {
+                                      "Path":  "shared/PanelUi.h",
+                                      "Size":  32744,
+                                      "SHA256":  "77B2C9385F4516A572B2ADA8B3EE815478CC4A474AA8CB017E26F645E96AAA95"
+                                  },
+                                  {
+                                      "Path":  "shared/PassiveFgCapabilityProbe.h",
+                                      "Size":  720,
+                                      "SHA256":  "95C2226813B00C00461807116F545ACE9A5AE8C5DBA13A4BBF63EC84DC9F9C39"
+                                  },
+                                  {
+                                      "Path":  "shared/PolledKeys.h",
+                                      "Size":  492,
+                                      "SHA256":  "649229BAA135780441F893F3CB683AFF524A73FD1ABA1E3B9102ECE066AD6DD4"
+                                  },
+                                  {
+                                      "Path":  "shared/PreparedOverlay.h",
+                                      "Size":  1044,
+                                      "SHA256":  "D658C896B775440EF1057D6277B9EAB89951D1FA090D472581E2AE7E10DAE0CA"
+                                  },
+                                  {
+                                      "Path":  "shared/PresentationOwner.h",
+                                      "Size":  2848,
+                                      "SHA256":  "8E6C92F4CC871D901CD005E20251A58D80ADFFF491C6CC6528DEB08FC3E857CA"
+                                  },
+                                  {
+                                      "Path":  "shared/PresetHotSwapPolicy.h",
+                                      "Size":  537,
+                                      "SHA256":  "D8330719D9784F92A4E4842E4A1F4979E08C1BAE384ACD4148F0F7C4DABC8701"
+                                  },
+                                  {
+                                      "Path":  "shared/PresetPathIdentity.h",
+                                      "Size":  933,
+                                      "SHA256":  "ADF29C97DFB5AF74982F73629C2A6A387851B26693DC7C23A12F542E53975277"
+                                  },
+                                  {
+                                      "Path":  "shared/PresetTechniquePolicy.h",
+                                      "Size":  2199,
+                                      "SHA256":  "A04D57BE807A4589B981111AA0AD116764135CDD34C0C9BB240CD25C20EEAF85"
+                                  },
+                                  {
+                                      "Path":  "shared/PrivateD3D11NrBridge.h",
+                                      "Size":  9958,
+                                      "SHA256":  "32805501F373FC4DCFA3776DCF8833B665CF8120BD50BA294F578CE9CE5F737C"
+                                  },
+                                  {
+                                      "Path":  "shared/PrivateNrSubmission.h",
+                                      "Size":  1532,
+                                      "SHA256":  "F9549B8BF3B865672F9EAA66A640E9278BDF60CCE6F730024A64DE18EE003A27"
+                                  },
+                                  {
+                                      "Path":  "shared/PrivateVulkanNrBridge.h",
+                                      "Size":  17237,
+                                      "SHA256":  "E53AB49FAAD975028ABD8DDA9AE6325AC09799B0B109FD48870FC14350BAC66C"
+                                  },
+                                  {
+                                      "Path":  "shared/PrivateVulkanNrRing.h",
+                                      "Size":  2723,
+                                      "SHA256":  "38E6379E96AD4CE39D0CADAD29151281A60B22B581379FFB5EBF98CDCD2C9594"
+                                  },
+                                  {
+                                      "Path":  "shared/ProducerDependencies.h",
+                                      "Size":  5602,
+                                      "SHA256":  "BBB42F5914C0DFA9C8F0E87226A8B5D5694BF59134DD07103ED5A50C0D15FEA0"
+                                  },
+                                  {
+                                      "Path":  "shared/ProviderPolicy.generated.h",
+                                      "Size":  2025,
+                                      "SHA256":  "AC80E05183C783B26D24303FA34A5EA477D04F8CA379F6351D3DCB2CB31EE6A8"
+                                  },
+                                  {
+                                      "Path":  "shared/ReadinessTrace.h",
+                                      "Size":  6145,
+                                      "SHA256":  "67FEB626AA95F0339A88F7DF5119683B67CEA8BE429CC11142811F0D76E11E5A"
+                                  },
+                                  {
+                                      "Path":  "shared/RenderingCapability.h",
+                                      "Size":  2043,
+                                      "SHA256":  "0A9A4C57C7BBD24FD30CD56FC90B4805FAD8A2DE932D117084A5303D8D1870D1"
+                                  },
+                                  {
+                                      "Path":  "shared/RenderingGpuPolicy.h",
+                                      "Size":  1497,
+                                      "SHA256":  "62DE91012B2FAD47E4BC0FC992D61F80415C4C48F09B9DEA57674D6CC3EAB526"
+                                  },
+                                  {
+                                      "Path":  "shared/RenderingGpuProbeWin.h",
+                                      "Size":  3851,
+                                      "SHA256":  "2AF38BD4A7041BD2BEB1F600D7F4B56BBAEE7FDFA2E7A2E5D2770A7AAD7FD089"
+                                  },
+                                  {
+                                      "Path":  "shared/RootConstants.h",
+                                      "Size":  611,
+                                      "SHA256":  "2C5CBBB7E27C20FCD78C87038AEAC59E3121E26AD1567223ED759DFF6F595A67"
+                                  },
+                                  {
+                                      "Path":  "shared/RouteOwnedBackend.h",
+                                      "Size":  451,
+                                      "SHA256":  "418527BF6E65522F8521C08FE34E533FD750C2AFAA66894DF64627E7065E1EBA"
+                                  },
+                                  {
+                                      "Path":  "shared/RuntimeControlPipe.h",
+                                      "Size":  3606,
+                                      "SHA256":  "FADA00160AE7751113862B89512525B41B4ED603A181A063ACD52043137359B9"
+                                  },
+                                  {
+                                      "Path":  "shared/RuntimeControlProtocol.h",
+                                      "Size":  9150,
+                                      "SHA256":  "6916301261B2E90B5DCE1F99BC577A4BE4E6921E1517B0D5167C9D2E1E92900B"
+                                  },
+                                  {
+                                      "Path":  "shared/RuntimeControlWin.h",
+                                      "Size":  25085,
+                                      "SHA256":  "E98AB65658C90F496415557717B2CCD0BDE3B6482661AC258FCE7584F53BABE3"
+                                  },
+                                  {
+                                      "Path":  "shared/RuntimeRenderContext.h",
+                                      "Size":  10016,
+                                      "SHA256":  "033EB1514C89B11B5B3FED02A4BFC901CB90289CA5C0000AFB1D55043CC20400"
+                                  },
+                                  {
+                                      "Path":  "shared/SettingsReview.h",
+                                      "Size":  5347,
+                                      "SHA256":  "0C10608FF47C3B9E7E77BC01BF33F2CBA9FAAEE0F388682B9E72A01F92320432"
+                                  },
+                                  {
+                                      "Path":  "shared/SimulatorRoute.h",
+                                      "Size":  4128,
+                                      "SHA256":  "6388F1582B6ED7B79133519C2A3E8B410AE8E29B87C053DF81C9583171355397"
+                                  },
+                                  {
+                                      "Path":  "shared/SimulatorRouteHost.h",
+                                      "Size":  11861,
+                                      "SHA256":  "B1467C025F2BD82AFF62A695AE1B87AD1F6C093C6FBDBE71A8254DF1C1F3EFAB"
+                                  },
+                                  {
+                                      "Path":  "shared/SnapshotRequest.h",
+                                      "Size":  2399,
+                                      "SHA256":  "F58AAE2FC4B8225C7226E265B60BCF0FDD8F883070FEA25929906DB8BC89B0E7"
+                                  },
+                                  {
+                                      "Path":  "shared/SnapshotStorage.h",
+                                      "Size":  8249,
+                                      "SHA256":  "64BDCBF90D469A1C8E1A4FE42E5580E4A70B12517B1076487A987942A05C798D"
+                                  },
+                                  {
+                                      "Path":  "shared/SourceMfgIdentity.h",
+                                      "Size":  194,
+                                      "SHA256":  "25B1B07AA7C343197E44C1701D1A68F03FDC6312062DAB47D0491FF0EBC27F81"
+                                  },
+                                  {
+                                      "Path":  "shared/SourceMfgOutput.h",
+                                      "Size":  2743,
+                                      "SHA256":  "D53A545F3116A9826E60C123A94278C3343F4173171A5DDB243A5D85D3D44968"
+                                  },
+                                  {
+                                      "Path":  "shared/TaaBridge.h",
+                                      "Size":  1229,
+                                      "SHA256":  "7582D25C1798AC1F8AD4EB84FE98207A14E8456328200A146516579768290474"
+                                  },
+                                  {
+                                      "Path":  "shared/TaaFgAdmission.h",
+                                      "Size":  1205,
+                                      "SHA256":  "84A6FEA8C3BA10B27C18C8B621A26D42C201CEF9F582766A628FF797352200DA"
+                                  },
+                                  {
+                                      "Path":  "shared/TaaFgHookPolicy.h",
+                                      "Size":  1616,
+                                      "SHA256":  "5E249224F2A8BE52E3D85A9EEF7D3B1B4926C04648A52DDDA6FBDEFBAFED8954"
+                                  },
+                                  {
+                                      "Path":  "shared/TaaNativeFgContract.h",
+                                      "Size":  10587,
+                                      "SHA256":  "85DD91C39B468ED47F96738836408234C6EAC709A9B175B801EB9C3DAB49756E"
+                                  },
+                                  {
+                                      "Path":  "shared/TaaOutputRetirement.h",
+                                      "Size":  524,
+                                      "SHA256":  "0A109AAD0F1060139410401911468A43A9EA82AFFB6DAF28947B666CEDD3E823"
+                                  },
+                                  {
+                                      "Path":  "shared/TaaRoutePolicy.h",
+                                      "Size":  1161,
+                                      "SHA256":  "FDD287440EDAE4F2111084B41AD5EA57AAD11DF916A76AC4FFA00839FE6A68E3"
+                                  },
+                                  {
+                                      "Path":  "shared/TaaWorkingExtent.h",
+                                      "Size":  1343,
+                                      "SHA256":  "F40440A6C20AB9919559BB2E273D59B219F57EEE9A7A396C9E0B8ADF733E272A"
+                                  },
+                                  {
+                                      "Path":  "shared/UnlockedProviderCall.h",
+                                      "Size":  434,
+                                      "SHA256":  "29D63E3EBDAF559A88C8274B894D10FC189EAE7DC2C682F93BFE27C540CFD1E2"
+                                  },
+                                  {
+                                      "Path":  "shared/UpdateNoticePolicy.h",
+                                      "Size":  2173,
+                                      "SHA256":  "3B3939BFCED52CEC7FFBF055265AC62243D968B9E82BADBD01CB3399BB5E058F"
+                                  },
+                                  {
+                                      "Path":  "shared/UpscalerFailureNotice.h",
+                                      "Size":  3309,
+                                      "SHA256":  "F52D4AF66D700B0C0C0E2B2FCCA7BBE707909A7B465BDB4A4D0FE507B2AE3FC5"
+                                  },
+                                  {
+                                      "Path":  "shared/VerifiedFileHashWin.h",
+                                      "Size":  2290,
+                                      "SHA256":  "E2FEC93207F28124BFE7356DAE26E88AD33F49FDED9D35C1DDBC254B535B90F3"
+                                  },
+                                  {
+                                      "Path":  "shared/ViewFamily.h",
+                                      "Size":  1272,
+                                      "SHA256":  "0ECA31D990206B515325790C6C80BED6715184A7C8BFA8C5E188FC85845836DB"
+                                  },
+                                  {
+                                      "Path":  "shared/VrProjection.h",
+                                      "Size":  1090,
+                                      "SHA256":  "A7038D9E4668C8DA68507043EF8CDCDC6ACC69E4EC0B4CFE1BD963CAA2E1607A"
+                                  },
+                                  {
+                                      "Path":  "shared/VulkanAcquireApiAdapter.h",
+                                      "Size":  14281,
+                                      "SHA256":  "D591CF766FEEFD2483772A47C063BBCB9BCF6EEC16AB24E481796360DA087133"
+                                  },
+                                  {
+                                      "Path":  "shared/VulkanAcquireDependency.h",
+                                      "Size":  35090,
+                                      "SHA256":  "E05B0BC6DB3FD785CA0A793AA650384A6362247695283AAF53247ECE73501E29"
+                                  },
+                                  {
+                                      "Path":  "shared/VulkanAcquireObservation.h",
+                                      "Size":  2781,
+                                      "SHA256":  "C0F3F94BC75C19B901BCF46584A78966C5F0E8A02CDED02B575926B7B2D7B16E"
+                                  },
+                                  {
+                                      "Path":  "shared/VulkanBridgeRetry.h",
+                                      "Size":  725,
+                                      "SHA256":  "5C5EC9051B1AE88AEEAD07412A4871248C12CB0F6A793BD8488802B981E782BD"
+                                  },
+                                  {
+                                      "Path":  "shared/VulkanFgAdmission.h",
+                                      "Size":  8190,
+                                      "SHA256":  "3B4B54658573809BD41BD9B9CC1FE5AFFCB0D7EC1CFD49BCE887A2EA928D9CB5"
+                                  },
+                                  {
+                                      "Path":  "shared/VulkanNeuralBridge.h",
+                                      "Size":  1175,
+                                      "SHA256":  "9A6DBB115BF50FCFC390F89381FCD925BDE27E0179BFF95851A8CE78C23BB654"
+                                  },
+                                  {
+                                      "Path":  "shared/VulkanNrLifecycle.h",
+                                      "Size":  4344,
+                                      "SHA256":  "ABD784D69B9706E4B09D93E42FC60D27CFD4CC913454CF300AD13EA6FBC61FDC"
+                                  },
+                                  {
+                                      "Path":  "shared/VulkanOverlayBridge.h",
+                                      "Size":  869,
+                                      "SHA256":  "8BF4C0BE16EBC8D9EDBEE6FC405DED3809F84CA403DBB44C7113C23406A9EA0A"
+                                  },
+                                  {
+                                      "Path":  "shared/VulkanOverlayRetirement.h",
+                                      "Size":  1926,
+                                      "SHA256":  "E11504B2C8B77FC7FA95CD7B8E4C84F3F15DD4B5D3B47D6BDA7867682541E087"
+                                  },
+                                  {
+                                      "Path":  "shared/VulkanOwner.h",
+                                      "Size":  6340,
+                                      "SHA256":  "22E0745AC105850157483BD4EEA1843F5712F4C7DC8E8F1C1074C33BB429630D"
+                                  },
+                                  {
+                                      "Path":  "shared/VulkanOwnerBridge.h",
+                                      "Size":  4635,
+                                      "SHA256":  "F44929FEF3AE7F9894E9620C956CA264C662838D917F76B7FCE7F6B9A2C2FB71"
+                                  },
+                                  {
+                                      "Path":  "shared/VulkanPresentObservation.h",
+                                      "Size":  3350,
+                                      "SHA256":  "C5691A55A26E0D813337963A3D7B5E2554B3C8990F3AD89ACFC49ED64476D548"
+                                  },
+                                  {
+                                      "Path":  "shared/VulkanSubmission.h",
+                                      "Size":  1339,
+                                      "SHA256":  "C57F2C4599C69CE4E2DD84A460F914CA8A21318ED31357911DC47CC0797B1F3B"
+                                  },
+                                  {
+                                      "Path":  "shared/VulkanSubmitObservation.h",
+                                      "Size":  8798,
+                                      "SHA256":  "A30DCF07E82EF3B25A583EFC7918C645520F30A10AA666DC44FD0611C6160782"
+                                  },
+                                  {
+                                      "Path":  "shared/VulkanSyncObservation.h",
+                                      "Size":  1156,
+                                      "SHA256":  "8E9E904D014E3442A2F35F10B1F117E8B249229C9D71ECF36CA8CF2C6A9F56D2"
+                                  },
+                                  {
+                                      "Path":  "shared/VulkanUiColour.h",
+                                      "Size":  869,
+                                      "SHA256":  "912E6F44CD3A9F430331BC18E93DECB43481742380029250E7A4ED9091ED5F1F"
+                                  },
+                                  {
+                                      "Path":  "shared/XPlaneBridgeRuntime.h",
+                                      "Size":  893,
+                                      "SHA256":  "8ECC5ECC099079F5222BA59C8C8E7C1FACD66792C68569FD8513207DC39432D4"
+                                  },
+                                  {
+                                      "Path":  "shared/XPlaneGraphicsRoute.h",
+                                      "Size":  2470,
+                                      "SHA256":  "C4C394E0763F778429D7367F2A3162AB724B127C185A45D0829B58545B602C01"
+                                  },
+                                  {
+                                      "Path":  "shared/XPlaneVulkanProcess.h",
+                                      "Size":  6240,
+                                      "SHA256":  "CDCC6C2F0B1EB1D0A6D6AE0B3C703AD1522930CC419A11BC4C4D81B3E47CF4B9"
+                                  },
+                                  {
+                                      "Path":  "shared/XPlaneVulkanTarget.h",
+                                      "Size":  1306,
+                                      "SHA256":  "DD9183D322326556B4A6000E78DC64D1F8D4BBF9604DC610A22743896814887F"
+                                  },
+                                  {
+                                      "Path":  "shared/XPlaneWindowIdentity.h",
+                                      "Size":  1129,
+                                      "SHA256":  "E06F2F17AC635AB2D7C70464B60C180E13A025FCE016E37DB5EB46A19BA5769F"
+                                  },
+                                  {
+                                      "Path":  "shared/Xp12ProviderOwnership.h",
+                                      "Size":  720,
+                                      "SHA256":  "431D5D93D5EBBAB8F7F9B140E9E7E9B1BFECFF9400A5DBBA5B6078DDB1BE2A2F"
+                                  },
+                                  {
+                                      "Path":  "shared/build-version.json",
+                                      "Size":  85,
+                                      "SHA256":  "083C3AD38AC6BAA0B0A9FC3D7AF5CF9295279BF6AEAC87CC9407A780A0DEE7FE"
+                                  },
+                                  {
+                                      "Path":  "shared/neural-model-policy.json",
+                                      "Size":  2102,
+                                      "SHA256":  "EA580208CE4B656BE90467AE50F44B3CDFEF4393D2ED9DD58C640791287EDC12"
+                                  },
+                                  {
+                                      "Path":  "shared/provider-policy.json",
+                                      "Size":  847,
+                                      "SHA256":  "930D5AF37B149F10DE418028D163C65CCA8104948D5C4087A62FECF7E7E67B38"
+                                  },
+                                  {
+                                      "Path":  "shared/qualification-policy.json",
+                                      "Size":  1700,
+                                      "SHA256":  "EACB303BB2E0EA8F5307803ED0EA86831473081797E68DC2B078BD965EA0690A"
+                                  }
+                              ]
+                },
+    "NvidiaDlssSdk":  {
+                          "SHA256":  "CC7605E13D914426D566145A2DD7E836BCB28F2E394FBFDCEFD00FBB2227F938",
+                          "Files":  [
+                                        {
+                                            "Path":  "include/nvsdk_ngx.h",
+                                            "Size":  41001,
+                                            "SHA256":  "96F21266A05EF06BB49F58C89DE1A7845F2D9B1E0E0E069FE03740B8EAF0344D"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_defs.h",
+                                            "Size":  45172,
+                                            "SHA256":  "A9481CBC78D53EE56639F0A573EC095C6C1EA1E5F296D139C20C42BF342C2E1B"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_defs_dlssd.h",
+                                            "Size":  14859,
+                                            "SHA256":  "AB2EF79188233B199CDEBB224A283F2B7D8F03EA95ADF880A8B225AEA2F08586"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_defs_dlssg.h",
+                                            "Size":  23586,
+                                            "SHA256":  "7874005392F8EFB83E338E2404FB70C0808A746D644F4EBD84E56FFB31ACEB23"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_defs_vk.h",
+                                            "Size":  3302,
+                                            "SHA256":  "43B821C5D297D86165E6D2F96A476F5C30F2158C7D5A0451425C6B927ABFEC88"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_helpers.h",
+                                            "Size":  5436,
+                                            "SHA256":  "4569AA7566667D8C0D93C8E50DDD3F2C4FA1C89DA536FFDC2571BBDC97A539E9"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_helpers_cuda.h",
+                                            "Size":  3668,
+                                            "SHA256":  "18F2FD3ADDA56124A975A9E5F7347E61CA2E25BD58E78B7922EDF6C5C0857281"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_helpers_d3d.h",
+                                            "Size":  32383,
+                                            "SHA256":  "9B3C356CD2D04E7924C0B6B97FC1F1A37E5D30095A8C22133A5A08398CEF2C4C"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_helpers_dlssd.h",
+                                            "Size":  749,
+                                            "SHA256":  "4144EF09594DCF0DDEC5C2DF1E0F87531049AB76DAF995A8607B255C2BDB0DF9"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_helpers_dlssd_cuda.h",
+                                            "Size":  29539,
+                                            "SHA256":  "32A74447C395586DD8C8C4D1EF29DF1A327A040DC12B01A101723DC083C47BF1"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_helpers_dlssd_d3d.h",
+                                            "Size":  73389,
+                                            "SHA256":  "BE5ECFC8F5ECB17861600485CE9FB617DC56FAA5F79EE1525081A54BF4281475"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_helpers_dlssd_vk.h",
+                                            "Size":  38716,
+                                            "SHA256":  "89351368B07B0AFA28E0923DE1B0276991EFB9B5E95922C89047DFCFCE70BB7D"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_helpers_dlssg.h",
+                                            "Size":  749,
+                                            "SHA256":  "A8ABDF14B689F2CBBBBED9991CB369FACB1F8D5B260C5AE4426A0E9146D95DDE"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_helpers_dlssg_d3d.h",
+                                            "Size":  17674,
+                                            "SHA256":  "6343BC03FE12238F19A6D02C427EB9F9DC72433C58A00C164B05473ACA710ED9"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_helpers_dlssg_vk.h",
+                                            "Size":  17304,
+                                            "SHA256":  "EEC70917A474A1F8BE114EB11D5DA3028CC752C410C3B3F12E03B29017D60726"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_helpers_vk.h",
+                                            "Size":  19995,
+                                            "SHA256":  "754697D9FAA93913985FC91FCEAE2073763461710D742A1F262CED2A7B6B62C9"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_loader.h",
+                                            "Size":  13677,
+                                            "SHA256":  "E0F8339E696DC26568A9D4AEFEE90C8497CE5AE048CC8B24CCC213CD3A8A2073"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_params.h",
+                                            "Size":  7860,
+                                            "SHA256":  "51A1F94116CF82F95C63A2C197371ED22E08BDDB09918D36CC6E2AC712753C80"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_params_dlssd.h",
+                                            "Size":  1235,
+                                            "SHA256":  "7E4FC6D5C84B436D31E289F863762A178AB2EF5D8C1FF40B614B01B342385F05"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_params_dlssg.h",
+                                            "Size":  6275,
+                                            "SHA256":  "82B1D573B4B48D4CEFC26AC01162A45646D99F0B84806DAC9DB3516CC5F733B5"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_standalone_common.h",
+                                            "Size":  13222,
+                                            "SHA256":  "231C6DEB2515B5D30DCCBC18A992CD5A2470A6BF3833B2A3B0FC7E3912BD9756"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_standalone_cuda.h",
+                                            "Size":  11121,
+                                            "SHA256":  "9CCA6B101025E2C9E915C8E7F1DD8798DC7CBB7AE45DC5E98D7F73CD3045BFB9"
+                                        },
+                                        {
+                                            "Path":  "include/nvsdk_ngx_vk.h",
+                                            "Size":  39150,
+                                            "SHA256":  "3BE54D0103CCE02174FD34912C60C9F40C73B5EEC919E42613A2268C589C53AD"
+                                        },
+                                        {
+                                            "Path":  "lib/Windows_x86_64/x64/nvsdk_ngx_d.lib",
+                                            "Size":  4090658,
+                                            "SHA256":  "BC43DF9EC032004FDE681D3E3AFD01CDE239E03A0125B822E88674C84287F99C"
+                                        }
+                                    ],
+                          "Kind":  "NVIDIA_DLSS_SDK_x64"
+                      },
+    "WorkerPath":  "legacy-nr/build/dlss5-feed-host64.exe",
+    "WorkerSHA256":  "B6BB47593DA3C8E4CDC33B5CE7D17313E574F17442FB1A722A42FF6A578AF57C",
+    "BuiltUtc":  "2026-11-07T17:02:11.7995873Z"
+}

@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "revision": 1,
+  "kind": "optishade-static-qualified-plans",
+  "recordSchema": 1,
+  "sourceKind": "reviewed_physical_game_capture",
+  "use": "closed_game_preparation_for_recorded_target_only",
+  "maximumCandidates": 32,
+  "maximumDocumentBytes": 1048576,
+  "bindingFields": [
+    "executableSha256", "architecture", "api", "adapterLuid",
+    "vendorId", "deviceId", "subSystemId", "driverVersion",
+    "managerVersion", "payloadSha256", "providerPolicySha256",
+    "modelPolicySha256", "runtimeFilesSha256", "qualificationPolicySha256"
+  ],
+  "outputFields": [
+    "kind", "width", "height", "colorSpace", "windowMode",
+    "refreshNumerator", "refreshDenominator", "displayAdapterLuid",
+    "displayIdentity", "viewCount"
+  ],
+  "metrics": [
+    {"name": "qualityLoss", "unit": "ratio", "maximum": "maximumQualityLoss", "integer": false},
+    {"name": "latencyP95Ms", "unit": "ms", "maximum": "maximumLatencyP95Ms", "integer": false},
+    {"name": "gpuOverheadP95Ms", "unit": "ms", "maximum": "maximumGpuOverheadP95Ms", "integer": false},
+    {"name": "peakMemoryBytes", "unit": "bytes", "maximum": "maximumMemoryBytes", "integer": true},
+    {"name": "frameAgeP95Ms", "unit": "ms", "maximum": "maximumFrameAgeP95Ms", "integer": false},
+    {"name": "realFrameP95Ms", "unit": "ms", "maximum": "maximumRealFrameP95Ms", "integer": false}
+  ],
+  "requiredOutputEvidence": ["distinctTemporalImages", "presentationDelivery", "cadence", "recovery"],
+  "tieBreak": ["preserveExistingSelection", "qualityLoss", "latencyP95Ms", "gpuOverheadP95Ms", "peakMemoryBytes", "frameAgeP95Ms", "realFrameP95Ms", "ordinalCandidateId"],
+  "liveAdaptivePolicy": false
+}

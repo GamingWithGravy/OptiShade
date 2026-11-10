@@ -1,0 +1,55 @@
+﻿OPTISHADE FEATURES
+Microsoft Flight Simulator 2024 | NVIDIA + AMD (AMD early experimental)
+
+SETUP
+- Automatic Steam and Xbox installation detection.
+- Custom installer with Home, Setup and Settings pages.
+- Optional DLSS 5 installation with a Yes / No choice.
+- Internal game menu: Insert opens and closes it.
+- Close the installer after installation and downloads finish.
+
+IMAGE EFFECTS AND PRESETS
+- FX shader support and downloadable effects catalogue.
+- INI preset support.
+- Effect search, on/off switches and available effect settings.
+- Active first button brings enabled effects to the top when requested.
+- In-game preset browser with Downloads and Game presets shortcuts.
+- Copy and load downloaded INI presets without moving the originals.
+- Named saves, overwrite warnings and protection for other presets.
+- Unsaved-change notices and Revert changes.
+- No automatic preset saving.
+
+PERSONALISATION
+- Purple interface by default.
+- Six overlay accent colours plus a custom picker.
+- Reset to purple and save your overlay colour per game.
+
+RECOVERY
+- Runtime checks and download recovery options.
+- Backups before approved replacement of conflicting files.
+- Restore installed files and recover original backups.
+- Saved presets kept during Restore.
+- Uninstall offers a choice to keep saved presets.
+
+REQUIREMENTS
+This edition is for Microsoft Flight Simulator 2024 and NVIDIA or AMD graphics cards (AMD support is early experimental). Neural rendering requires compatible RTX hardware, a matching model and a supported game connection. Presets need their required shaders. Additional effects and neural passes can reduce frame rate; performance gains are not guaranteed.
+
+VERSION 0.19.18
+- INI and FX import browsers with drive selection and editable folder paths.
+- Clear import, rescan and shader recompilation actions.
+- Backed-up reinstall and repair, preserving saved looks.
+- Standard and SweetFX shaders bundled for offline setup.
+- Accurate installation status with separate unfinished-download reporting.
+- Stable-release notifications in setup and in game.
+- Verified self-update for the installer and recorded MSFS installations.
+- Optional Fusion Cinema addon and public REX preset instructions on GitHub.
+
+VERSION 0.20.5
+- Image-effects packages are optional at install time. Existing installs retain their choice.
+- In game, Image effects > Install ZIP installs FX, INI, includes and textures without overwriting existing shaders.
+- ZIP looks appear under Saved look, including import subfolders. Select one to apply it.
+- Import INI can offer catalogue downloads for missing FX while MSFS is open. Declining leaves the current look active.
+- AMD: early experimental image effects and supported FSR/XeSS. No Neural Rendering on AMD in this build. Please report issues to Gravy.
+- No publication before personal PC testing. See release notes for possible fixes.
+
+Diagnostics: Troubleshooting > Save diagnostics ZIP for Discord. Includes Report.txt, recent log tails and Reproduction-notes.txt. Choose plain TXT in the save dialog if preferred. Review before attaching; nothing is uploaded automatically.

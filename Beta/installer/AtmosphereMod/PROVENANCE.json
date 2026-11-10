@@ -1,0 +1,12 @@
+{
+  "Author": "tomwhoca",
+  "Repository": "https://github.com/tomwhoca/AtmosphereMod",
+  "Releases": "https://github.com/tomwhoca/AtmosphereMod/releases",
+  "Asset": "AtmosphereMod-<version>.zip from the latest non-prerelease vX.Y.Z release",
+  "Verification": "GitHub asset SHA-256 digest required; must agree with the SHA-256 the author states in the release notes when present; https download from github.com release assets only; size cap 100 MB",
+  "Modified": false,
+  "License": "AtmosphereMod Freeware Licence (see LICENSE.txt; no redistribution without the author's written permission)",
+  "Permission": "Owner statement, 2 Nov 2026: the author agreed that OptiShade may install the mod the same way as the Glass Cockpit fix. OptiShade does not redistribute it: the official release is downloaded from the author's GitHub when the user selects the component.",
+  "Policy": "Official release zip, unchanged, opened in a temporary folder and installed by OptiShade itself, as the author's installer does: the add-on beside OptiShade's ReShade64.dll, the [ATMOSPHEREMOD] keys in ReShade.ini, the EFB sim bridge in the Community folder and tunables.ini/install.json in %LOCALAPPDATA%\\AtmosphereMod. Only the shader patch runs the author's extract_pak.py and patch_dxil.patch_all() with the release's bundled Python and Microsoft-signed DXC 1.8.2502. AtmosphereMod.addon64 and the release files are not modified, and they stay outside OptiShade's receipt.",
+  "SimConnect": "The add-on's own METAR feature uses SimConnect. OptiShade adds no SimConnect code; owner approved installing this third-party component (2 Nov 2026)."
+}

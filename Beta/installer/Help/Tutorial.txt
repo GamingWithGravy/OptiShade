@@ -1,0 +1,33 @@
+﻿OPTISHADE - GETTING STARTED
+YOUR GAME, YOUR WAY
+
+1. Close the game and open OptiShade Manager.
+2. Open Library and choose a detected game. OptiShade selects a unique title-matched x86 or x64 game executable automatically. If a game is not detected or its launch files are ambiguous, add the game folder; the manager will ask for the actual game executable only when it cannot safely choose one. The available components depend on the game executable's architecture and graphics API.
+3. Choose Install OptiShade. This installs the required core and records the files so they can be repaired or restored later.
+4. After the core is installed, choose the optional components you want. Components vary by game, graphics card and rendering API. Install only the features you plan to test.
+5. Wait for selected downloads to finish. Use Retry unfinished downloads from Components if a download fails. Installing a component does not prove the game loaded it.
+6. Launch the game with Play from Setup, or start it normally. Press Insert to open the in-game menu. Change shortcuts in Keybinds and restart the selected game after saving.
+7. Use Image effects to choose a saved look, enable effects and tune their available settings. Use the live effect controls before saving your changes.
+
+BUILD YOUR LOOK
+Open Image effects. Search for an effect and switch it on to see its settings. Adjust the available controls. Active first moves enabled effects to the top when you press it.
+
+IMPORT A PRESET
+Select Import INI..., find your downloaded INI and choose Copy INI and load look. The preset is copied into the selected game's presets folder; your original download stays in place. Missing FX files trigger an offer to install uniquely matched catalogue packages and load the look. Unknown or ambiguous shaders need the author's ZIP.
+
+SAVE YOUR PRESET
+Choose Save preset, enter a name and save your look. Existing names trigger a warning. Use a new name to keep both versions. Changes are not saved automatically. Revert changes returns to the saved look.
+
+CHANGE THE MENU COLOUR
+Open Settings & status and choose Theme accent. The choice saves automatically. Purple is the default. Custom colour controls are in Menu size and customisation.
+
+REPAIR, RESTORE AND UNINSTALL
+Repair replaces OptiShade core files while preserving configuration and saved looks. Restore returns one selected game to its recorded original files. Uninstall is in Settings > App information; it restores every managed game installation in one pass, then asks whether to keep saved looks and screenshots. Game saves and controls are not installation targets.
+
+WHERE YOUR INI PRESETS GO
+Use the selected game's Setup page to see its OptiShade data location. Presets belong in that game's OptiShadeData\Presets folder, not in another game's folder or an unrelated configuration directory. Avoid replacing the game's own files or another graphics tool's configuration with a downloaded look.
+
+The simplest method is Image effects > Import INI... in game. OptiShade copies the look to the selected game's folder and loads it. Required FX and texture files must also be installed; copying an INI alone does not add them.
+
+RENDERING AND NEURAL FEATURES
+Image effects, upscaling, Neural Rendering and frame generation are separate features. Their availability depends on the game's actual rendering path, its anti-aliasing and scaling settings, hardware and installed components. Start with the game's normal settings, change one feature at a time, and save diagnostics if a game freezes, flashes or shows no visible change. A detected DLL or completed install does not confirm active output.

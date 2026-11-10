@@ -1,0 +1,550 @@
+diff --git a/source/native/ampere_experiment.cpp b/source/native/ampere_experiment.cpp
+index e8e4b38..09c5c34 100644
+--- a/source/native/ampere_experiment.cpp
++++ b/source/native/ampere_experiment.cpp
+@@ -268,7 +268,8 @@ bool Initialize(uint32_t requestedMultiplier) noexcept
+             static_cast<uint16_t>((version >> 48) & 0xFFFF),
+             static_cast<uint16_t>((version >> 32) & 0xFFFF),
+             static_cast<uint16_t>((version >> 16) & 0xFFFF)};
+-        if (!dlssg_provider_policy::IsSupportedVersion(triplet)) continue;
++        if (!dlssg_provider_policy::IsSupportedVersion(triplet)
++            || (triplet.major == 310 && triplet.minor == 9 && triplet.build == 16)) continue;
+         if (version > bestVersion) { bestVersion = version; best = candidate; }
+     }
+     if (bestVersion == 0)
+diff --git a/source/native/dlssg_provider_policy.cpp b/source/native/dlssg_provider_policy.cpp
+index b0a96c7..ac48cf5 100644
+--- a/source/native/dlssg_provider_policy.cpp
++++ b/source/native/dlssg_provider_policy.cpp
+@@ -1,9 +1,36 @@
+ #include "dlssg_provider_policy.h"
+ 
+ #include <winver.h>
++#include <cstring>
+ 
+ namespace dlssg_provider_policy
+ {
++bool ReadLoadedProviderVersion(HMODULE module, VersionTriplet& version) noexcept
++{
++    version = {};
++    if (!module) return false;
++    const HRSRC resource = FindResourceW(module, MAKEINTRESOURCEW(VS_VERSION_INFO), RT_VERSION);
++    if (!resource) return false;
++    const DWORD bytes = SizeofResource(module, resource);
++    const auto data = static_cast<const unsigned char*>(LockResource(LoadResource(module, resource)));
++    // VS_VERSIONINFO contains three WORDs, a terminated UTF-16 key, DWORD
++    // alignment padding and the fixed value. Bound every read by the resource.
++    constexpr wchar_t key[] = L"VS_VERSION_INFO";
++    constexpr size_t valueOffset = (3 * sizeof(WORD) + sizeof(key) + 3) & ~size_t(3);
++    if (!data || bytes < valueOffset + sizeof(VS_FIXEDFILEINFO)) return false;
++    WORD header[3]{};
++    std::memcpy(header, data, sizeof(header));
++    if (header[0] > bytes || header[0] < valueOffset + sizeof(VS_FIXEDFILEINFO)
++        || header[1] != sizeof(VS_FIXEDFILEINFO) || header[2] != 0
++        || std::memcmp(data + sizeof(header), key, sizeof(key)) != 0) return false;
++    VS_FIXEDFILEINFO fixed{};
++    std::memcpy(&fixed, data + valueOffset, sizeof(fixed));
++    if (fixed.dwSignature != VS_FFI_SIGNATURE) return false;
++    version = {HIWORD(fixed.dwFileVersionMS), LOWORD(fixed.dwFileVersionMS),
++        HIWORD(fixed.dwFileVersionLS)};
++    return true;
++}
++
+ bool ReadProviderVersion(
+     const wchar_t* path, VersionTriplet& version) noexcept
+ {
+@@ -58,7 +85,12 @@ bool IsSupportedProvider(HMODULE module, const wchar_t* path) noexcept
+     // Feature identity is structural. Once that is established, the embedded
+     // provider version is the only eligibility input; delivery path, filename,
+     // hash, and the versions of unrelated DLSS siblings are irrelevant.
++    (void)path;
++    VersionTriplet version{};
++    // Validate the image which will execute, without reopening WindowsApps or
++    // OTA files. Do not substitute a different on-disk image if this is invalid.
+     return IsDlssgImplementationModule(module)
+-        && SupportedProviderVersionMatches(path);
++        && ReadLoadedProviderVersion(module, version)
++        && IsSupportedVersion(version);
+ }
+ }
+diff --git a/source/native/dlssg_provider_policy.h b/source/native/dlssg_provider_policy.h
+index 3b237ce..eb69a95 100644
+--- a/source/native/dlssg_provider_policy.h
++++ b/source/native/dlssg_provider_policy.h
+@@ -17,7 +17,7 @@ struct VersionTriplet
+ // Only provider builds which passed the complete immutable layout and payload
+ // contract belong here. The fourth file-version component is intentionally not
+ // part of eligibility because it did not change the validated provider layout.
+-inline constexpr std::array<VersionTriplet, 15> kSupportedVersions{{
++inline constexpr std::array<VersionTriplet, 16> kSupportedVersions{{
+     {310, 1, 0},
+     {310, 2, 0},
+     {310, 2, 1},
+@@ -33,6 +33,7 @@ inline constexpr std::array<VersionTriplet, 15> kSupportedVersions{{
+     {310, 8, 0},
+     {310, 9, 0},
+     {310, 9, 1},
++    {310, 9, 16},
+ }};
+ 
+ inline constexpr char kD3d12ImplementationExport[] =
+@@ -83,6 +84,8 @@ static_assert(IsSupportedVersion({310, 7, 129}));
+ static_assert(IsSupportedVersion({310, 8, 0}));
+ static_assert(IsSupportedVersion({310, 9, 0}));
+ static_assert(IsSupportedVersion({310, 9, 1}));
++static_assert(IsSupportedVersion({310, 9, 16}));
++static_assert(!IsSupportedVersion({310, 9, 17}));
+ static_assert(!IsSupportedVersion({310, 7, 1}));
+ static_assert(!IsSupportedVersion({310, 5, 1}));
+ static_assert(!IsSupportedVersion({310, 6, 1}));
+@@ -91,6 +94,7 @@ static_assert(!IsSupportedVersion({310, 9, 2}));
+ 
+ bool ReadProviderVersion(
+     const wchar_t* path, VersionTriplet& version) noexcept;
++bool ReadLoadedProviderVersion(HMODULE module, VersionTriplet& version) noexcept;
+ bool SupportedProviderVersionMatches(const wchar_t* path) noexcept;
+ bool IsDlssgImplementationModule(HMODULE module) noexcept;
+ bool IsSupportedProvider(HMODULE module, const wchar_t* path) noexcept;
+diff --git a/source/native/midpoint_fix.cpp b/source/native/midpoint_fix.cpp
+index 2e8c42a..b0ac582 100644
+--- a/source/native/midpoint_fix.cpp
++++ b/source/native/midpoint_fix.cpp
+@@ -20,6 +20,7 @@ namespace midpoint_fix
+ namespace
+ {
+ constexpr size_t kKernelCount = 25;
++constexpr size_t kMaximumKernelCount = 26;
+ constexpr size_t kDescriptorBytes = 48;
+ constexpr size_t kNameBytes = 96;
+ constexpr uint64_t kMaximumFatbinBytes = 64ull * 1024ull * 1024ull;
+@@ -64,6 +65,9 @@ struct TemporalProviderProfile
+     uint64_t sm89PayloadBytes = 0;
+     uint32_t sm89CompressedBytes = 0;
+     uint64_t sm89RawBytes = 0;
++    size_t kernelCount = kKernelCount;
++    const char* const* kernelNames = nullptr;
++    size_t outputPullSlot = 14;
+ };
+ 
+ constexpr TemporalProviderProfile kEarlyTemporalProfile{
+@@ -167,6 +171,60 @@ constexpr std::array<const char*, kKernelCount> k3109KernelNames{{
+     "ZeroBuffer",
+ }};
+ 
++constexpr std::array<const char*, kMaximumKernelCount> k310916KernelNames{{
++    "BlendCandidatesFused",
++    "BlendCandidatesFGLite",
++    "Copy4Channel",
++    "DL1Net_Input",
++    "DL1Net_Output",
++    "DetectMenus",
++    "DetectMenusHudless",
++    "Distortion",
++    "DownsampleDistortion",
++    "DownsampleRGBAndEstimateUIFused",
++    "EstimateIntermMvecsScatter",
++    "EstimatePrev2CurrScatter",
++    "InitMvecQualityMask",
++    "InputMvecProcessing",
++    "MenuDetectionOutput",
++    "OutputPull",
++    "OutputPullMiddle",
++    "OutputPush",
++    "OutputPushFine",
++    "Prev2CurrUnpackPull",
++    "Prev2CurrPullMiddle",
++    "Prev2CurrPush",
++    "Prev2CurrPushFine",
++    "Scatter3d",
++    "WarpBlendingWeights",
++    "ZeroBuffer",
++}};
++
++constexpr TemporalProviderProfile k310916TemporalProfile{
++    10,
++    true,
++    98704,
++    "FBA7599CC9CDC1EED947AD5ADB94436052E8C17AD7FD268C2590AB36A0C731E9",
++    "D1EB7A60C57915238AA228511DA16386F95AAAA5A0D1C1B7903F1DA8FB9519B4",
++    "579ACF3317ED39B45AC0ABBC70F4DC812A53AE0F8B11E528B7B5542681E8BEF4",
++    nullptr,
++    nullptr,
++    k3109TemporalInput,
++    "%f136",
++    "%f134",
++    28144,
++    28040,
++    28040,
++    90732,
++    30408,
++    30402,
++    99626,
++    kMaximumKernelCount,
++    k310916KernelNames.data(),
++    15,
++};
++
++
+ constexpr const TemporalProviderProfile* ProfileForVersion(
+     dlssg_provider_policy::VersionTriplet version) noexcept
+ {
+@@ -189,6 +247,8 @@ constexpr const TemporalProviderProfile* ProfileForVersion(
+     if (version.major == 310 && version.minor == 9
+         && (version.build == 0 || version.build == 1))
+         return &k3109TemporalProfile;
++    if (version.major == 310 && version.minor == 9 && version.build == 16)
++        return &k310916TemporalProfile;
+     if (version.major == 310
+         && ((version.minor == 7
+                 && (version.build == 0 || version.build == 128
+@@ -379,7 +439,9 @@ bool IsReadOnlyImageAddress(HMODULE module, uintptr_t address) noexcept
+ bool KernelIdentityMatches(const TemporalProviderProfile& profile, size_t slot,
+     const char* descriptorName, const char* entryName) noexcept
+ {
+-    if (!descriptorName || !entryName || slot >= kKernelCount)
++    if (!descriptorName || !entryName || slot >= profile.kernelCount
++        || profile.kernelCount > kMaximumKernelCount
++        || (!profile.kernelNames && profile.kernelCount != kKernelCount))
+         return false;
+     if (!profile.namedKernelDescriptors)
+     {
+@@ -388,7 +450,7 @@ bool KernelIdentityMatches(const TemporalProviderProfile& profile, size_t slot,
+     }
+ 
+     constexpr char kEntryPrefix[] = "Kernel_";
+-    const char* const expected = k3109KernelNames[slot];
++    const char* const expected = profile.kernelNames ? profile.kernelNames[slot] : k3109KernelNames[slot];
+     return expected && std::strcmp(descriptorName, expected) == 0
+         && std::strncmp(entryName, kEntryPrefix,
+             sizeof(kEntryPrefix) - 1) == 0
+@@ -452,11 +514,11 @@ bool DescriptorMatches(uintptr_t moduleBase, uintptr_t moduleEnd,
+ bool DescriptorTableMatches(uintptr_t moduleBase, uintptr_t moduleEnd,
+     uintptr_t table, const TemporalProviderProfile& profile) noexcept
+ {
+-    constexpr size_t kTableBytes = kKernelCount * sizeof(uintptr_t);
++    const size_t kTableBytes = profile.kernelCount * sizeof(uintptr_t);
+     if (!table || moduleEnd <= moduleBase || table < moduleBase
+         || moduleEnd - moduleBase < kTableBytes || table > moduleEnd - kTableBytes)
+         return false;
+-    for (size_t slot = 0; slot < kKernelCount; ++slot)
++    for (size_t slot = 0; slot < profile.kernelCount; ++slot)
+     {
+         uintptr_t descriptor = 0;
+         if (!SafeRead(table + slot * sizeof(uintptr_t), descriptor)
+@@ -470,7 +532,7 @@ bool DescriptorTableMatches(uintptr_t moduleBase, uintptr_t moduleEnd,
+ uintptr_t FindDescriptorEntry(HMODULE module, uint32_t imageSize,
+     const TemporalProviderProfile& profile) noexcept
+ {
+-    constexpr size_t kTableBytes = kKernelCount * sizeof(uintptr_t);
++    const size_t kTableBytes = profile.kernelCount * sizeof(uintptr_t);
+     if (!module || imageSize < kTableBytes)
+         return 0;
+     const uintptr_t base = reinterpret_cast<uintptr_t>(module);
+@@ -1117,7 +1179,10 @@ bool PatchProvider(HMODULE module, const wchar_t* suppliedPath) noexcept
+     if (!dlssg_provider_policy::IsSupportedProvider(pinned, path))
+         return fail(Failure::eProviderVersion);
+     dlssg_provider_policy::VersionTriplet providerVersion{};
+-    if (!dlssg_provider_policy::ReadProviderVersion(path, providerVersion))
++    if (!dlssg_provider_policy::ReadLoadedProviderVersion(pinned, providerVersion))
++        return fail(Failure::eProviderVersion);
++    if (providerVersion.major == 310 && providerVersion.minor == 9 && providerVersion.build == 16
++        && (gAmpereTarget.load() || gTuringTarget.load()))
+         return fail(Failure::eProviderVersion);
+     const TemporalProviderProfile* const profile =
+         ProfileForVersion(providerVersion);
+@@ -1277,9 +1342,9 @@ bool TuringDescriptors(HMODULE module, size_t imageSize, uintptr_t& table,
+     const uintptr_t base = reinterpret_cast<uintptr_t>(module);
+     if (imageSize > UINTPTR_MAX - base) return false;
+     const uintptr_t candidate = gDescriptorEntry - gProfile->temporalSlot * sizeof(uintptr_t);
+-    if (candidate < base || imageSize < kKernelCount * sizeof(uintptr_t)
+-        || candidate - base > imageSize - kKernelCount * sizeof(uintptr_t)) return false;
+-    for (size_t i = 0; i < kKernelCount; ++i)
++    if (candidate < base || imageSize < gProfile->kernelCount * sizeof(uintptr_t)
++        || candidate - base > imageSize - gProfile->kernelCount * sizeof(uintptr_t)) return false;
++    for (size_t i = 0; i < gProfile->kernelCount; ++i)
+     {
+         uintptr_t descriptor = 0;
+         if (!SafeRead(candidate + i * sizeof(uintptr_t), descriptor)) return false;
+diff --git a/source/native/patcher.cpp b/source/native/patcher.cpp
+index ca41895..8cbb86c 100644
+--- a/source/native/patcher.cpp
++++ b/source/native/patcher.cpp
+@@ -974,6 +974,45 @@ bool AdapterVerifiedForApi(NgxGraphicsApi api) noexcept
+             || gVulkanAdapterVerified.load(std::memory_order_acquire));
+ }
+ 
++// Create can enter the shared NGX runtime while Evaluate enters the concrete
++// DLSS-G provider directly. Bind the latter only to the already selected module
++// and generation; aggregate discovery must never authorize a different provider.
++entry_detour::Snapshot BindSelectedProviderEvaluate(entry_detour::Kind kind)
++{
++    const auto owner = reinterpret_cast<HMODULE>(
++        gActiveNgxProviderBase.load(std::memory_order_acquire));
++    const auto generation = gActiveNgxProviderGeneration.load(std::memory_order_acquire);
++    if (!owner || !generation) return {};
++    const auto candidate = entry_detour::ReadSnapshot(kind, owner);
++    if (!candidate.current || candidate.owner != owner || candidate.generation != generation)
++        return {};
++    uint64_t empty = 0;
++    gActiveNgxEvaluateHandle.compare_exchange_strong(empty,
++        PackEntryHandle(candidate.handle), std::memory_order_acq_rel);
++    return entry_detour::ReadSnapshot(UnpackEntryHandle(
++        gActiveNgxEvaluateHandle.load(std::memory_order_acquire)));
++}
++
++bool CanObserveNgxEvaluateEntry(NgxDispatchRoute route, NgxGraphicsApi api,
++    entry_detour::Handle handle)
++{
++    if (gActiveNgxGraphicsApi.load(std::memory_order_acquire) != static_cast<uint32_t>(api))
++        return false;
++    const auto createRoute = static_cast<NgxDispatchRoute>(
++        gActiveNgxDispatchRoute.load(std::memory_order_acquire));
++    if (createRoute == route) return true;
++    if (createRoute != NgxDispatchRoute::eRuntime || route != NgxDispatchRoute::eProvider)
++        return false;
++    const auto selected = UnpackEntryHandle(gActiveNgxEvaluateHandle.load(std::memory_order_acquire));
++    if (!(selected == handle)) return false;
++    const auto entry = entry_detour::ReadSnapshot(handle);
++    const auto expectedKind = api == NgxGraphicsApi::eVulkan
++        ? entry_detour::Kind::eNgxVulkanEvaluateFeature : entry_detour::Kind::eNgxD3D12EvaluateFeature;
++    return entry.current && entry.kind == expectedKind
++        && reinterpret_cast<uintptr_t>(entry.owner) == gActiveNgxProviderBase.load(std::memory_order_acquire)
++        && entry.generation == gActiveNgxProviderGeneration.load(std::memory_order_acquire);
++}
++
+ entry_detour::Snapshot EffectiveNgxDetour(
+     entry_detour::Kind providerKind,
+     entry_detour::Kind runtimeKind, bool create)
+@@ -987,7 +1026,7 @@ entry_detour::Snapshot EffectiveNgxDetour(
+     // the first FG Create identifies a provider, never borrow coverage from a
+     // different provider merely because it exposes the same operation.
+     if (gActiveNgxProviderBase.load(std::memory_order_acquire) != 0)
+-        return {};
++        return create ? entry_detour::Snapshot{} : BindSelectedProviderEvaluate(providerKind);
+     const entry_detour::Snapshot provider =
+         entry_detour::ReadSnapshot(providerKind);
+     const entry_detour::Snapshot runtime =
+@@ -1656,9 +1695,13 @@ bool WriteBridgeStatus(const ControlConfig& control, DWORD pid)
+         ? entry_detour::ReadSnapshot(activeControl->freeResourcesHandle)
+         : entry_detour::Snapshot{};
+ 
++    // OptiMFG transport extension: bind status to this exact process lifetime.
++    FILETIME created{}, exited{}, kernel{}, user{};
++    GetProcessTimes(GetCurrentProcess(), &created, &exited, &kernel, &user);
++    const auto processBirth = (static_cast<unsigned long long>(created.dwHighDateTime) << 32) | created.dwLowDateTime;
+     char json[16384]{};
+     const int length = sprintf_s(json,
+-        "{\"version\":18,\"pid\":%lu,\"heartbeat\":%llu,\"route\":\"%s\","
++        "{\"version\":1801,\"processBirth\":%llu,\"externalUiOnly\":true,\"pid\":%lu,\"heartbeat\":%llu,\"route\":\"%s\","
+         "\"bridgeReady\":%s,\"liveHookInstalled\":%s,"
+         "\"loaderCoreImported\":true,"
+         "\"nvidiaCompatibilityResolved\":%s,"
+@@ -1809,7 +1852,7 @@ bool WriteBridgeStatus(const ControlConfig& control, DWORD pid)
+         "\"releaseEntryCurrent\":%s,"
+         "\"frameGenerationOffAccepted\":%s,"
+         "\"releaseObserved\":%s}\n",
+-        static_cast<unsigned long>(pid),
++        processBirth, static_cast<unsigned long>(pid),
+         static_cast<unsigned long long>(UnixTimeSeconds()), route,
+         bridgeReady ? "true" : "false",
+         gLiveHookInstalled.load(std::memory_order_relaxed) ? "true" : "false",
+@@ -2640,7 +2683,18 @@ sl::Result SubmitAdjustedOptionsImpl(
+     sl::DLSSGOptions adjusted = BuildAdjustedOptions(
+         source, snapshot, !liveReapply, uiInputs.ready);
+     bool dynamicOverrideApplied = dynamicRequested && DynamicMfgSupported();
++    const bool traceTransition = snapshot.revision != 0
++        && snapshot.revision != gAttemptedRevision.load(std::memory_order_acquire);
++    const ULONGLONG transitionStart = GetTickCount64();
++    if (traceTransition)
++        Log(L"OptiMFG settings enter: revision=%llu thread=%u generated=%u mode=%u source=game-setter",
++            static_cast<unsigned long long>(snapshot.revision), GetCurrentThreadId(),
++            adjusted.numFramesToGenerate, static_cast<unsigned>(adjusted.mode));
+     sl::Result result = submitOptions(adjusted);
++    if (traceTransition)
++        Log(L"OptiMFG settings return: revision=%llu thread=%u result=%d elapsedMs=%llu",
++            static_cast<unsigned long long>(snapshot.revision), GetCurrentThreadId(),
++            static_cast<int>(result), static_cast<unsigned long long>(GetTickCount64()-transitionStart));
+     if ((result == sl::Result::eOk || result == sl::Result::eWarnOutOfVRAM)
+         && hasState
+         && (!liveReapply
+@@ -2713,56 +2767,6 @@ sl::Result SubmitAdjustedOptions(
+         }, hasState);
+ }
+ 
+-void ReapplyPendingControl(const sl::ViewportHandle& viewport)
+-{
+-    if (!gControlReady.load(std::memory_order_acquire)
+-        || !gGameFrameGenerationOn.load(std::memory_order_acquire)
+-        || !BridgeReady())
+-        return;
+-
+-    const ControlSnapshot snapshot = ReadControlSnapshot();
+-    if (snapshot.revision == 0
+-        || snapshot.revision == gAppliedRevision.load(std::memory_order_acquire))
+-        return;
+-
+-    const uint64_t attemptedRevision =
+-        gAttemptedRevision.load(std::memory_order_acquire);
+-    bool retryNotInitialized = false;
+-    if (snapshot.revision == attemptedRevision)
+-    {
+-        const int32_t result = gLastSetOptionsResult.load(std::memory_order_relaxed);
+-        if (result != static_cast<int32_t>(sl::Result::eErrorNotInitialized))
+-            return;
+-        const uint64_t now = GetTickCount64();
+-        const uint64_t previousAttempt =
+-            gLastAttemptTick.load(std::memory_order_relaxed);
+-        if (now < previousAttempt
+-            || now - previousAttempt < kNotInitializedRetryDelayMs)
+-            return;
+-        retryNotInitialized = true;
+-    }
+-
+-    ControlRouteRecord* route = ActiveControlRoute();
+-    sl::DLSSGOptions source{};
+-    if (!route || !ReadLastGameOptions(viewport, source))
+-        return;
+-    if (retryNotInitialized)
+-    {
+-        const uint64_t retry =
+-            gNotInitializedRetryCount.fetch_add(1, std::memory_order_relaxed) + 1;
+-        Log(L"Retrying request revision %llu after Streamline result 21 (retry %llu)",
+-            static_cast<unsigned long long>(snapshot.revision),
+-            static_cast<unsigned long long>(retry));
+-    }
+-
+-    gSetOptionsCalls.fetch_add(1, std::memory_order_relaxed);
+-    const sl::Result result =
+-        SubmitAdjustedOptions(*route, viewport, source, snapshot, true);
+-    if (result != sl::Result::eOk)
+-        Log(L"Live reapply failed for request revision %llu: result=%d",
+-            static_cast<unsigned long long>(snapshot.revision), static_cast<int>(result));
+-}
+-
+ bool SameMfgControl(const ControlConfig& left,
+     const ControlConfig& right) noexcept
+ {
+@@ -3087,6 +3091,12 @@ void BeforeNgxCreateFeatureForRoute(NgxDispatchRoute route,
+         gActiveNgxEvaluateHandle.store(
+             PackEntryHandle(evaluate.handle), std::memory_order_release);
+     }
++    else
++    {
++        BindSelectedProviderEvaluate(api == NgxGraphicsApi::eVulkan
++            ? entry_detour::Kind::eNgxVulkanEvaluateFeature
++            : entry_detour::Kind::eNgxD3D12EvaluateFeature);
++    }
+     if (selectionSource
+         == NgxProviderSelectionSource::eRuntimeUniqueCandidate
+         && firstPipelineCreate)
+@@ -3278,12 +3288,7 @@ void BeforeNgxEvaluateFeatureForRoute(NgxDispatchRoute route,
+     void* callback, entry_detour::Handle entryHandle,
+     const void* originalCaller) noexcept
+ {
+-    const uint32_t active = gActiveNgxDispatchRoute.load(
+-        std::memory_order_acquire);
+-    if (active != static_cast<uint32_t>(route))
+-        return;
+-    if (gActiveNgxGraphicsApi.load(std::memory_order_acquire)
+-        != static_cast<uint32_t>(api))
++    if (!CanObserveNgxEvaluateEntry(route, api, entryHandle))
+         return;
+ 
+     // Evaluate has no feature-id argument. Prefer the selected provider as the
+@@ -3806,6 +3811,9 @@ sl::Result HandlePublicSetOptions(uint32_t routeSlot,
+             route->publicSetOriginal, route->publicSetHandle))
+         return sl::Result::eErrorNotInitialized;
+ 
++    if (InternalControlBypassDepth() != 0)
++        return PassPublicSet(*route, viewport, options);
++
+     BaseStructureFields fields{};
+     if (!ReadBaseStructureFields(&options, fields)
+         || fields.type != sl::DLSSGOptions::s_structType)
+@@ -3881,6 +3889,9 @@ sl::Result HandlePublicGetState(uint32_t routeSlot, ControlEntryPath path,
+     if (!original)
+         return sl::Result::eErrorNotInitialized;
+ 
++    if (InternalControlBypassDepth() != 0)
++        return original(viewport, state, options);
++
+     BaseStructureFields stateFields{};
+     if (!ReadBaseStructureFields(&state, stateFields)
+         || stateFields.type != sl::DLSSGState::s_structType)
+@@ -3921,13 +3932,13 @@ sl::Result HandlePublicGetState(uint32_t routeSlot, ControlEntryPath path,
+         ScopedInternalControlBypass bypass;
+         return original(viewport, state, options);
+     }
+-    std::lock_guard callLock(gStreamlineCallMutex);
++    // A query must not submit settings or serialize against the setter.
++    // Pending overrides are consumed on the game's next SetOptions call.
+     if (path == ControlEntryPath::eResolver)
+     {
+         gGetStateResolverFallbackCalls.fetch_add(
+             1, std::memory_order_release);
+     }
+-    ReapplyPendingControl(viewport);
+     ScopedInternalControlBypass bypass;
+     const sl::Result result = original(viewport, state, options);
+     RecordDlssgStateResult(result, state);
+@@ -4103,9 +4114,7 @@ sl::Result HandleInternalGetData(uint32_t routeSlot,
+     if (!ActivateControlRoute(
+             routeSlot, ControlEntryPath::eInternal, false))
+         return passThrough();
+-    std::lock_guard callLock(gStreamlineCallMutex);
+-    const sl::ViewportHandle publicViewport{viewportValue};
+-    ReapplyPendingControl(publicViewport);
++    // Read-only query: never apply a pending control from this callback.
+     const sl::Result result = passThrough();
+     auto& mutableState = *const_cast<sl::DLSSGState*>(stateView);
+     RecordDlssgStateResult(result, mutableState);
+@@ -6165,6 +6174,20 @@ void LogModuleInventory(const ModuleRecord& record)
+     if (!record.wrapperExport && !record.ngxExport
+         && !record.ngxRuntimeExport)
+         return;
++    if (record.ngxExport)
++    {
++        ScopedModuleReference retained(record.module);
++        if (!retained || LoadedModulePath(retained.get()) != record.path) return;
++        dlssg_provider_policy::VersionTriplet loaded{}, disk{};
++        const bool loadedRead = dlssg_provider_policy::ReadLoadedProviderVersion(record.module, loaded);
++        const bool diskRead = dlssg_provider_policy::ReadProviderVersion(record.path.c_str(), disk);
++        const bool identity = dlssg_provider_policy::IsDlssgImplementationModule(record.module);
++        Log(L"OptiMFG provider validation: loadedRead=%d loadedVersion=%u.%u.%u "
++            L"diskRead=%d diskVersion=%u.%u.%u identity=%d supported=%d path=%s",
++            loadedRead, loaded.major, loaded.minor, loaded.build,
++            diskRead, disk.major, disk.minor, disk.build, identity,
++            loadedRead && identity && dlssg_provider_policy::IsSupportedVersion(loaded), record.path.c_str());
++    }
+     Log(L"Loaded module: wrapperExport=%d wrapperCandidate=%d wrapperPatched=%d "
+         L"wrapperCompiledMaximum=%u "
+         L"ngxExport=%d d3d12=%d vulkan=%d ngxCandidate=%d ngxPatched=%d "
+diff --git a/source/native/v1_2_core.rc b/source/native/v1_2_core.rc
+index 025d984..9b8f586 100644
+--- a/source/native/v1_2_core.rc
++++ b/source/native/v1_2_core.rc
+@@ -1,8 +1,8 @@
+ #include <windows.h>
+ 
+ VS_VERSION_INFO VERSIONINFO
+- FILEVERSION 1,2,0,24
+- PRODUCTVERSION 1,2,0,24
++ FILEVERSION 1,2,0,25
++ PRODUCTVERSION 1,2,0,25
+  FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+ #ifdef _DEBUG
+  FILEFLAGS VS_FF_DEBUG
+@@ -19,11 +19,11 @@ BEGIN
+         BEGIN
+             VALUE "CompanyName", "dashdogy"
+             VALUE "FileDescription", "Universal DLSS Multi Frame Generation enabler for supported games on NVIDIA GeForce RTX 40 Series GPUs."
+-            VALUE "FileVersion", "1.2.0.24"
++            VALUE "FileVersion", "1.2.0.25"
+             VALUE "InternalName", "RTX40MFGCore.dll"
+             VALUE "OriginalFilename", "RTX40MFGCore.dll"
+             VALUE "ProductName", "Universal RTX 40 MFG Unlock V1.2"
+-            VALUE "ProductVersion", "1.2.0.24"
++            VALUE "ProductVersion", "1.2.0.25"
+         END
+     END
+     BLOCK "VarFileInfo"

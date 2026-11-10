@@ -1,0 +1,19 @@
+﻿HOW OPTISHADE WORKS
+
+OptiShade adds image effects and optional rendering components to supported Windows games. Its Library keeps game installations together so each one can be installed, configured, repaired and restored from one manager.
+
+Created by gravy and powered by Fusion Engine, OptiShade combines modified open-source code from ReShade and OptiScaler, including colour-processing code derived from RenoDX, with a custom manager and in-game interface. The underlying components retain their authors' credits and licences; matching source is supplied with the release.
+
+INSTALLATION FLOW
+Choose a detected game in Library and install the OptiShade core. The core provides the manager connection, in-game menu and the files required for that installation method. Afterward, choose optional components for the selected game. The manager records each file it owns and keeps recovery copies of files it replaces.
+
+IMAGE EFFECTS
+FX files provide effects such as colour adjustment, sharpening and other visual changes. INI presets store which effects you use and their settings. A preset is a recipe: it still needs its matching FX files and textures to work.
+
+RENDERING FEATURES
+Image effects, upscaling, Neural Rendering and frame generation are separate systems. The selected game, rendering API, anti-aliasing mode, render scale, graphics hardware and runtime components all affect availability. OptiShade can report files and runtime activity, but only a game-output test can confirm that a feature is producing the intended result.
+
+RESTORE AND UNINSTALL
+Restore uses the selected game's ownership record to remove OptiShade files and put back verified originals. Uninstall in Settings > App information checks every recorded game installation and restores them in one pass. It can keep saved looks and screenshots. Game settings, controls and saves are not installation targets.
+
+The manager's game list contains installations it can identify. The manager matches catalogued games to a unique rendering executable using the title and executable metadata. If it cannot distinguish the game's executable from launchers or tools, it asks you to choose the real rendering executable. 64-bit DirectX/Vulkan games can use the OptiScaler runtime where their graphics path is supported. 32-bit DirectX 10/11 and OpenGL games can use ReShade image effects and the experimental Legacy NR bridge. The bridge needs a matching NVIDIA RTX model, a supported motion-vector provider and a game-local ReShade preset. D3D9 games need a configured external D3D9-to-D3D11 wrapper before OptiShade is installed or repaired through DXGI; native D3D9 cannot run the bridge. Vulkan needs an external 32-bit ReShade layer, which this package does not install. x86 OptiScaler upscaling, frame generation and Glass Cockpit remain unavailable. Compatibility depends on the active graphics path. A successful install alone does not certify support for every game or GPU.

@@ -1,0 +1,6 @@
+Upstream: https://github.com/mcsoderh/RTX30MFG-Unlock
+Revision: 21a2b9931f0c13f46a4b3b8a5856620d9698f88e
+Archive SHA256: e199238d31039d1b22484f3afac87be7b0b4e146127b268b0f68c24efa17d831
+Upstream MIT notices retained. OptiShade adapter additions are GPL-3.0-or-later. Source-derived integration must retain both applicable notices.
+Core-only target: RTX40MFGCore, output OptiShadeMFG.dll; upstream UI disabled. Runtime vendor components are not redistributed here.
+RTX20/30/40 simulator output awaits hardware tests.

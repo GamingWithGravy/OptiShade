@@ -1,0 +1,186 @@
+{
+  "schema": 1,
+  "reference_commit": "09993b0",
+  "nr_required_fields": [
+    "DlssNrApplyModel",
+    "DlssNrAutoMask",
+    "DlssNrColourStrength",
+    "DlssNrCompare",
+    "DlssNrCompareSplit",
+    "DlssNrCompareSwap",
+    "DlssNrCompareTags",
+    "DlssNrCompareZoom",
+    "DlssNrDebugView",
+    "DlssNrDeferredDlss",
+    "DlssNrEnabled",
+    "DlssNrEnvironmentColour",
+    "DlssNrEnvironmentDetail",
+    "DlssNrExtraPasses",
+    "DlssNrFinishedPicture",
+    "DlssNrHoldFrame",
+    "DlssNrIntensity",
+    "DlssNrLocalStructure",
+    "DlssNrLocalTone",
+    "DlssNrMaxRatio",
+    "DlssNrPass2AutoMask",
+    "DlssNrPass2Intensity",
+    "DlssNrPass2LocalStructure",
+    "DlssNrPass2LocalTone",
+    "DlssNrPass2Preset",
+    "DlssNrPass2SkinStructure",
+    "DlssNrPass2Style",
+    "DlssNrPass3AutoMask",
+    "DlssNrPass3Intensity",
+    "DlssNrPass3LocalStructure",
+    "DlssNrPass3LocalTone",
+    "DlssNrPass3Preset",
+    "DlssNrPass3SkinStructure",
+    "DlssNrPass3Style",
+    "DlssNrPasses",
+    "DlssNrPrecision",
+    "DlssNrPreset",
+    "DlssNrResidualAcrossRr",
+    "DlssNrResidualAcrossRrBlend",
+    "DlssNrResidualFg",
+    "DlssNrResidualFgApproxCamera",
+    "DlssNrReversibleMode",
+    "DlssNrRunBeforeSr",
+    "DlssNrScalingDownscaler",
+    "DlssNrScanAnchors",
+    "DlssNrScanInverted",
+    "DlssNrScanMeter",
+    "DlssNrScanTrim",
+    "DlssNrShowSkinMask",
+    "DlssNrSkinColour",
+    "DlssNrSkinDetail",
+    "DlssNrSkinProtection",
+    "DlssNrSkinStructure",
+    "DlssNrSkinToneEnabled",
+    "DlssNrStyle",
+    "SourcePolicy",
+    "DlssNrTagScale",
+    "DlssNrTransfer",
+    "DlssNrTransferStrength",
+    "DlssNrUnlockPasses",
+    "DlssNrWhitePointScale",
+    "DlssNrWhitePointSource",
+    "DlssNrWhitePointTrim",
+    "DlssNrWorkingScale"
+  ],
+  "files": [
+    {
+      "previous_compiled_file": "dlssnr/reconstruction/NRConnection.generated.inl",
+      "source": "dlssnr/reconstruction/NRConnection.inl",
+      "previous_sha256": "9e8c90bc37389f38c79fac7aa4f378b7344a9c0c62c6f1cc3dffecf52c2a5b25",
+      "migration_sha256": "fc147638b242a5257dd6755b83600a8488116092e9f7202540ecf2aac48e10c6"
+    },
+    {
+      "previous_compiled_file": "dlssnr/reconstruction/NRPlacement.generated.inl",
+      "source": "dlssnr/reconstruction/NRPlacement.inl",
+      "previous_sha256": "520bcdf4d2fc0ea22ec1160d515dabf80a7d826bef3ad75e6ace22bac2c1d42e",
+      "migration_sha256": "97babefc76c65d264492523e86270ea4e0b4ccb4ce0ced8d445eaaaa83fd73b3"
+    },
+    {
+      "previous_compiled_file": "dlssnr/reconstruction/NRCompatibility.generated.inl",
+      "source": "dlssnr/reconstruction/NRCompatibility.inl",
+      "previous_sha256": "46576b85181c9dc173d0497502d6d6fe3c8a4a6b0491cbaf445699f460315e73",
+      "migration_sha256": "7d72b796424c101b6482da0798484cc523db991a1a1878de6ce05eda478d4361"
+    },
+    {
+      "previous_compiled_file": "dlssnr/reconstruction/NRExperimental.generated.inl",
+      "source": "dlssnr/reconstruction/NRExperimental.inl",
+      "previous_sha256": "a3cf0d297b7d30d6217d0a057aa25063ab637c72b334170024469f5f3558ca21",
+      "migration_sha256": "b0e3d9eb96e06a4fc35343a0e08ec1edb37f1af020821950d014a31f6ea68576"
+    },
+    {
+      "previous_compiled_file": "dlssnr/reconstruction/NRStatus.generated.inl",
+      "source": "dlssnr/reconstruction/NRStatus.inl",
+      "previous_sha256": "09367a2417bf602f70bc7f97ae208ae657fdb8f4c5722a65b1311ff35adeb37e",
+      "migration_sha256": "ca754792cc1a104387279c5c9c20a05ac94e595343171f9f42ce6b0bd967980c"
+    },
+    {
+      "previous_compiled_file": "dlssnr/reconstruction/NRQuality.generated.inl",
+      "source": "dlssnr/reconstruction/NRQuality.inl",
+      "previous_sha256": "78ca0c9ab08ee46efb80851029582a9bc978bfe46c3777c9763ce0b0f6934c8f",
+      "migration_sha256": "23a5cb9cd04fa32350dd8e93f6649cde572cb706c9d802090f2ebbf5da0dbf0f"
+    },
+    {
+      "previous_compiled_file": "dlssnr/reconstruction/NRStrength.generated.inl",
+      "source": "dlssnr/reconstruction/NRStrength.inl",
+      "previous_sha256": "c34ee08c4e2a6581cc569b69611882eaef5cd68177e06fd063a314495a03317f",
+      "migration_sha256": "bb63c6e79b01a41caae2e41b7c39298154de9b34cae36fdfa363489dc0dae021"
+    },
+    {
+      "previous_compiled_file": "dlssnr/reconstruction/NRHdr.generated.inl",
+      "source": "dlssnr/reconstruction/NRHdr.inl",
+      "previous_sha256": "3246bb9238889b0db4b82d9be5579cb45cc9ad7ebf74d6ccf06b1241793e0e20",
+      "migration_sha256": "ca7909352b719133419e7288b3ae35eb9721501fd0428a4e6296d287d13f8caa"
+    },
+    {
+      "previous_compiled_file": "dlssnr/reconstruction/NRPasses.generated.inl",
+      "source": "dlssnr/reconstruction/NRPasses.inl",
+      "previous_sha256": "5510e62ea67d6c37d960952b5b0e286a8727cde089276949d57f8bfa1f283895",
+      "migration_sha256": "10560bac2adc36bacac4387fccae4bb612e8d51cae15b5f5639fa228de82e17f"
+    },
+    {
+      "previous_compiled_file": "dlssnr/reconstruction/NRColour.generated.inl",
+      "source": "dlssnr/reconstruction/NRColour.inl",
+      "previous_sha256": "ca29920384e4af85f1513c7b14e863ccb6e751eba4d9636e85af0f2b96575de0",
+      "migration_sha256": "0249ff144d2945839af5d17ea91253d98efdf0eab7e19b89efae964facbcbd1f"
+    },
+    {
+      "previous_compiled_file": "dlssnr/reconstruction/NRCompare.generated.inl",
+      "source": "dlssnr/reconstruction/NRCompare.inl",
+      "previous_sha256": "f70306aede928cc01ac73bfc9ad1ef5da6eacc2ccad44839dc096c75586a6d80",
+      "migration_sha256": "187520a75c18ebd87c7c70ab714a58fb9905aa37d96dc85610d207bef45e2c5b"
+    },
+    {
+      "previous_compiled_file": "dlssnr/DlssNr_Menu.reconstruction.generated.cpp",
+      "source": "dlssnr/DlssNr_Menu.cpp",
+      "previous_sha256": "f659d35dacd713937e7fd4c08a87cb471103bff7c04f23daba53ecdd4063dafd",
+      "migration_sha256": "f659d35dacd713937e7fd4c08a87cb471103bff7c04f23daba53ecdd4063dafd"
+    },
+    {
+      "previous_compiled_file": "menu/reconstruction/Performance.generated.inl",
+      "source": "menu/reconstruction/Performance.inl",
+      "previous_sha256": "af68ad0593d25be2d7ebc6dbad51307bbec7460a12c5e825dc5924f4ef2c5856",
+      "migration_sha256": "f19c91d78710a206cf4af45548c623d9904d9ede60f0e0a639464b8327662594"
+    },
+    {
+      "previous_compiled_file": "menu/reconstruction/MenuPreferences.generated.inl",
+      "source": "menu/reconstruction/MenuPreferences.inl",
+      "previous_sha256": "eb2c609873f9756e3304ec5bdae06f3c9d2f49ea20175c0b3fec96c2c1c4e11e",
+      "migration_sha256": "aafd4ddcc535b87daaeaa321d822ea8e68f8a84cd079167287ab954529d45bf9"
+    },
+    {
+      "previous_compiled_file": "menu/reconstruction/FpsPreferences.generated.inl",
+      "source": "menu/reconstruction/FpsPreferences.inl",
+      "previous_sha256": "fe6ee6470b427e301cb3d9fd035c76b0ce9953f39d40e79043a5e9ce2d127f2f",
+      "migration_sha256": "05ac21bad9aeb8912fef422083ab55dee95171322be6c6d637e4375e91d5d7a0"
+    },
+    {
+      "previous_compiled_file": "menu/reconstruction/TechnicalStatus.generated.inl",
+      "source": "menu/reconstruction/TechnicalStatus.inl",
+      "previous_sha256": "79473551b7050e821d6a4ed8e9c59a2e1c60daf8e043f79c05f31bca905876dc",
+      "migration_sha256": "d4fc81ef434cf490fc276022dd0cb9e88e03b12368fe98fa82aeff7cc3ca93ac"
+    },
+    {
+      "previous_compiled_file": "menu/menu_common.reconstruction.generated.cpp",
+      "source": "menu/menu_common.cpp",
+      "previous_sha256": "af8fa78a9467a5a7fbf5efb2ef679f60e98dda995fd0cde9f9a546ad2f338b4b",
+      "migration_sha256": "4270e01abd129d0e6837f6127ef1903635e8bfb479205ede71eca40df49ae728"
+    },
+    {
+      "previous_compiled_file": "menu/optishade_effects_ui.reconstruction.generated.inl",
+      "source": "menu/optishade_effects_ui.inl",
+      "previous_sha256": "958be3d15ca0ccce48ebc2a74b431cdeb22825b4f0166fde68be5a0cc6e87c1f",
+      "migration_sha256": "958be3d15ca0ccce48ebc2a74b431cdeb22825b4f0166fde68be5a0cc6e87c1f"
+    },
+    {
+      "previous_compiled_file": "dllmain.reconstruction.generated.cpp",
+      "source": "dllmain.cpp",
+      "previous_sha256": "03a442758dacb48da37a312eed3d703133868bd049b80a9ab4a2cb1292d01fb2",
+      "migration_sha256": "03a442758dacb48da37a312eed3d703133868bd049b80a9ab4a2cb1292d01fb2"
+    }
+  ]
+}

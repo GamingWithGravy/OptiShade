@@ -1,0 +1,6 @@
+{
+  "schema": 1,
+  "title": "Welcome to OptiShade 1.0!",
+  "body": "Thanks for being part of the community. OptiShade is built to make your games look and feel the way you want.\n\nDiagnostics upload privately when you send a report from Troubleshooting, so there is no need to post diagnostic ZIPs publicly. Include the game, GPU and steps that led to an issue.\n\nKnown issues: VR frame generation and some long-session performance reports are still being investigated. Shader loading and frame-generation results can vary by game, GPU and driver.\n\nEnjoy the 1.0 release, and thank you for helping improve OptiShade.",
+  "updated": "2026-11-09"
+}

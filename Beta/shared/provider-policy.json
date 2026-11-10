@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "providers": {
+    "source": {
+      "families": [
+        20,
+        30,
+        40
+      ],
+      "id": "optishade-source-mfg",
+      "experimental": true
+    },
+    "legacy": {
+      "families": [
+        40
+      ],
+      "id": "rtxmfg-upstream",
+      "experimental": true
+    },
+    "native": {
+      "families": [
+        50
+      ],
+      "id": "game-native",
+      "experimental": false
+    },
+    "sm86": {
+      "families": [
+        20,
+        30
+      ],
+      "id": "dlssg-for-sm86-upstream",
+      "experimental": true
+    }
+  },
+  "channels": {
+    "beta": {
+      "20": "sm86",
+      "30": "sm86",
+      "40": "source",
+      "50": "native"
+    },
+    "stable": {
+      "20": "sm86",
+      "30": "sm86",
+      "40": "legacy",
+      "50": "native"
+    }
+  }
+}

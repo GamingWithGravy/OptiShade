@@ -1,0 +1,130 @@
+diff --git a/source/native/single_hotkey.h b/source/native/single_hotkey.h
+index 06a0fb8..ccba49d 100644
+--- a/source/native/single_hotkey.h
++++ b/source/native/single_hotkey.h
+@@ -5,6 +5,24 @@
+ 
+ namespace single_overlay
+ {
++// OptiShade controls-only integration. No replacement hotkey or saved binding.
++#if defined(MFG_UNLOCK_OVERLAY_MENU_DRAW) && !MFG_UNLOCK_OVERLAY_MENU_DRAW
++inline constexpr int kDefaultMenuKey = 0;
++enum class KeyAction { None, Toggle, Bound, Cancelled };
++class MenuHotkey
++{
++public:
++    static bool Bindable(int) noexcept { return false; }
++    int Key() const noexcept { return 0; }
++    bool Binding() const noexcept { return false; }
++    void BeginBinding() noexcept {}
++    void CancelBinding() noexcept {}
++    bool Load(int) noexcept { return false; }
++    int TakePendingSave() noexcept { return 0; }
++    void ResetPressed() noexcept {}
++    KeyAction Process(int, bool) noexcept { return KeyAction::None; }
++};
++#else
+ inline constexpr int kDefaultMenuKey = VK_BACK;
+ 
+ enum class KeyAction { None, Toggle, Bound, Cancelled };
+@@ -55,4 +73,5 @@ public:
+         return key == Key() ? KeyAction::Toggle : KeyAction::None;
+     }
+ };
++#endif
+ }
+diff --git a/source/native/overlay_platform.cpp b/source/native/overlay_platform.cpp
+index 5ba64f6..bdd114b 100644
+--- a/source/native/overlay_platform.cpp
++++ b/source/native/overlay_platform.cpp
+@@ -60,8 +60,13 @@ bool Foreground(HWND window) noexcept
+ 
+ bool CaptureInput() noexcept
+ {
++#if defined(MFG_UNLOCK_OVERLAY_MENU_DRAW) && !MFG_UNLOCK_OVERLAY_MENU_DRAW
++    // The controls-only build must never bind, poll, capture or open another UI.
++    return false;
++#else
+     return !gInsideOverlay && gVisible.load(std::memory_order_acquire)
+         && Foreground(gActiveWindow.load(std::memory_order_acquire));
++#endif
+ }
+ 
+ void SetVisible(bool visible, HWND window)
+@@ -270,11 +275,17 @@ void ReleaseRetiredRawMouse(HWND window, const RAWMOUSE& mouse)
+ 
+ bool ProcessKey(HWND window, int key, bool down)
+ {
++#if defined(MFG_UNLOCK_OVERLAY_MENU_DRAW) && !MFG_UNLOCK_OVERLAY_MENU_DRAW
++    (void)window; (void)key; (void)down;
++    // The controls-only build must never bind, poll, capture or open another UI.
++    return false;
++#else
+     const bool wasBinding = gMenuKey.Binding();
+     const auto action = gMenuKey.Process(key, down);
+     if (action == KeyAction::Toggle)
+         SetVisible(!gVisible.load(std::memory_order_acquire), window);
+     return wasBinding || action != KeyAction::None || key == gMenuKey.Key();
++#endif
+ }
+ 
+ std::string KeyLabel()
+@@ -398,6 +409,11 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
+ 
+ bool AttachWindow(HWND window)
+ {
++#if defined(MFG_UNLOCK_OVERLAY_MENU_DRAW) && !MFG_UNLOCK_OVERLAY_MENU_DRAW
++    (void)window;
++    // The controls-only build must never bind, poll, capture or open another UI.
++    return false;
++#else
+     DWORD process = 0;
+     if (!IsWindow(window) || !GetWindowThreadProcessId(window, &process)
+         || process != GetCurrentProcessId()) return false;
+@@ -414,6 +430,7 @@ bool AttachWindow(HWND window)
+     if (!original) return false;
+     gWindows.emplace(window, WindowInput{original, {}, 1});
+     return true;
++#endif
+ }
+ 
+ void DetachWindow(HWND window, bool releaseClient)
+@@ -509,6 +526,11 @@ struct ClipTag
+ 
+ bool PlatformState::Initialize(HWND hwnd)
+ {
++#if defined(MFG_UNLOCK_OVERLAY_MENU_DRAW) && !MFG_UNLOCK_OVERLAY_MENU_DRAW
++    (void)hwnd;
++    // The controls-only build must never bind, poll, capture or open another UI.
++    return false;
++#else
+     if (context)
+     {
+         if (window != hwnd || !inputAttached) return false;
+@@ -592,6 +614,7 @@ bool PlatformState::Initialize(HWND hwnd)
+     if (!gVisible.load(std::memory_order_acquire))
+         gActiveWindow.store(hwnd, std::memory_order_release);
+     return true;
++#endif
+ }
+ 
+ void PlatformState::RetireInput()
+@@ -620,6 +643,10 @@ void PlatformState::Shutdown()
+ 
+ bool PlatformState::WantsFrame() const noexcept
+ {
++#if defined(MFG_UNLOCK_OVERLAY_MENU_DRAW) && !MFG_UNLOCK_OVERLAY_MENU_DRAW
++    // The controls-only build must never bind, poll, capture or open another UI.
++    return false;
++#else
+     // The edge state is shared with window/raw messages, so polling cannot
+     // toggle twice for a single press. It also covers custom input pumps.
+     if (context && inputAttached && Foreground(window))
+@@ -648,6 +675,7 @@ bool PlatformState::WantsFrame() const noexcept
+     }
+     return context && inputAttached && IsWindow(window) && (gVisible.load(std::memory_order_acquire)
+         || GetTickCount64() - firstFrame < 7000);
++#endif
+ }
+ 
+ bool PlatformState::NewFrame(uint32_t outputWidth, uint32_t outputHeight)

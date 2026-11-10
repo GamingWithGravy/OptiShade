@@ -1,0 +1,16 @@
+OPTISHADE - TEST BUILD DISCLAIMER
+Created by gravy | Powered by Fusion Engine
+
+OptiShade is an experimental version. By installing it, you accept that it may cause crashes, visual problems, reduced performance or other unexpected behaviour. Compatibility and performance are not guaranteed.
+
+
+Back up anything important before testing. Restore and Uninstall are designed to remove OptiShade's tracked files and restore its backups without changing game settings, controls or saves. Restore keeps saved INI presets in the game presets folder. Uninstall asks whether to keep or remove those presets. Presets saved elsewhere are left alone; downloaded effects are removed.
+
+Some features require compatible hardware, game support and separately supplied NVIDIA files. Installing a feature does not guarantee it will work in your game. DLSS neural rendering can change how faces and scenery look, and extra passes can reduce performance.
+
+This is a community project using modified ReShade and OptiScaler code. It is not an official release from, or endorsed by, NVIDIA, Microsoft, game developers, ReShade or OptiScaler. Third-party components remain subject to their own licences.
+
+Please share reproducible problems and diagnostics with gravy. Check logs for personal information before sharing them. OptiShade was created by gravy.
+
+
+

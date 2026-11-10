@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "models": [
+    {
+      "Id": "original-3108",
+      "Variant": "auto",
+      "Families": [
+        50
+      ],
+      "Family": "RTX 50",
+      "ModelHash": "E16BCF15E16E13F527491CDF7845B2FE6521A738D8F7C9C721866A8496E1FC8E",
+      "Url": "https://github.com/RankFTW/rhi-repo/releases/download/dlssnr-310.8.0/nvngx_dlssnr_310.8.0.zip",
+      "ArchiveHash": "388C0A7912E15EC911B9C9E11A692142B11FE387DDF2B637D8C358138FFFB3AC",
+      "Entry": "nvngx_dlssnr.dll",
+      "Signed": true
+    },
+    {
+      "Id": "compat-3108",
+      "Variant": "auto",
+      "Families": [
+        20,
+        30,
+        40
+      ],
+      "Family": "RTX 20/30/40 experimental",
+      "ModelHash": "E67DEE209320CDAFE0E93E45675D7AA34323A53ACC57A72B2E40A181581C989A",
+      "Url": "https://github.com/grim-susemi/OptiScaler-Susemi/releases/download/v10/optiscaler-susemi-v10-bin64-bundle.zip",
+      "ArchiveHash": "0DE10C4DB5780FF33BE19D42FA1855D3370853CBDEA4C04C7FF92E455159856A",
+      "Entry": "package/candidate-susemi-v10/nvngx_dlssnr.dll",
+      "Signed": false
+    },
+    {
+      "Id": "compat-3109",
+      "Variant": "compat-3109",
+      "Families": [
+        20,
+        30,
+        40,
+        50
+      ],
+      "Family": "Local experimental 310.9.16 FP16",
+      "ModelHash": "CDFA6C1EC784867182164C7836F324F087B5C9F374D0C9FE46F54999FEABF3ED",
+      "Url": "",
+      "ArchiveHash": "",
+      "Entry": "nvngx_dlssnr.dll",
+      "Signed": false
+    },
+    {
+      "Id": "official-3109",
+      "Variant": "official-3109",
+      "Families": [
+        50
+      ],
+      "Family": "NVIDIA signed DLSS-NR 310.9.16 RTX 50",
+      "ModelHash": "2BC19BC09A7B89DD44F73E2AC0108FCC586E2154BDD0830F242F4F040E28789F",
+      "Url": "",
+      "ArchiveHash": "",
+      "Entry": "nvngx_dlssnr.dll",
+      "Signed": true
+    },
+    {
+      "Id": "v7-3109",
+      "Variant": "v7-3109",
+      "Families": [
+        20,
+        30,
+        50
+      ],
+      "Family": "Local experimental 310.9 V7",
+      "ModelHash": "30B6B599DBC593E5F9A8A0DDB2EDAC6F2F15AD0EAA967CD6BB0AB6BB224825C3",
+      "Url": "",
+      "ArchiveHash": "",
+      "Entry": "nvngx_dlssnr.dll",
+      "Signed": false
+    }
+  ]
+}

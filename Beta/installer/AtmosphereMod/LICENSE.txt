@@ -1,0 +1,118 @@
+AtmosphereMod Freeware Licence
+Version 1.0, October 2026
+
+Copyright (c) 2026 tomwhoca. All rights reserved, except as granted below.
+
+"The Software" means the files of AtmosphereMod that the author created, in
+this repository and in its official releases: the ReShade add-on, the
+installer and patching tools, the shaders, the EFB app, the settings files
+and the documentation. Third-party components (section 8) are not covered by
+this licence.
+
+
+1. What you may do
+
+   Free of charge, you may:
+   a) download, install and use the Software on your own computers, for your
+      personal, non-commercial use;
+   b) change its settings (tunables.ini) as you like;
+   c) read its source code, and build and run it for your own private use,
+      also with changes you make for yourself, as long as you don't share
+      them (section 2);
+   d) show the Software in screenshots, videos and live streams, including
+      monetised ones (a mention of AtmosphereMod is appreciated);
+   e) share links to the official download page.
+
+
+2. What you may not do
+
+   Without the author's prior written permission, you may not:
+   a) redistribute the Software, in whole or in part, modified or not. This
+      includes re-uploads, mirrors, bundles, installers, add-on packs and
+      collections, on any website or service, free or paid;
+   b) publish or share modified versions of the Software, or works based on
+      it or on its source code. GitHub's terms let anyone view and fork a
+      public repository; a fork grants no rights beyond this licence;
+   c) sell, rent or license the Software, charge for access to it, or
+      include it in any commercial product or service;
+   d) remove or change copyright notices, this licence or the disclaimers,
+      or present the Software or any part of it as your own work;
+   e) use the name "AtmosphereMod" for other projects, or in a way that
+      suggests the author endorses them;
+   f) share the shaders the installer generates on your PC (section 3).
+
+
+3. The game's files
+
+   The Software contains none of the files of Microsoft Flight Simulator
+   2024. Its installer patches the shaders of your own, legitimately
+   obtained installation of the game, on your own PC. The shaders it
+   generates are derived from the game's files:
+   - they are for use with the Software, on that PC only;
+   - they are subject to the game's terms;
+   - they must not be shared.
+   You are responsible for using the Software in line with the terms of
+   Microsoft Flight Simulator 2024 and of ReShade.
+
+
+4. Contributions
+
+   Bug reports and suggestions are welcome. If you send the author code,
+   text or other material for inclusion in the Software (for example a pull
+   request):
+   - you confirm that you have the right to do so;
+   - you allow the author to use, change and publish it as part of the
+     Software, under this or any later licence, without payment.
+
+
+5. No warranty
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+   OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
+
+   The Software is experimental and has been tested on a single PC only.
+   You install and use it entirely at your own risk.
+
+
+6. Limitation of liability
+
+   TO THE EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL THE AUTHOR
+   BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, INCLUDING LOSS OF
+   DATA, DAMAGE TO HARDWARE OR SOFTWARE, CRASHES OR LOST TIME, WHETHER IN AN
+   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+   CONNECTION WITH THE SOFTWARE OR ITS USE.
+
+
+7. Ending, later versions, validity
+
+   a) Your rights under this licence end automatically if you break any of
+      its terms. You must then uninstall and delete the Software.
+   b) The author may publish later releases under different terms. Each
+      release is covered by the licence that comes with it.
+   c) If any part of this licence is found unenforceable, the rest stays in
+      effect.
+
+
+8. Third-party components
+
+   These are not covered by this licence; their own licences apply (see
+   THIRD-PARTY-NOTICES.txt in each release):
+   - the ReShade add-on API headers (BSD 3-Clause licence, Patrick Mours);
+   - the Python embeddable package bundled with the installer (Python
+     Software Foundation License);
+   - the parts of the Microsoft Flight Simulator 2024 SDK used by the add-on
+     and the EFB app (the SDK's licence terms);
+   - Microsoft's DirectX Shader Compiler, which the installer may download
+     (its own licences).
+
+
+9. Not affiliated
+
+   AtmosphereMod is not affiliated with, endorsed by or supported by
+   Microsoft, Asobo Studio or the ReShade project. Microsoft Flight
+   Simulator is a trademark of Microsoft Corporation.
+
+
+Questions and permission requests: open an issue on the AtmosphereMod GitHub
+page, https://github.com/tomwhoca/AtmosphereMod/issues

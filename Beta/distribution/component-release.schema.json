@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://optishade.invalid/schema/component-release-v1.json",
+  "title": "OptiShade first-party component release manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "componentId", "version", "channel", "publishedUtc",
+    "sourceCommit", "launcherRange", "contracts", "dependencies",
+    "package", "files", "signature"
+  ],
+  "properties": {
+    "schema": { "const": 1 },
+    "componentId": { "enum": ["OptiShade.Launcher", "OptiShade.Core", "OptiShade.OptiMFG", "OptiShade.Effects", "OptiShade.Providers.AMD", "OptiShade.Providers.Intel"] },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$", "maxLength": 64 },
+    "channel": { "enum": ["stable", "beta"] },
+    "publishedUtc": { "type": "string", "format": "date-time" },
+    "sourceCommit": { "type": "string", "pattern": "^[a-fA-F0-9]{40,64}$" },
+    "launcherRange": {
+      "type": "object", "additionalProperties": false,
+      "required": ["minInclusive", "maxExclusive"],
+      "properties": {
+        "minInclusive": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "maxExclusive": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" }
+      }
+    },
+    "contracts": {
+      "type": "object", "additionalProperties": { "type": "string", "maxLength": 96 },
+      "maxProperties": 32
+    },
+    "dependencies": {
+      "type": "array", "maxItems": 16, "uniqueItems": true,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["componentId", "minimumVersion"],
+        "properties": {
+          "componentId": { "enum": ["OptiShade.Launcher", "OptiShade.Core", "OptiShade.OptiMFG", "OptiShade.Effects", "OptiShade.Providers.AMD", "OptiShade.Providers.Intel"] },
+          "minimumVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" }
+        }
+      }
+    },
+    "package": {
+      "type": "object", "additionalProperties": false,
+      "required": ["branch", "path", "bytes", "sha256"],
+      "properties": {
+        "branch": { "type": "string", "pattern": "^(launcher|core|optimfg|effects|providers-amd|providers-intel)-(stable|beta)$" },
+        "path": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]{1,240}$" },
+        "lfsOid": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+        "bytes": { "type": "integer", "minimum": 1, "maximum": 103809024 },
+        "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" }
+      }
+    },
+    "files": {
+      "type": "array", "minItems": 1, "maxItems": 4096,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["packagePath", "installPath", "bytes", "sha256", "preconditionSha256"],
+        "properties": {
+          "packagePath": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]{1,240}$" },
+          "installPath": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]{1,240}$" },
+          "bytes": { "type": "integer", "minimum": 0, "maximum": 536870912 },
+          "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+          "preconditionSha256": { "type": ["string", "null"], "pattern": "^[a-fA-F0-9]{64}$" }
+        }
+      }
+    },
+    "signature": {
+      "type": "object", "additionalProperties": false,
+      "required": ["algorithm", "keyId", "value"],
+      "properties": {
+        "algorithm": { "const": "Ed25519" },
+        "keyId": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,64}$" },
+        "value": { "type": "string", "contentEncoding": "base64", "minLength": 80, "maxLength": 128 }
+      }
+    }
+  }
+}

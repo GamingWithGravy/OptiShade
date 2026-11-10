@@ -1,0 +1,445 @@
+#include "pch.h"
+#include "input_system_internal.h"
+#include "../../../../shared/InputHandleFilter.h"
+
+#include <algorithm>
+#include <cwctype>
+#include <string>
+
+#include <winioctl.h>
+#include <hidusage.h>
+#include <hidsdi.h>
+#include <hidpi.h>
+#include <hidclass.h>
+
+#ifndef HID_USAGE_GENERIC_MULTI_AXIS_CONTROLLER
+#define HID_USAGE_GENERIC_MULTI_AXIS_CONTROLLER ((USHORT) 0x08)
+#endif
+
+namespace OptiInput
+{
+namespace
+{
+optishade::input::HandleFilter<MaxTrackedHidHandles> trackedHandles;
+using HidD_GetPreparsedData_t = BOOLEAN(WINAPI*)(HANDLE, PHIDP_PREPARSED_DATA*);
+using HidD_FreePreparsedData_t = BOOLEAN(WINAPI*)(PHIDP_PREPARSED_DATA);
+using HidP_GetCaps_t = NTSTATUS(WINAPI*)(PHIDP_PREPARSED_DATA, PHIDP_CAPS);
+
+HidD_GetPreparsedData_t hidGetPreparsedData = nullptr;
+HidD_FreePreparsedData_t hidFreePreparsedData = nullptr;
+HidP_GetCaps_t hidGetCaps = nullptr;
+std::once_flag hidApiOnce;
+
+void LoadHidApi()
+{
+    std::call_once(hidApiOnce, []{
+
+    HMODULE hid = GetModuleHandleW(L"hid.dll");
+
+    if (hid == nullptr)
+        hid = LoadLibraryW(L"hid.dll");
+
+    if (hid == nullptr)
+        return;
+
+    hidGetPreparsedData = reinterpret_cast<HidD_GetPreparsedData_t>(GetProcAddress(hid, "HidD_GetPreparsedData"));
+    hidFreePreparsedData = reinterpret_cast<HidD_FreePreparsedData_t>(GetProcAddress(hid, "HidD_FreePreparsedData"));
+    hidGetCaps = reinterpret_cast<HidP_GetCaps_t>(GetProcAddress(hid, "HidP_GetCaps"));
+    });
+}
+
+std::wstring ToLowerCopy(std::wstring text)
+{
+    std::transform(text.begin(), text.end(), text.begin(),
+                   [](wchar_t ch) { return static_cast<wchar_t>(std::towlower(ch)); });
+
+    return text;
+}
+
+bool LooksLikeHidPath(const std::wstring& path)
+{
+    const std::wstring lower = ToLowerCopy(path);
+    return lower.find(L"hid#") != std::wstring::npos || lower.find(L"\\\\.\\hid") != std::wstring::npos;
+}
+
+std::wstring AnsiToWide(LPCSTR text)
+{
+    if (text == nullptr)
+        return {};
+
+    const int length = MultiByteToWideChar(CP_ACP, 0, text, -1, nullptr, 0);
+
+    if (length <= 1)
+        return {};
+
+    std::wstring result(static_cast<std::size_t>(length), L'\0');
+    if (MultiByteToWideChar(CP_ACP, 0, text, -1, &result[0], length) != length)
+        return {};
+    result.resize(static_cast<std::size_t>(length - 1));
+    return result;
+}
+
+HidDeviceKind HidKindFromUsage(USHORT usagePage, USHORT usage)
+{
+    if (usagePage != HID_USAGE_PAGE_GENERIC)
+        return HidDeviceKind::Other;
+
+    switch (usage)
+    {
+    case HID_USAGE_GENERIC_MOUSE:
+        return HidDeviceKind::Mouse;
+
+    case HID_USAGE_GENERIC_KEYBOARD:
+        return HidDeviceKind::Keyboard;
+
+    case HID_USAGE_GENERIC_JOYSTICK:
+    case HID_USAGE_GENERIC_GAMEPAD:
+    case HID_USAGE_GENERIC_MULTI_AXIS_CONTROLLER:
+        return HidDeviceKind::Gamepad;
+
+    default:
+        return HidDeviceKind::Other;
+    }
+}
+
+bool TryQueryHidUsage(HANDLE handle, USHORT* usagePage, USHORT* usage)
+{
+    if (usagePage != nullptr)
+        *usagePage = 0;
+
+    if (usage != nullptr)
+        *usage = 0;
+
+    LoadHidApi();
+
+    if (hidGetPreparsedData == nullptr || hidFreePreparsedData == nullptr || hidGetCaps == nullptr)
+        return false;
+
+    PHIDP_PREPARSED_DATA preparsed = nullptr;
+
+    {
+        ScopedHookBypass bypass;
+
+        if (!hidGetPreparsedData(handle, &preparsed) || preparsed == nullptr)
+            return false;
+    }
+
+    HIDP_CAPS caps {};
+    NTSTATUS status = 0;
+
+    {
+        ScopedHookBypass bypass;
+        status = hidGetCaps(preparsed, &caps);
+        hidFreePreparsedData(preparsed);
+    }
+
+    if (status < 0)
+        return false;
+
+    if (usagePage != nullptr)
+        *usagePage = caps.UsagePage;
+
+    if (usage != nullptr)
+        *usage = caps.Usage;
+
+    return true;
+}
+
+HidHandleSlot* FindHidHandleSlotLocked(HANDLE handle)
+{
+    if (handle == nullptr || handle == INVALID_HANDLE_VALUE)
+        return nullptr;
+
+    for (HidHandleSlot& slot : _state.HidHandleSlots)
+    {
+        if (slot.InUse && slot.Handle == handle)
+            return &slot;
+    }
+
+    return nullptr;
+}
+
+HidHandleSlot* AllocateHidHandleSlotLocked(HANDLE handle)
+{
+    HidHandleSlot* slot = FindHidHandleSlotLocked(handle);
+
+    if (slot != nullptr)
+        return slot;
+
+    for (HidHandleSlot& candidate : _state.HidHandleSlots)
+    {
+        if (!candidate.InUse)
+        {
+            candidate = {};
+            candidate.InUse = true;
+            candidate.Handle = handle;
+            _state.HidTrackedHandleCount++;
+            return &candidate;
+        }
+    }
+
+    return nullptr;
+}
+
+void UpdateHidSeenFlagsLocked(HidDeviceKind kind)
+{
+    switch (kind)
+    {
+    case HidDeviceKind::Mouse:
+        _state.HidMouseHandleSeen = true;
+        break;
+
+    case HidDeviceKind::Keyboard:
+        _state.HidKeyboardHandleSeen = true;
+        break;
+
+    case HidDeviceKind::Gamepad:
+        _state.HidGamepadHandleSeen = true;
+        break;
+
+    case HidDeviceKind::Other:
+    default:
+        _state.HidOtherHandleSeen = true;
+        break;
+    }
+}
+
+void TrackHidHandleLocked(HANDLE handle, USHORT usagePage, USHORT usage, bool hasUsage)
+{
+    if (handle == nullptr || handle == INVALID_HANDLE_VALUE)
+        return;
+
+    _state.HidCreateFileCallCount++;
+
+    HidHandleSlot* slot = AllocateHidHandleSlotLocked(handle);
+
+    if (slot == nullptr)
+    {
+        ++_state.HidTrackingOverflowCount;
+        const ULONGLONG now = GetTickCount64();
+        if (_state.HidTrackingOverflowCount == 1 || now - _state.HidLastOverflowWarning >= 60000)
+        {
+            _state.HidLastOverflowWarning = now;
+            LOG_WARN("HID tracking capacity reached; input passes through for untracked handles. "
+                     "tracked:{} capacity:{} overflowTotal:{} (not proof of an OS handle leak)",
+                     _state.HidTrackedHandleCount, MaxTrackedHidHandles, _state.HidTrackingOverflowCount);
+        }
+        return;
+    }
+
+    // A successful open may reuse a value while an older close hook is finishing.
+    slot->Generation = ++_state.HidNextGeneration;
+    slot->UsagePage = usagePage;
+    slot->Usage = usage;
+    slot->Kind = hasUsage ? HidKindFromUsage(usagePage, usage) : HidDeviceKind::Other;
+    trackedHandles.Publish(static_cast<std::size_t>(slot-_state.HidHandleSlots.data()),reinterpret_cast<std::uintptr_t>(handle));
+
+    UpdateHidSeenFlagsLocked(slot->Kind);
+
+    OPTIINPUT_LOG_VERBOSE("HID handle tracked handle:{} kind:{} usagePage:{:#x} usage:{:#x}",
+                          static_cast<void*>(handle), static_cast<int>(slot->Kind),
+                          static_cast<unsigned>(slot->UsagePage), static_cast<unsigned>(slot->Usage));
+}
+
+void ClearHidHandleLocked(HANDLE handle)
+{
+    HidHandleSlot* slot = FindHidHandleSlotLocked(handle);
+
+    if (slot == nullptr)
+        return;
+
+    trackedHandles.Publish(static_cast<std::size_t>(slot-_state.HidHandleSlots.data()),0);
+    *slot = {};
+
+    if (_state.HidTrackedHandleCount > 0)
+        _state.HidTrackedHandleCount--;
+}
+
+bool IsTrackedHidMouseLocked(HANDLE handle)
+{
+    HidHandleSlot* slot = FindHidHandleSlotLocked(handle);
+    return slot != nullptr && slot->Kind == HidDeviceKind::Mouse;
+}
+
+bool ShouldBlockHidMouseReadLocked(HANDLE handle)
+{
+    return IsTrackedHidMouseLocked(handle) && ShouldBlockMouseInputLocked();
+}
+
+void ZeroReadBuffer(LPVOID buffer, DWORD bufferSize, LPDWORD bytesTransferred)
+{
+    if (buffer != nullptr && bufferSize > 0)
+        SecureZeroMemory(buffer, bufferSize);
+
+    if (bytesTransferred != nullptr)
+        *bytesTransferred = 0;
+}
+
+bool IsHidInputReportIoctl(DWORD controlCode)
+{
+#ifdef IOCTL_HID_GET_INPUT_REPORT
+    if (controlCode == IOCTL_HID_GET_INPUT_REPORT)
+        return true;
+#endif
+
+#ifdef IOCTL_HID_READ_REPORT
+    if (controlCode == IOCTL_HID_READ_REPORT)
+        return true;
+#endif
+
+    return false;
+}
+} // namespace
+
+void ResetHidHandleFilterLocked(){trackedHandles.Clear();}
+
+HANDLE WINAPI hkCreateFileW(LPCWSTR fileName, DWORD desiredAccess, DWORD shareMode,
+                            LPSECURITY_ATTRIBUTES securityAttributes, DWORD creationDisposition,
+                            DWORD flagsAndAttributes, HANDLE templateFile)
+{
+    HANDLE handle = o_CreateFileW(fileName, desiredAccess, shareMode, securityAttributes, creationDisposition,
+                                  flagsAndAttributes, templateFile);
+    const DWORD error = GetLastError();
+
+    if (bypassHookDepth == 0 && handle != nullptr && handle != INVALID_HANDLE_VALUE && fileName != nullptr && LooksLikeHidPath(fileName))
+    {
+        ScopedHookBypass bypass;
+        USHORT page=0, usage=0;
+        const bool known=TryQueryHidUsage(handle,&page,&usage);
+        std::unique_lock lock(_state.Mutex);
+        TrackHidHandleLocked(handle,page,usage,known);
+    }
+
+    SetLastError(error);
+    return handle;
+}
+
+HANDLE WINAPI hkCreateFileA(LPCSTR fileName, DWORD desiredAccess, DWORD shareMode,
+                            LPSECURITY_ATTRIBUTES securityAttributes, DWORD creationDisposition,
+                            DWORD flagsAndAttributes, HANDLE templateFile)
+{
+    HANDLE handle = o_CreateFileA(fileName, desiredAccess, shareMode, securityAttributes, creationDisposition,
+                                  flagsAndAttributes, templateFile);
+    const DWORD error = GetLastError();
+
+    if (bypassHookDepth == 0 && handle != nullptr && handle != INVALID_HANDLE_VALUE && fileName != nullptr)
+    {
+        ScopedHookBypass bypass;
+        const std::wstring widePath = AnsiToWide(fileName);
+        if(LooksLikeHidPath(widePath)){
+            USHORT page=0, usage=0;
+            const bool known=TryQueryHidUsage(handle,&page,&usage);
+            std::unique_lock lock(_state.Mutex);
+            TrackHidHandleLocked(handle,page,usage,known);
+        }
+    }
+
+    SetLastError(error);
+    return handle;
+}
+
+BOOL WINAPI hkReadFile(HANDLE file, LPVOID buffer, DWORD bytesToRead, LPDWORD bytesRead, LPOVERLAPPED overlapped)
+{
+    const BOOL result = o_ReadFile(file, buffer, bytesToRead, bytesRead, overlapped);
+
+    if (!result || bypassHookDepth != 0 || !trackedHandles.Contains(reinterpret_cast<std::uintptr_t>(file)))
+        return result;
+
+    const DWORD error = GetLastError();
+    bool shouldZero = false;
+    DWORD bytesToZero = bytesRead != nullptr ? *bytesRead : bytesToRead;
+
+    {
+        std::unique_lock lock(_state.Mutex);
+
+        if (IsTrackedHidMouseLocked(file))
+        {
+            _state.HidReadFileCallCount++;
+
+            if (ShouldBlockHidMouseReadLocked(file))
+            {
+                _state.HidReadFileBlockedCount++;
+                shouldZero = true;
+            }
+            else
+            {
+                _state.HidReadFilePassedCount++;
+            }
+        }
+    }
+
+    if (shouldZero)
+        ZeroReadBuffer(buffer, bytesToZero, bytesRead);
+
+    SetLastError(error);
+    return result;
+}
+
+BOOL WINAPI hkDeviceIoControl(HANDLE device, DWORD controlCode, LPVOID inBuffer, DWORD inBufferSize, LPVOID outBuffer,
+                              DWORD outBufferSize, LPDWORD bytesReturned, LPOVERLAPPED overlapped)
+{
+    const BOOL result = o_DeviceIoControl(device, controlCode, inBuffer, inBufferSize, outBuffer, outBufferSize,
+                                          bytesReturned, overlapped);
+
+    if (!result || bypassHookDepth != 0 || !trackedHandles.Contains(reinterpret_cast<std::uintptr_t>(device)))
+        return result;
+
+    const DWORD error = GetLastError();
+    bool shouldZero = false;
+    DWORD bytesToZero = bytesReturned != nullptr ? *bytesReturned : outBufferSize;
+
+    {
+        std::unique_lock lock(_state.Mutex);
+
+        if (IsTrackedHidMouseLocked(device))
+        {
+            _state.HidDeviceIoControlCallCount++;
+
+            if (ShouldBlockHidMouseReadLocked(device) && IsHidInputReportIoctl(controlCode))
+            {
+                _state.HidDeviceIoControlBlockedCount++;
+                shouldZero = true;
+            }
+            else
+            {
+                _state.HidDeviceIoControlPassedCount++;
+            }
+        }
+    }
+
+    if (shouldZero)
+        ZeroReadBuffer(outBuffer, bytesToZero, bytesReturned);
+
+    SetLastError(error);
+    return result;
+}
+
+BOOL WINAPI hkCloseHandle(HANDLE handle)
+{
+    if(!trackedHandles.Contains(reinterpret_cast<std::uintptr_t>(handle)))return o_CloseHandle(handle);
+    // Retirement is bookkeeping, not input interception. It must also run for
+    // a tracked handle closed inside another original API's bypass scope. The
+    // recursive state mutex permits that scope without leaking its slot.
+    std::uint64_t generation = 0;
+    {
+        std::unique_lock lock(_state.Mutex);
+        if (const auto slot = FindHidHandleSlotLocked(handle))
+            generation = slot->Generation;
+    }
+
+    // No input mutex is held across the OS call. Failed closes must keep their
+    // live tracking slot; successful retirement must not remove a reused handle.
+    const BOOL result = o_CloseHandle(handle);
+    const DWORD error = GetLastError();
+    if (result && generation != 0)
+    {
+        std::unique_lock lock(_state.Mutex);
+        const auto slot = FindHidHandleSlotLocked(handle);
+        if (slot != nullptr && slot->Generation == generation)
+            ClearHidHandleLocked(handle);
+    }
+    SetLastError(error);
+    return result;
+}
+
+} // namespace OptiInput

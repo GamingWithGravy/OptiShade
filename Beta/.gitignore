@@ -1,0 +1,67 @@
+# Generated files and local workspace data
+/dist/
+/installer/Payload/
+/installer/PayloadFusion/
+/installer/FusionSetup.exe
+/installer/resource.syso
+/installer/OptiShade.res
+/installer/create-icon.py
+/installer/OptiShade.svg
+/installer/OptiShade.rc
+/optiscaler/x64/
+/reshade/bin/
+/reshade/obj/
+/test-run/
+/nr-test-run/
+*.obj
+*.pdb
+*.log
+*.user
+*.suo
+.vs/
+__pycache__/
+**/.github/
+**/.git/
+/tests/fusion_feed.cpp
+/tests/preset-import-generated.cpp
+/build-import-test.cmd
+/tests/msfs-bounded.ps1
+
+/optiscaler/external/xess/bin/basic_sample_*.exe
+/reshade/deps/stb/tests/oversample/oversample.exe
+/reshade/deps/vma/bin/VmaSample_*.exe
+
+# Private planning and local audit material
+/docs/v0.20.5-test-notes.md
+/Screenshots/
+/.research/
+/tests/render-release-local.ps1
+
+# Private neural research data: generated models contain vendor weights.
+*.safetensors
+*.onnx
+/tools/amd-neural-lab/results/
+
+# Unpublished research and internal phase audit (not part of releases)
+/tools/amd-neural-lab/
+/docs/AMD-neural-research.md
+/docs/Local-0208-phases.md
+
+# Generated standalone test harnesses
+/tests/*.exe
+
+# Private support and handoff exclusion
+*[Hh]andoff*.md
+*[Pp]rompt*.md
+/docs/Maintenance-*.md
+**/PrivateDiagnostics/
+OptiShade-diagnostics-*.zip
+
+# Generated read-only hardware sensor bridge
+/installer/OptiShadeSensors.exe
+
+# Acquired runtime assets remain in packages, not the source repository
+/installer/HybridAssets/*
+!/installer/HybridAssets/PROVENANCE.json
+
+/routes/bin/

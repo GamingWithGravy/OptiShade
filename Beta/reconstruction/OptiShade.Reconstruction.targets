@@ -1,0 +1,27 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Both normal build-performance.cmd and direct VC++ builds import this.
+       Canonical native sources are compiled once by the project. No generated replacements. -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)'=='OptiScaler'">
+    <OptiShadeReconstructionImported>true</OptiShadeReconstructionImported>
+    <OptiShadeChannelRoot>$(MSBuildThisFileDirectory)..\</OptiShadeChannelRoot>
+    <OptiShadePython Condition="'$(OptiShadePython)'==''">python</OptiShadePython>
+  </PropertyGroup>
+  <!-- WP0 requires the matching linker PDB, not only a compiler vc143.pdb.
+       Keep Release optimization and the vendor inputs unchanged. -->
+  <ItemDefinitionGroup Condition="'$(MSBuildProjectName)'=='OptiScaler' and '$(Configuration)'=='Release'">
+    <ClCompile><DebugInformationFormat>ProgramDatabase</DebugInformationFormat></ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(OutDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <LinkIncremental>false</LinkIncremental>
+      <AdditionalOptions>/PDBALTPATH:$(TargetName).pdb %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
+  <Target Name="OptiShadeVerifyNativeViews" BeforeTargets="PrepareForBuild" Condition="'$(MSBuildProjectName)'=='OptiScaler'">
+    <Exec Command="&quot;$(OptiShadePython)&quot; &quot;$(OptiShadeChannelRoot)reconstruction\check_source_provider.py&quot; --channel &quot;$(OptiShadeChannelRoot).&quot;" />
+    <Exec Command="&quot;$(OptiShadePython)&quot; &quot;$(OptiShadeChannelRoot)reconstruction\check_native_views.py&quot; --channel &quot;$(OptiShadeChannelRoot).&quot;" />
+    <Exec Command="&quot;$(OptiShadePython)&quot; &quot;$(OptiShadeChannelRoot)reconstruction\channel_version.py&quot; --check" />
+    <Exec Command="&quot;$(OptiShadePython)&quot; &quot;$(OptiShadeChannelRoot)reconstruction\generate_provider_policy.py&quot; --check" />
+    <Message Importance="High" Text="OptiShade private reconstruction: native view modules and asynchronous MFG status selected. Native/hardware validation remains required." />
+  </Target>
+</Project>

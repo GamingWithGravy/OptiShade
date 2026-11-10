@@ -1,0 +1,29 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="OptiShade / Installation safety" Width="720" SizeToContent="Height" MaxHeight="760" ResizeMode="NoResize" WindowStyle="None" AllowsTransparency="True" WindowStartupLocation="CenterScreen" Background="Transparent" Foreground="#F3EFFB" FontFamily="Segoe UI">
+ <Border Background="#171020" BorderBrush="#49365F" BorderThickness="1" CornerRadius="12">
+  <Grid>
+   <Grid.RowDefinitions><RowDefinition Height="44"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+   <Border x:Name="TitleBar" Grid.Row="0" Background="#11101D" BorderBrush="#332841" BorderThickness="0,0,0,1" CornerRadius="11,11,0,0">
+    <Grid Margin="12,0,6,0">
+     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+      <Border Width="24" Height="24" CornerRadius="6" Background="#34204D" Margin="0,0,9,0"><TextBlock Text="OS" FontSize="11" FontWeight="Bold" Foreground="#C393FF" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+      <TextBlock Text="OptiShade / Installation safety" FontSize="13" Foreground="#EAE2F4" VerticalAlignment="Center"/>
+     </StackPanel>
+     <TextBlock x:Name="CloseWindow" Grid.Column="1" Text="&#x00D7;" FontSize="20" Foreground="#C9B6DF" Width="36" TextAlignment="Center" Cursor="Hand" VerticalAlignment="Center"/>
+    </Grid>
+   </Border>
+   <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="28">
+    <TextBlock x:Name="Heading" Text="Before installing OptiShade" FontSize="24" FontWeight="SemiBold" Foreground="#FFBE83" TextWrapping="Wrap" Margin="0,0,0,18"/>
+    <TextBlock TextWrapping="Wrap" FontSize="15" Margin="0,0,0,14" Text="OptiShade changes game files. Installing or using third-party modifications in a game that uses anti-cheat may lead to enforcement, including an account suspension or ban."/>
+    <TextBlock TextWrapping="Wrap" FontSize="15" Margin="0,0,0,14" Text="Check the game's rules and publisher guidance before installing. If you are unsure whether modifications are allowed, do not install OptiShade into that game."/>
+    <TextBlock TextWrapping="Wrap" Foreground="#BDAFCF" Margin="0,0,0,20" Text="You accept the risk of using OptiShade. To the extent permitted by applicable law, Gravy and the OptiShade contributors are not responsible for account bans or suspensions resulting from its use."/>
+    <CheckBox x:Name="AcceptRisk" IsChecked="False" Foreground="#F3EFFB" Margin="0,0,0,12" AutomationProperties.Name="I have read and accept the installation risk"><TextBlock TextWrapping="Wrap" Text="I have read this warning and accept the risk before installing OptiShade into any game."/></CheckBox>
+    <CheckBox x:Name="DontShowAgain" IsChecked="False" Foreground="#C9B6DF" Margin="0,0,0,22" AutomationProperties.Name="Don't show this warning again"><TextBlock Text="Don't show this again on startup (saves my acceptance on this PC)."/></CheckBox>
+    <WrapPanel HorizontalAlignment="Right">
+     <Button x:Name="Decline" Content="Decline" IsCancel="True" Padding="20,10" Margin="0,0,12,8" Background="#30283F"/>
+     <Button x:Name="Accept" Content="Accept" IsDefault="False" IsEnabled="False" Padding="20,10" Margin="0,0,0,8" Background="#8650C8" Foreground="White"/>
+    </WrapPanel>
+   </StackPanel></ScrollViewer>
+  </Grid>
+ </Border>
+</Window>

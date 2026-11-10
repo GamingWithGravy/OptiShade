@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "default": "nvidia-310.9.16",
+  "scope": ["nvngx_dlss.dll", "nvngx_dlssd.dll"],
+  "profiles": [
+    {
+      "id": "nvidia-310.9.16",
+      "label": "310.9.16 (current; recommended)",
+      "files": [
+        { "Name": "nvngx_dlss.dll", "Version": "310.9.16.0", "SourceTag": "v310.9.16", "SHA256": "D00B5B0AB29C3CA101B70C3A5ECB3A01B7EF33766A3383A28A18623083E6123E" },
+        { "Name": "nvngx_dlssd.dll", "Version": "310.9.16.0", "SourceTag": "v310.9.16", "SHA256": "B49435AE346F227FEAFE7BBE937D88277EA0EE7323975EC06488F377FDB46CEE" }
+      ]
+    }
+  ]
+}

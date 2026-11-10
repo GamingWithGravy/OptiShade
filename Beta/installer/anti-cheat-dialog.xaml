@@ -1,0 +1,36 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="OptiShade / Anti-cheat check" Width="720" SizeToContent="Height" MaxHeight="760" ResizeMode="NoResize" WindowStyle="None" AllowsTransparency="True" WindowStartupLocation="CenterOwner" Background="Transparent" Foreground="#F3EFFB" FontFamily="Segoe UI">
+ <Border Background="#171020" BorderBrush="#49365F" BorderThickness="1" CornerRadius="12">
+  <Grid>
+   <Grid.RowDefinitions><RowDefinition Height="44"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+   <Border x:Name="TitleBar" Grid.Row="0" Background="#11101D" BorderBrush="#332841" BorderThickness="0,0,0,1" CornerRadius="11,11,0,0">
+    <Grid Margin="12,0,6,0">
+     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+      <Border Width="24" Height="24" CornerRadius="6" Background="#34204D" Margin="0,0,9,0"><TextBlock Text="OS" FontSize="11" FontWeight="Bold" Foreground="#C393FF" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+      <TextBlock Text="OptiShade / Anti-cheat check" FontSize="13" Foreground="#EAE2F4" VerticalAlignment="Center"/>
+     </StackPanel>
+     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+      <TextBlock x:Name="MinimizeWindow" Text="&#x2014;" FontSize="16" Foreground="#C9B6DF" Width="36" TextAlignment="Center" Cursor="Hand" VerticalAlignment="Center"/>
+      <TextBlock x:Name="CloseWindow" Text="&#x00D7;" FontSize="20" Foreground="#C9B6DF" Width="36" TextAlignment="Center" Cursor="Hand" VerticalAlignment="Center"/>
+     </StackPanel>
+    </Grid>
+   </Border>
+   <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="28">
+    <TextBlock x:Name="Heading" FontSize="23" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="#FFBE83" Margin="0,0,0,18"/>
+    <TextBlock x:Name="GameName" TextWrapping="Wrap" FontSize="16" Margin="0,0,0,8"/>
+    <TextBlock x:Name="Providers" TextWrapping="Wrap" FontSize="16" Margin="0,0,0,10"/>
+    <TextBlock x:Name="Evidence" TextWrapping="Wrap" Foreground="#BDAFCF" Margin="0,0,0,18"/>
+    <TextBlock x:Name="Opening" TextWrapping="Wrap" Margin="0,0,0,16"/>
+    <TextBlock Text="Installing or using OptiShade may result in an account suspension or permanent ban." TextWrapping="Wrap" Margin="0,0,0,16"/>
+    <TextBlock Text="OptiShade cannot guarantee compatibility or protection against account penalties. By continuing, you acknowledge these risks and accept responsibility for your decision to use OptiShade, to the extent permitted by applicable law." TextWrapping="Wrap" Margin="0,0,0,18"/>
+    <Expander Foreground="#C9B6DF" Header="Detection details" Margin="0,0,0,16"><TextBlock x:Name="Details" TextWrapping="Wrap" Foreground="#BDAFCF"/></Expander>
+    <CheckBox x:Name="AcceptRisk" IsChecked="False" Foreground="#F3EFFB" Margin="0,0,0,12" AutomationProperties.Name="I understand the risk and choose to proceed."><TextBlock TextWrapping="Wrap" Text="I understand the risk and choose to proceed."/></CheckBox>
+    <CheckBox x:Name="DontShowForGame" IsChecked="False" Foreground="#C9B6DF" Margin="0,0,0,22" AutomationProperties.Name="Don't show this warning for this game again"><TextBlock TextWrapping="Wrap" Text="Don't show this warning for this game again."/></CheckBox>
+    <WrapPanel HorizontalAlignment="Right">
+     <Button x:Name="CancelInstall" Content="Cancel" IsCancel="True" Padding="20,10" Margin="0,0,12,8"/>
+     <Button x:Name="AcceptInstall" Content="Continue at my own risk" IsDefault="False" IsEnabled="False" Padding="20,10" Margin="0,0,0,8" Background="#8650C8" Foreground="White"/>
+    </WrapPanel>
+   </StackPanel></ScrollViewer>
+  </Grid>
+ </Border>
+</Window>

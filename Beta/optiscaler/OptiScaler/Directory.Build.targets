@@ -1,0 +1,3 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildThisFileDirectory)..\..\reconstruction\OptiShade.Reconstruction.targets" Condition="'$(MSBuildProjectName)'=='OptiScaler' and '$(OptiShadeReconstructionImported)'!='true'" />
+</Project>

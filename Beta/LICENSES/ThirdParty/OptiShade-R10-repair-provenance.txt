@@ -1,0 +1,36 @@
+OptiShade private R10 repair source provenance
+
+OptiScaler: https://github.com/optiscaler/OptiScaler (GPL-3.0; existing notices retained).
+Reviewed source baseline: e237f895.
+Selected frame-boundary, projection/depth and HUD-less format fixes: 7f0bbb7, ff50ecd, 97e99b4.
+Streamline plugin-instance lifetime hooks: source at d5f44ae41881f9b6f9db3ac04334b149ca7914c0.
+Associated library-load lifecycle changes: 4abfd7b.
+These are adapted portions, not a wholesale upgrade to that upstream revision.
+OptiShade external-provider policy, MFG runtime handling and native-frame callbacks are retained.
+Unrelated UE camera callbacks and an upstream OTA preference change are not imported.
+
+AMD monitoring uses the installed driver ADL user-mode API. Public ABI definitions were reviewed at:
+https://github.com/GPUOpen-LibrariesAndSDKs/display-library/commit/84c881cb2136f04287eb3af12de00a9e2867aa9e
+The MIT notice is distributed as OptiShadeData/Licenses/AMD-ADL.txt.
+No ADLX SDK library, kernel driver or LibreHardwareMonitor is distributed by this change.
+PMLog readings are capability-probed and may be unavailable on some drivers/adapters.
+
+No code from DLSS-NR-on-AMD was imported. Its repository is not a redistribution permission grant.
+The private XP12 bridge implementation is OptiShade-authored transport using public
+VK_KHR_external_memory_win32 / VK_KHR_external_semaphore_win32 and D3D12 APIs.
+Public API references:
+https://docs.vulkan.org/refpages/latest/refpages/source/VkD3D12FenceSubmitInfoKHR.html
+https://docs.vulkan.org/refpages/latest/refpages/source/VkImportSemaphoreWin32HandleInfoKHR.html
+https://github.com/NVIDIA-RTX/Streamline/blob/main/docs/ProgrammingGuideDLSS_G.md
+https://github.com/NVIDIA-RTX/Streamline/blob/main/docs/ProgrammingGuide.md
+https://github.com/AlanBacker/dlss5-vk-bridge was an architectural reference only;
+no source from that repository is included. Existing NVIDIA runtime/model terms
+and verified acquisition policy remain unchanged. This is not a new permission
+grant to redistribute NVIDIA assets.
+
+2026-10-08 private upstream test 1:
+NR motion-guide unit correction adapted from https://github.com/wilsjo2/OptiScaler-DLSSNR-PreSR-Multipass/pull/109
+Reviewed PR head 57aa64e03c3e6f74903fbd1d550748904cb9fd58 (GPL-3.0, upstream repository terms).
+Only guide/reference motion scaling adapted for existing DX12 and Vulkan paths.
+The PR guide-resampling resources, switches and broader preview renderer were not imported.
+Existing independent simulator routes and backend activation policies are preserved.

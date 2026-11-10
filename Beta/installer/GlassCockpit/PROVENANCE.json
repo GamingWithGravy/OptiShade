@@ -1,0 +1,13 @@
+{
+  "Author": "IFreemz",
+  "Version": "v1.0.3",
+  "Release": "https://github.com/IFreemz/msfs2024-glass-cockpit-dlss-fix/releases/tag/v1.0.3",
+  "Repository": "https://github.com/IFreemz/msfs2024-glass-cockpit-dlss-fix",
+  "Issues": "https://github.com/IFreemz/msfs2024-glass-cockpit-dlss-fix/issues",
+  "Download": "https://github.com/IFreemz/msfs2024-glass-cockpit-dlss-fix/releases/download/v1.0.3/glass-cockpit-dlss-fix.addon64",
+  "SHA256": "524cbd27601bc8e1904e76ecf7f0702cdef8dbc81f089a8c88adf622a66f16e3",
+  "GitHubDigest": "sha256:524cbd27601bc8e1904e76ecf7f0702cdef8dbc81f089a8c88adf622a66f16e3",
+  "Modified": false,
+  "License": "GPL-3.0-only with upstream section 7 attribution and redistribution permission; dependency notices included",
+  "Policy": "Official release binary, unchanged. Redistribution and automatic updates are explicitly permitted by the upstream copyright holder. The manager validates the official release asset digest and binary version before replacing an installed copy after the user selects Download and install."
+}

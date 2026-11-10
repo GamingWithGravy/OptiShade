@@ -1,0 +1,70 @@
+{
+  "version": "2.14.16",
+  "releaseUrl": "https://github.com/NVIDIA-RTX/Streamline/releases/tag/v2.14.16",
+  "archiveUrl": "https://github.com/NVIDIA-RTX/Streamline/releases/download/v2.14.16/streamline-sdk-v2.14.16.zip",
+  "archiveSha256": "32041E51DB0CAB709A271B72A352281B690C2ABBD669A827809401A5DD23956B",
+  "files": [
+    {
+      "entry": "bin/x64/sl.interposer.dll",
+      "name": "sl.interposer.dll",
+      "version": "2.14.16.0",
+      "sha256": "B1D7395AEBD7B9722841D64DCF7433680020B6A8E421F851C16D5BA0C2182EDF",
+      "signerThumbprint": "B66776FC8E70C58ED98199E8391264C827AAC534"
+    },
+    {
+      "entry": "bin/x64/sl.common.dll",
+      "name": "sl.common.dll",
+      "version": "2.14.16.0",
+      "sha256": "38EEA3B4209AFC455636EA372B5933D65FCC13BECEC6C84D101DCFC4D8648F75",
+      "signerThumbprint": "B66776FC8E70C58ED98199E8391264C827AAC534"
+    },
+    {
+      "entry": "bin/x64/sl.dlss_g.dll",
+      "name": "sl.dlss_g.dll",
+      "version": "2.14.16.0",
+      "sha256": "3ED9538DF724993BEA8A050195A6A78B9C8C8A566D5B05ADE477AAB3C390E90F",
+      "signerThumbprint": "B66776FC8E70C58ED98199E8391264C827AAC534"
+    },
+    {
+      "entry": "bin/x64/sl.reflex.dll",
+      "name": "sl.reflex.dll",
+      "version": "2.14.16.0",
+      "sha256": "443577E869352436FF7EC8F4D9C90418D3E95368436CE219261E0F4F07A38122",
+      "signerThumbprint": "B66776FC8E70C58ED98199E8391264C827AAC534"
+    },
+    {
+      "entry": "bin/x64/sl.pcl.dll",
+      "name": "sl.pcl.dll",
+      "version": "2.14.16.0",
+      "sha256": "5698C38E722318681F215C9FE68E45B9BEDD51378ACC699D8EEE26E961E57770",
+      "signerThumbprint": "B66776FC8E70C58ED98199E8391264C827AAC534"
+    },
+    {
+      "entry": "bin/x64/nvngx_dlssg.dll",
+      "name": "nvngx_dlssg.dll",
+      "version": "310.9.16.0",
+      "sha256": "8D59D49B36410DD6B62FEF2503A5871D347415BD85D943FA0848563A95DD50C7",
+      "signerThumbprint": "7B7B0B6697AFB438CF6F65A155F00E86676FB186"
+    },
+    {
+      "entry": "license.txt",
+      "name": "Streamline-LICENSE.txt",
+      "sha256": "7B6F23E7D6F3AD6292F9308D2B42CDC3D82AE4E9B2ABB55F230279D83BEDD43D"
+    },
+    {
+      "entry": "bin/x64/nvngx_dlss.license.txt",
+      "name": "nvngx_dlss.license.txt",
+      "sha256": "3027F23CA5A46DD9CB8183FBD522983A86F64D7DAAC5982912BF9F214671F294"
+    },
+    {
+      "entry": "bin/x64/reflex.license.txt",
+      "name": "reflex.license.txt",
+      "sha256": "EBF83C07FB3B2939908C3795D887AFDE3161C89A28BA391724EFC784CE1BDABE"
+    },
+    {
+      "entry": "3rd-party-licenses.md",
+      "name": "Streamline-3rd-party-licenses.md",
+      "sha256": "CB251639994465F31D2178C16ACEDF1FF4F9CEF1C370A09782ED36D4C86C1DCA"
+    }
+  ]
+}

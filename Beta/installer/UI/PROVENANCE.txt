@@ -1,0 +1,6 @@
+Decorative simulator thumbnails are displayed from the owner's approved
+13 October 2026 UI concept pack, 01_Desktop_Manager/01_Home.png.
+The source image is retained unchanged as ConceptArtwork.png. Native WPF
+CroppedBitmap selects only the three aircraft illustrations. No concept
+labels, statuses, controls or example hardware values are used as UI.
+All functional content is rendered and bound by manager.xaml/manager.ps1.

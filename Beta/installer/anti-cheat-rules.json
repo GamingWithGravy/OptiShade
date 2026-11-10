@@ -1,0 +1,216 @@
+{
+  "Schema": 1,
+  "Version": "2026-10-18.1",
+  "ReviewedUtc": "2026-10-18",
+  "Providers": [
+    {
+      "Id": "eac",
+      "Name": "Easy Anti-Cheat",
+      "Directories": [
+        "EasyAntiCheat"
+      ],
+      "Files": [
+        "EasyAntiCheat_EOS_Setup.exe"
+      ],
+      "Signer": "(?i)(^|,\\s*)(CN|O)=(\"?)(EasyAntiCheat Oy|Epic Games,? Inc\\.?|Epic Games Inc\\.?)(\"?)(,|$)",
+      "Product": "(?i)Easy.?Anti.?Cheat",
+      "Source": "https://www.epicgames.com/help/c-32551467/c-Trending_0/how-do-i-install-easy-anti-cheat-on-my-computer-to-play-fall-guys-a13812901"
+    },
+    {
+      "Id": "battleye",
+      "Name": "BattlEye",
+      "Directories": [
+        "BattlEye"
+      ],
+      "Files": [
+        "BEService.exe",
+        "BEService_x64.exe",
+        "GTA5_BE.exe",
+        "GTA5_Enhanced_BE.exe"
+      ],
+      "Signer": "(?i)(^|,\\s*)(CN|O)=\"?BattlEye Innovations( e\\.K\\.)?\"?(,|$)",
+      "Product": "(?i)BattlEye",
+      "Source": "https://www.battleye.com/support/faq/"
+    },
+    {
+      "Id": "ea",
+      "Name": "EA Javelin anticheat",
+      "Directories": [
+        "EAAntiCheat"
+      ],
+      "Files": [
+        "EAAntiCheat.Installer.exe"
+      ],
+      "Signer": "(?i)(^|,\\s*)(CN|O)=\"?Electronic Arts( Inc\\.?)?\"?(,|$)",
+      "Product": "(?i)(EA.*Anti.?Cheat|Javelin)",
+      "Source": "https://help.ea.com/en/articles/platforms/pc-ea-anticheat/"
+    },
+    {
+      "Id": "vanguard",
+      "Name": "Riot Vanguard",
+      "Directories": [
+        "Riot Vanguard"
+      ],
+      "Files": [
+        "vgc.exe",
+        "vgk.sys"
+      ],
+      "Signer": "(?i)(^|,\\s*)(CN|O)=\"?Riot Games(,? Inc\\.?)?\"?(,|$)",
+      "Product": "(?i)Vanguard",
+      "Source": "https://support.riotgames.com/en-us/riot/performance/uninstall-and-disable-vanguard"
+    },
+    {
+      "Id": "vac",
+      "Name": "Valve Anti-Cheat (VAC)",
+      "Directories": [],
+      "Files": [],
+      "Signer": "(?!)",
+      "Product": "(?!)",
+      "Source": "https://partner.steamgames.com/doc/features/anticheat"
+    }
+  ],
+  "Games": [
+    {
+      "Id": "steam-cs2",
+      "Store": "Steam",
+      "ProductId": "730",
+      "Exe": "cs2.exe",
+      "Name": "Counter-Strike 2",
+      "Provider": "vac",
+      "Mode": "VAC-secured multiplayer; current mode is not observed.",
+      "Source": "https://store.steampowered.com/app/730/CounterStrike_2/",
+      "ReviewedUtc": "2026-10-17"
+    },
+    {
+      "Id": "steam-gta5-legacy",
+      "Store": "Steam",
+      "ProductId": "271590",
+      "Exe": "GTA5.exe",
+      "Name": "Grand Theft Auto V Legacy",
+      "Provider": "battleye",
+      "Mode": "GTA Online on PC; current Story/Online mode is not observed.",
+      "Source": "https://support.rockstargames.com/articles/1nenwhZlVrJY6CTFeSS2Fx/grand-theft-auto-online-battleye-faq",
+      "ReviewedUtc": "2026-10-17"
+    },
+    {
+      "Id": "steam-gta5-enhanced",
+      "Store": "Steam",
+      "ProductId": "3240220",
+      "Exe": "GTA5_Enhanced.exe",
+      "Name": "Grand Theft Auto V Enhanced",
+      "Provider": "battleye",
+      "Mode": "GTA Online on PC; current Story/Online mode is not observed.",
+      "Source": "https://support.rockstargames.com/articles/1nenwhZlVrJY6CTFeSS2Fx/grand-theft-auto-online-battleye-faq",
+      "ReviewedUtc": "2026-10-17"
+    },
+    {
+      "Id": "steam-1172470",
+      "Store": "Steam",
+      "ProductId": "1172470",
+      "Exe": "r5apex.exe",
+      "Name": "Apex Legends",
+      "Provider": "ea",
+      "ReviewedUtc": "2026-10-18",
+      "Mode": "PC anti-cheat is documented; current game mode and activity are not observed.",
+      "Source": "https://www.ea.com/games/apex-legends/apex-legends/news/javelin-anticheat-announcement",
+      "EffectiveFrom": "2026-09-29",
+      "Notes": "EA announced migration from Easy Anti-Cheat to Javelin on September 24, 2026."
+    },
+    {
+      "Id": "steam-252490",
+      "Store": "Steam",
+      "ProductId": "252490",
+      "Exe": "RustClient.exe",
+      "Name": "Rust",
+      "Provider": "eac",
+      "ReviewedUtc": "2026-10-18",
+      "Mode": "PC anti-cheat is documented; current game mode and activity are not observed.",
+      "Source": "https://store.steampowered.com/app/252490/"
+    },
+    {
+      "Id": "steam-1085660",
+      "Store": "Steam",
+      "ProductId": "1085660",
+      "Exe": "destiny2.exe",
+      "Name": "Destiny 2",
+      "Provider": "battleye",
+      "ReviewedUtc": "2026-10-18",
+      "Mode": "PC anti-cheat is documented; current game mode and activity are not observed.",
+      "Source": "https://store.steampowered.com/app/1085660/"
+    },
+    {
+      "Id": "steam-236390",
+      "Store": "Steam",
+      "ProductId": "236390",
+      "Exe": "aces.exe",
+      "Name": "War Thunder",
+      "Provider": "battleye",
+      "ReviewedUtc": "2026-10-18",
+      "Mode": "PC anti-cheat is documented; current game mode and activity are not observed.",
+      "Source": "https://store.steampowered.com/app/236390/"
+    },
+    {
+      "Id": "steam-570",
+      "Store": "Steam",
+      "ProductId": "570",
+      "Exe": "dota2.exe",
+      "Name": "Dota 2",
+      "Provider": "vac",
+      "ReviewedUtc": "2026-10-18",
+      "Mode": "PC anti-cheat is documented; current game mode and activity are not observed.",
+      "Source": "https://store.steampowered.com/app/570/"
+    },
+    {
+      "Id": "steam-440",
+      "Store": "Steam",
+      "ProductId": "440",
+      "Exe": "tf_win64.exe",
+      "Name": "Team Fortress 2",
+      "Provider": "vac",
+      "ReviewedUtc": "2026-10-18",
+      "Mode": "PC anti-cheat is documented; current game mode and activity are not observed.",
+      "Source": "https://store.steampowered.com/app/440/"
+    },
+    {
+      "Id": "steam-2622380",
+      "Store": "Steam",
+      "ProductId": "2622380",
+      "Exe": "nightreign.exe",
+      "Name": "ELDEN RING NIGHTREIGN",
+      "Provider": "eac",
+      "ReviewedUtc": "2026-10-18",
+      "Mode": "PC anti-cheat is documented; current game mode and activity are not observed.",
+      "Source": "https://store.steampowered.com/app/2622380/"
+    }
+  ],
+  "GameReviews": [
+    {
+      "Store": "Steam",
+      "ProductId": "1551360",
+      "Name": "Forza Horizon 5",
+      "Status": "Unknown",
+      "ReviewedUtc": "2026-10-18",
+      "Source": "https://store.steampowered.com/app/1551360/",
+      "Notes": "No provider confirmed from the reviewed official page. This is not evidence of absence; local detection still applies."
+    },
+    {
+      "Store": "Steam",
+      "ProductId": "2014780",
+      "Name": "X-Plane 12",
+      "Status": "Unknown",
+      "ReviewedUtc": "2026-10-18",
+      "Source": "https://store.steampowered.com/app/2014780/",
+      "Notes": "No provider confirmed from the reviewed official page. This is not evidence of absence; local detection still applies."
+    },
+    {
+      "Store": "Steam",
+      "ProductId": "2537590",
+      "Name": "Microsoft Flight Simulator 2024",
+      "Status": "Unknown",
+      "ReviewedUtc": "2026-10-18",
+      "Source": "https://store.steampowered.com/app/2537590/",
+      "Notes": "No provider confirmed from the reviewed official page. This is not evidence of absence; local detection still applies."
+    }
+  ],
+  "AbsencePolicy": "Missing or unknown entries never mean no anti-cheat. No confirmed-absence entries are currently asserted."
+}

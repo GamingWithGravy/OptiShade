@@ -1,0 +1,25 @@
+OPTISHADE USER AGREEMENT (version 1)
+
+Please read this agreement before installing OptiShade. You must accept it to install.
+
+1. Game modification and anti-cheat
+OptiShade changes game files and loads into games. Using third-party modifications in a game that uses anti-cheat, or whose rules forbid modifications, may lead to enforcement by the game's publisher or platform, including account suspension or a permanent ban. OptiShade shows warnings when it detects or suspects anti-cheat, but it cannot detect every protection system or know every game's rules.
+
+It is your responsibility to check each game's rules and publisher guidance before installing OptiShade into it. If you are unsure whether modifications are allowed, do not install OptiShade into that game. Do not use OptiShade in online, competitive or multiplayer modes where modifications are not permitted.
+
+2. Your acceptance of risk
+You install and use OptiShade at your own risk. If you ignore or dismiss a warning and install OptiShade into a game, you accept full responsibility for the result. To the extent permitted by applicable law, Gravy (GamingWithGravy) and the OptiShade contributors are not responsible or liable for any account ban, suspension, loss of access, loss of purchases, progress or data, or any other loss or damage resulting from installing or using OptiShade.
+
+3. No warranty
+OptiShade is provided "as is", without warranty of any kind. It is experimental software and may cause crashes, visual problems, reduced performance or other unexpected behaviour. Compatibility and performance are not guaranteed, and a feature being installed does not mean it works in your game.
+
+4. Your files
+Back up anything important before use. Restore and Uninstall are designed to remove OptiShade's tracked files and restore its backups, but you are responsible for your own data.
+
+5. Third-party software
+OptiShade is a community project using modified ReShade and OptiScaler code and third-party components that remain subject to their own licences. It is not an official release from, or endorsed by, NVIDIA, AMD, Intel, Microsoft, any game developer or publisher, ReShade or OptiScaler.
+
+6. Diagnostics
+OptiShade can collect diagnostic logs to help fix problems. Check logs for personal information before sharing them.
+
+By ticking the box and choosing Install, you confirm that you have read, understood and accept this agreement.

@@ -1,0 +1,37 @@
+OPTISHADE FEATURES
+Windows games · DirectX and Vulkan paths where supported
+
+GAME LIBRARY
+- Game-neutral Home and Library pages.
+- Scan for detected game installations and select one to manage.
+- Install the core first, then choose optional components for that game.
+- Track, repair, restore or remove each recorded installation.
+- Full application uninstall restores every recorded game installation in one pass.
+
+IMAGE EFFECTS AND PRESETS
+- ReShade FX shader support and effects catalogue.
+- INI preset support, search and import.
+- Enable effects and adjust their exposed settings.
+- Save, save as, revert and reset supported effect settings.
+- Installed effects and saved looks are managed separately from rendering components.
+
+OPTIONAL RENDERING COMPONENTS
+- Glass Cockpit DLSS Fix by IFreemz (https://github.com/IFreemz/msfs2024-glass-cockpit-dlss-fix) checks its official release feed. When a newer version is available, use its Components card to download and install the verified official asset; the developer's filename and binary are kept unchanged.
+- Experimental NVIDIA Neural Rendering targets RTX 20, 30, 40 and 50 series. A matching model, game and runtime input path are required; successful installation alone does not confirm rendering support.
+- Neural Rendering, frame-generation and graphics-provider components are offered across supported games where the selected hardware and active game integration allow them.
+- MFG provider preparation supports qualified game routes and generic x64 games with a fresh, identity-verified NVIDIA Streamline DLSS-G capability on Direct3D 12 or Vulkan. A graphics API or GPU match alone is not enough; games without a compatible DLSS-G integration remain unavailable.
+- RTX 50 users can also enable NVIDIA App's global DLSS Multi Frame Generation override across NVIDIA-listed compatible titles (Graphics > Global Settings > DLSS Override). The game must already have DLSS Frame Generation enabled; use NVIDIA's DLSS overlay to verify the active override. This NVIDIA-managed route is separate from OptiShade's selected-game provider installation. (NVIDIA details: https://www.nvidia.com/en-us/geforce/news/nvidia-app-global-dlss-overrides-rtx-40-series-smooth-motion/)
+- The experimental RTX 20/30 SM86 provider uses OptiScaler's in-process Ampere loader instead of adding a second game-root proxy. The upstream manual still advises removing OptiScaler before installing its standalone proxy, so combined setup and output need testing across games and RTX 20/30 systems. RTX 40 and RTX 50 remain on their separate provider routes.
+- The MFG page uses current game/provider capability reports for its multiplier controls; the available maximum can vary by game, runtime and GPU. Vulkan may use fixed multipliers when supported; NVIDIA currently limits Dynamic MFG to Direct3D 12. Dynamic MFG is enabled only when both the API and game/provider report support. (NVIDIA Streamline DLSS-G guide: https://github.com/NVIDIA-RTX/Streamline/blob/main/docs/ProgrammingGuideDLSS_G.md)
+- The active rendering API, game settings, GPU and runtime files affect whether a component can work.
+- File detection is evidence of installation, not proof of active rendering or correct output.
+- Start with one optional feature at a time and use diagnostics when a game hangs, flashes or shows no visible change.
+
+PERSONALISATION AND RECOVERY
+- Purple interface with saved menu and effect preferences.
+- Configurable in-game menu and preset-switching shortcuts.
+- Backups before approved replacement of conflicting files.
+- Restore and uninstall use per-game ownership records; saved looks can be retained.
+
+COMPATIBILITY
+OptiShade's supported games and APIs continue to expand. Compatibility depends on the actual game executable, active renderer, driver, hardware and installed components. Image effects may work when neural or frame-generation features are unavailable. Additional effects or neural passes can reduce frame rate; performance gains are not guaranteed.
