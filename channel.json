@@ -2,22 +2,22 @@
   "payload": {
     "schema": 1,
     "componentId": "OptiShade.Launcher",
-    "version": "1.0.82",
+    "version": "1.0.83",
     "channel": "stable",
-    "sourceCommit": "74f7bc519c971a5bc6ece141521bf76cfcf51102",
+    "sourceCommit": "3f1fb84338a9129df87b4ffe3b96a3d66481cb6c",
     "contracts": {
       "launcher": "standalone-exe/v1"
     },
     "dependencies": [],
     "package": {
-      "path": "launcher/1.0.82/OptiShade.exe",
-      "bytes": 11614720,
-      "sha256": "b0bbf9d0f1268ec695c7c5c4e1c15442b2f9f40019189e9a94b560e41b62160e"
+      "path": "launcher/1.0.83/OptiShade.exe",
+      "bytes": 11623936,
+      "sha256": "cdcd690138a0f3ca3e77650ab4cc7172530cca5b422a22355349b6891876bcc4"
     }
   },
   "signature": {
     "algorithm": "Ed25519",
     "keyId": "optishade-release-2026",
-    "value": "5UDa5wJP5UPGFOZ2NtmplSEBmb1A0b1WwDIHWOOoZiBwRy/Io6iOo55O/dUf68SzbyrGEQdtF3P5J5BAPCXyAw=="
+    "value": "XLJrn8ftBelKn8p6R1j+NvJAzjLwtIWsPiF5Ioyvh+IfGHa9EDN1uPh/eMwAu0kcOEvIMhfwCH/FaMbZ4jKECQ=="
   }
 }
