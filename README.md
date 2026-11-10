@@ -1,7 +1,11 @@
-# OptiShade Core 1.0.77
+# OptiShade Core 1.0.78
 
-This branch provides the current stable Core package and corresponding OptiScaler source archive. The package download is available for channel validation; remote installation and rollback are not enabled, so the package is deliberately marked `installable: false`.
+Signed OptiShade Core package for the OptiShade launcher. The launcher reads [`channel.json`](channel.json), checks its signature, then downloads and verifies `packages/OptiShade.Core-1.0.78.tar.gz` and every file in it before installing.
 
-Download paths are listed in [`manifest.json`](manifest.json). The runtime archive includes only Core-classified files, with required third-party notices and build identity. Image Effects, OptiMFG and Neural Rendering payloads remain separate. The corresponding-source archive is supplied for GPL-covered OptiScaler-derived portions.
+Changes in 1.0.78:
+- Image effects: each effect file is loaded once. Duplicate copies of the same effect (for example LumaSharpen or the PD80 effects) no longer make a look show as "ambiguous" or apply twice.
+- Fixes a freeze during play caused by an image-effects crash when the game used graphics resources the effects layer had not seen.
+- Fixes a freeze after the graphics device was lost: effects pause for that frame instead of crashing.
+- VR: on graphics cards with 12 GB or less, the headset starts with its own light look; headset effects pause for the session if video memory runs out.
 
-The launcher and installer executables are not included here or in Releases.
+`packages/OptiShade.Core-source.tar.gz` is the corresponding source for the GPL-covered OptiScaler-derived portions. The launcher and installer are not included here.
