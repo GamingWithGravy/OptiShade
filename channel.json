@@ -1,10 +1,10 @@
 {
   "schema": 1,
   "componentId": "OptiShade.Core",
-  "version": "1.0.93",
+  "version": "1.0.94",
   "channel": "stable",
-  "publishedUtc": "2026-11-11T12:31:13Z",
-  "sourceCommit": "8fb871ca6087ee01c9da02f39f00abbf451c5bcc",
+  "publishedUtc": "2026-11-11T12:40:15Z",
+  "sourceCommit": "8f99d912c9f792e5bcdd465d1f53d35ca2637c8c",
   "launcherRange": {
     "minInclusive": "1.0.0",
     "maxExclusive": "2.0.0"
@@ -13,16 +13,16 @@
   "dependencies": [],
   "package": {
     "branch": "core-stable",
-    "path": "packages/OptiShade.Core-1.0.93.tar.gz",
-    "bytes": 14282969,
-    "sha256": "6a0d1fe8b19bbe11627c6ed2a86ed5b046264634249e36d1d2fd459be6935070"
+    "path": "packages/OptiShade.Core-1.0.94.tar.gz",
+    "bytes": 14278776,
+    "sha256": "5c757f819c9199eb69e123c5992057efe574310c96713e487e0c39d1774c875a"
   },
   "files": [
     {
       "packagePath": "files.json",
       "installPath": "files.json",
       "bytes": 25909,
-      "sha256": "5fc0472ef9d3fcabdef99763754983da2334e6c876409f9327944889881d56df",
+      "sha256": "06029e5606c9649cf100e6d27d1b1fae94f56b157c1afaf65e686a1af88ac92b",
       "preconditionSha256": ""
     },
     {
@@ -707,15 +707,15 @@
     {
       "packagePath": "winmm.dll",
       "installPath": "winmm.dll",
-      "bytes": 27513856,
-      "sha256": "942268cd9412e1a747e192901973964919995e1cfb1d66be4006fc4a698a0e50",
+      "bytes": 27514368,
+      "sha256": "f984817c56155bd621800e8b4cf7d5d70dd709816e3d7330e718abc89393588e",
       "preconditionSha256": ""
     },
     {
       "packagePath": "OptiShadeData/BuildIdentity.json",
       "installPath": "OptiShadeData/BuildIdentity.json",
       "bytes": 3356,
-      "sha256": "9214644ab9a15ed1ced0ee83f76385f136e635d02ccbfa68d1d99c33a407243e",
+      "sha256": "8408c7ad042dae62ea71420a3f5e56be9c21267c1873ce26771719663dfc34cb",
       "preconditionSha256": ""
     },
     {
@@ -1058,6 +1058,6 @@
   "signature": {
     "algorithm": "Ed25519",
     "keyId": "optishade-release-2026",
-    "value": "b4s4zwU+nfticPhjmuba/U22VlPfhVWhjb4fFNQg/tLusg9f0Tz0SKmaTEIaZVC6V1oAPh9q3x4Mc/T9MGh8Bw=="
+    "value": "XWm5ZLScKmFbfN84U41YlYX5JFDirzEFYIqCEyM8HI7Ulq/0cXXJFn2AFAQijGg/ckFJxhBNp9KRzIk5SbdEDg=="
   }
 }
