@@ -1,10 +1,10 @@
 {
   "schema": 1,
   "componentId": "OptiShade.Core",
-  "version": "1.0.99",
+  "version": "1.0.100",
   "channel": "stable",
-  "publishedUtc": "2026-11-11T18:12:07Z",
-  "sourceCommit": "ccec41f392450b7cc220f43c0ef04f8245d5336d",
+  "publishedUtc": "2026-11-11T21:36:57Z",
+  "sourceCommit": "bf5105981d91dbe9644d5f88d309eebefbf742cd",
   "launcherRange": {
     "minInclusive": "1.0.0",
     "maxExclusive": "2.0.0"
@@ -13,16 +13,16 @@
   "dependencies": [],
   "package": {
     "branch": "core-stable",
-    "path": "packages/OptiShade.Core-1.0.99.tar.gz",
-    "bytes": 14290262,
-    "sha256": "20270dc21d3ffe46e4426d776044a51b46a08335ae7a26ea373e36171e667202"
+    "path": "packages/OptiShade.Core-1.0.100.tar.gz",
+    "bytes": 14295966,
+    "sha256": "ba96999f254ca5bf1a9de5d02f819c08953d8403e0cc3fc4ec4787bccd9edf20"
   },
   "files": [
     {
       "packagePath": "files.json",
       "installPath": "files.json",
       "bytes": 25909,
-      "sha256": "ce0210192cbe0e6b4314d25d56df043390dc385aa50e478bc5bcd3bea768cf4e",
+      "sha256": "b8322839f724317924a0b94b7066e2e5637934996881cc88791f43cbd7ddb259",
       "preconditionSha256": ""
     },
     {
@@ -350,8 +350,8 @@
     {
       "packagePath": "OptiShadeData/Tools/OptiShade-Troubleshooter.exe",
       "installPath": "OptiShadeData/Tools/OptiShade-Troubleshooter.exe",
-      "bytes": 601088,
-      "sha256": "4ca4e3879bc364aac713a2925f3e39d01c3ebd21b55562ee2985ce48dbb576fd",
+      "bytes": 606208,
+      "sha256": "a1cbc226ae0968711476859cbcfda9dd27cc49c122837551c43764a20f20f45b",
       "preconditionSha256": ""
     },
     {
@@ -707,15 +707,15 @@
     {
       "packagePath": "winmm.dll",
       "installPath": "winmm.dll",
-      "bytes": 27514368,
-      "sha256": "f984817c56155bd621800e8b4cf7d5d70dd709816e3d7330e718abc89393588e",
+      "bytes": 27515904,
+      "sha256": "ef6e7570ff12b886c09ebe2b2f642423fc94512224b695b6855e6362a4b37a88",
       "preconditionSha256": ""
     },
     {
       "packagePath": "OptiShadeData/BuildIdentity.json",
       "installPath": "OptiShadeData/BuildIdentity.json",
-      "bytes": 3356,
-      "sha256": "ec03ee2d17ef588a3e4660ebeac3b2f57b49669668bafadcad5e454ed8687646",
+      "bytes": 3357,
+      "sha256": "ef2d8720a453adb69239ddc71efb5be1e78067cac01285dac321c91b6fe798f2",
       "preconditionSha256": ""
     },
     {
@@ -1058,6 +1058,6 @@
   "signature": {
     "algorithm": "Ed25519",
     "keyId": "optishade-release-2026",
-    "value": "kwR7zmAwkIdghmI4KqV4qqhVKuiMc+Mf1Mv3yinfOAmLeggwQdyQQ4PG9GACbucq+LkFg+sSIG3ALanfzYPNAA=="
+    "value": "G9DjLcDjGuyul29KmAUrOHITMs5tAVLtMEzGp+w7nj6m4unMueOCreCk2+NzrJsypz+HAs3uFe3rM8PSuonqCg=="
   }
 }
