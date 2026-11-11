@@ -1,10 +1,10 @@
 {
   "schema": 1,
   "componentId": "OptiShade.Core",
-  "version": "1.0.94",
+  "version": "1.0.95",
   "channel": "stable",
-  "publishedUtc": "2026-11-11T12:40:15Z",
-  "sourceCommit": "8f99d912c9f792e5bcdd465d1f53d35ca2637c8c",
+  "publishedUtc": "2026-11-11T13:00:06Z",
+  "sourceCommit": "22eec8dad3ccf3bdfb33811b6fcb1bef8f929b40",
   "launcherRange": {
     "minInclusive": "1.0.0",
     "maxExclusive": "2.0.0"
@@ -13,16 +13,16 @@
   "dependencies": [],
   "package": {
     "branch": "core-stable",
-    "path": "packages/OptiShade.Core-1.0.94.tar.gz",
-    "bytes": 14278776,
-    "sha256": "5c757f819c9199eb69e123c5992057efe574310c96713e487e0c39d1774c875a"
+    "path": "packages/OptiShade.Core-1.0.95.tar.gz",
+    "bytes": 14289233,
+    "sha256": "6fd315e7cd878055dbc3e1d1d26891391880e366adbcf47bb02c89cdf5bba278"
   },
   "files": [
     {
       "packagePath": "files.json",
       "installPath": "files.json",
       "bytes": 25909,
-      "sha256": "06029e5606c9649cf100e6d27d1b1fae94f56b157c1afaf65e686a1af88ac92b",
+      "sha256": "fb07b0e0159d69cc85bfe1f63f18e15a3eba86856858295fec0bb5a8b9d81fae",
       "preconditionSha256": ""
     },
     {
@@ -350,8 +350,8 @@
     {
       "packagePath": "OptiShadeData/Tools/OptiShade-Troubleshooter.exe",
       "installPath": "OptiShadeData/Tools/OptiShade-Troubleshooter.exe",
-      "bytes": 568320,
-      "sha256": "3e7a3a89b9b679263af406ff4b00e6e91245e919368d62ed163c22d309c96157",
+      "bytes": 600064,
+      "sha256": "3c482e00a5cc4646ed42036c951ebec8985274ce140ba8de29c21e7ea803e3f5",
       "preconditionSha256": ""
     },
     {
@@ -715,7 +715,7 @@
       "packagePath": "OptiShadeData/BuildIdentity.json",
       "installPath": "OptiShadeData/BuildIdentity.json",
       "bytes": 3356,
-      "sha256": "8408c7ad042dae62ea71420a3f5e56be9c21267c1873ce26771719663dfc34cb",
+      "sha256": "0152d77b60d212d6d68bbc9197050916d0f21e2f98b38f9807846d613eed09d9",
       "preconditionSha256": ""
     },
     {
@@ -1058,6 +1058,6 @@
   "signature": {
     "algorithm": "Ed25519",
     "keyId": "optishade-release-2026",
-    "value": "XWm5ZLScKmFbfN84U41YlYX5JFDirzEFYIqCEyM8HI7Ulq/0cXXJFn2AFAQijGg/ckFJxhBNp9KRzIk5SbdEDg=="
+    "value": "OC1y2Qmbm4NvCviEY5foIEM6AGITXLspuzWAbsWLj3qpsQrm8cW0yFjVf2sShVsKew00wiBC2ofaZ+lpV8QaDw=="
   }
 }
