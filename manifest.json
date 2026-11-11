@@ -1,16 +1,16 @@
 {
   "schema": 1,
   "componentId": "OptiShade.Core",
-  "version": "1.0.98",
+  "version": "1.0.99",
   "channel": "download-only",
   "installable": false,
-  "buildVersion": "1.0.98",
-  "sourceCommit": "8cfd62c5a7e9243363f231432919c00aa4162f50",
+  "buildVersion": "1.0.99",
+  "sourceCommit": "ccec41f392450b7cc220f43c0ef04f8245d5336d",
   "sourceTreeSha256": "8A2E48EA3411D24017784C73E61F0F2307CECEF4DC037E1B4DFE5CBA262BAA0E",
   "package": {
     "file": "OptiShade.Core.tar.gz",
-    "bytes": 14289271,
-    "sha256": "0af8f70a8bdf5af88d574311b11caf3198201f0776b23d8e414a8971adb33881"
+    "bytes": 14290262,
+    "sha256": "20270dc21d3ffe46e4426d776044a51b46a08335ae7a26ea373e36171e667202"
   },
   "sourcePackage": {
     "file": "OptiShade.Core-source.tar.gz",

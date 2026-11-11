@@ -1,10 +1,10 @@
 {
   "schema": 1,
   "componentId": "OptiShade.Core",
-  "version": "1.0.98",
+  "version": "1.0.99",
   "channel": "stable",
-  "publishedUtc": "2026-11-11T14:24:28Z",
-  "sourceCommit": "8cfd62c5a7e9243363f231432919c00aa4162f50",
+  "publishedUtc": "2026-11-11T18:12:07Z",
+  "sourceCommit": "ccec41f392450b7cc220f43c0ef04f8245d5336d",
   "launcherRange": {
     "minInclusive": "1.0.0",
     "maxExclusive": "2.0.0"
@@ -13,16 +13,16 @@
   "dependencies": [],
   "package": {
     "branch": "core-stable",
-    "path": "packages/OptiShade.Core-1.0.98.tar.gz",
-    "bytes": 14289271,
-    "sha256": "0af8f70a8bdf5af88d574311b11caf3198201f0776b23d8e414a8971adb33881"
+    "path": "packages/OptiShade.Core-1.0.99.tar.gz",
+    "bytes": 14290262,
+    "sha256": "20270dc21d3ffe46e4426d776044a51b46a08335ae7a26ea373e36171e667202"
   },
   "files": [
     {
       "packagePath": "files.json",
       "installPath": "files.json",
       "bytes": 25909,
-      "sha256": "e8ca2d75ba90c4a7727e5143153616dd2bc00172d508556351f54fd7b5aa9399",
+      "sha256": "ce0210192cbe0e6b4314d25d56df043390dc385aa50e478bc5bcd3bea768cf4e",
       "preconditionSha256": ""
     },
     {
@@ -350,8 +350,8 @@
     {
       "packagePath": "OptiShadeData/Tools/OptiShade-Troubleshooter.exe",
       "installPath": "OptiShadeData/Tools/OptiShade-Troubleshooter.exe",
-      "bytes": 600064,
-      "sha256": "3c482e00a5cc4646ed42036c951ebec8985274ce140ba8de29c21e7ea803e3f5",
+      "bytes": 601088,
+      "sha256": "4ca4e3879bc364aac713a2925f3e39d01c3ebd21b55562ee2985ce48dbb576fd",
       "preconditionSha256": ""
     },
     {
@@ -693,15 +693,15 @@
     {
       "packagePath": "ReShade32.dll",
       "installPath": "ReShade32.dll",
-      "bytes": 4727808,
-      "sha256": "a20045834a803ceb117a57e9058f23c50cd8472b0e155d1de85c999209ed689d",
+      "bytes": 4728320,
+      "sha256": "c42755399d63b090987cba3bcf03d3ca642d75db94f0edb80e7c0ccfba62ca5c",
       "preconditionSha256": ""
     },
     {
       "packagePath": "ReShade64.dll",
       "installPath": "ReShade64.dll",
-      "bytes": 5943808,
-      "sha256": "8bcf0576583ec19f7608757556d6010ba2543404ebdc107a54631f0c89dd15ae",
+      "bytes": 5944320,
+      "sha256": "30c8554388b0bbaec0ecdf10af2fb98544296564ec40db3c866d4b66d678c636",
       "preconditionSha256": ""
     },
     {
@@ -715,7 +715,7 @@
       "packagePath": "OptiShadeData/BuildIdentity.json",
       "installPath": "OptiShadeData/BuildIdentity.json",
       "bytes": 3356,
-      "sha256": "a3a14c179d56bcb24c02421655a6b457daf720665a6532bc9d87a1f9eb47a820",
+      "sha256": "ec03ee2d17ef588a3e4660ebeac3b2f57b49669668bafadcad5e454ed8687646",
       "preconditionSha256": ""
     },
     {
@@ -1058,6 +1058,6 @@
   "signature": {
     "algorithm": "Ed25519",
     "keyId": "optishade-release-2026",
-    "value": "QITgv58ULys7LtPphSUboz8IHvlL+qmEs5MEyX+PHFQAZOzTLudIpx+988OBaBtWXvndozqlw3V4G1goXHFkAA=="
+    "value": "kwR7zmAwkIdghmI4KqV4qqhVKuiMc+Mf1Mv3yinfOAmLeggwQdyQQ4PG9GACbucq+LkFg+sSIG3ALanfzYPNAA=="
   }
 }
