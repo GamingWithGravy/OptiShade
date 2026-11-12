@@ -1,6 +1,15 @@
-# OptiShade Core 1.0.103
+# OptiShade Core 1.0.104
 
-Signed OptiShade Core package for the OptiShade launcher. The launcher reads [`channel.json`](channel.json), checks its signature, then downloads and verifies `packages/OptiShade.Core-1.0.103.tar.gz` and every file in it before installing.
+Signed OptiShade Core package for the OptiShade launcher. The launcher reads [`channel.json`](channel.json), checks its signature, then downloads and verifies `packages/OptiShade.Core-1.0.104.tar.gz` and every file in it before installing.
+
+Changes in 1.0.104:
+- Image effects: a preset chosen in game is now kept for the next start. Before, a preset picked while effects were still loading could be replaced by the previous one when the game restarted, although the menu showed the new one.
+- New VR tool compatibility setting (off by default, on the game page in the OptiShade app) for VR tools that run their own DLSS and frame generation, such as OFXR. When on, the VR tool uses NVIDIA DLSS and frame generation directly; Neural Rendering, image effects and the Glass Cockpit correction keep working.
+- OptiMFG: the in-game page only says "Running" once frame generation has started, and stops asking for another restart when restarting has not helped.
+- X-Plane: the Neural Rendering page explains when a test graphics route is turned on and how to switch back to Native Vulkan.
+- Blocked overlay DLLs are now really blocked, and programs reading a DLL's version or icon are no longer redirected.
+- Safer window resizes with frame generation on AMD graphics cards.
+- Troubleshooter: points out an X-Plane test graphics route, no longer suggests updating to fix depth flicker when already up to date, and says when a sent report's local copy could not be deleted.
 
 Changes in 1.0.103:
 - Fixes "Upscaler failed to run: DLSS" and a black screen with DLSS Ultra Performance. DLSS now adjusts itself in a moment, with no error message.

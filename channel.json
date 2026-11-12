@@ -1,10 +1,10 @@
 {
   "schema": 1,
   "componentId": "OptiShade.Core",
-  "version": "1.0.103",
+  "version": "1.0.104",
   "channel": "stable",
-  "publishedUtc": "2026-11-12T10:29:20Z",
-  "sourceCommit": "a7cabe4a40a5a77ac171eddf066ab5a21e3efef6",
+  "publishedUtc": "2026-11-12T21:09:15Z",
+  "sourceCommit": "ccc4da8e6a296e907f6040c1b96b255e73f23d73",
   "launcherRange": {
     "minInclusive": "1.0.0",
     "maxExclusive": "2.0.0"
@@ -13,16 +13,16 @@
   "dependencies": [],
   "package": {
     "branch": "core-stable",
-    "path": "packages/OptiShade.Core-1.0.103.tar.gz",
-    "bytes": 14305530,
-    "sha256": "52dfe4e5520084bace1c10783c74caae9e838fd8b31858c9dbaed6bd08eca343"
+    "path": "packages/OptiShade.Core-1.0.104.tar.gz",
+    "bytes": 14310664,
+    "sha256": "f1ac3149f00dc95f0ee3c34084a694e67b9992e3cfabfa1f5446a3aa5baee922"
   },
   "files": [
     {
       "packagePath": "files.json",
       "installPath": "files.json",
       "bytes": 25909,
-      "sha256": "ab3ac301581d1d4cc80bfe08fd0ec392907b79f7b539569426c172d6a5ca37b8",
+      "sha256": "5de48f0b270d6b02a223187435b574518747f8d233ca9bed488e8829792f0e9b",
       "preconditionSha256": ""
     },
     {
@@ -350,8 +350,8 @@
     {
       "packagePath": "OptiShadeData/Tools/OptiShade-Troubleshooter.exe",
       "installPath": "OptiShadeData/Tools/OptiShade-Troubleshooter.exe",
-      "bytes": 610304,
-      "sha256": "f773561e36c217d3aeeb453b4ec817a6fbdaac75a001b22aa8a3bec81ef4d5ae",
+      "bytes": 614400,
+      "sha256": "b4e9c3510ea7385e2688806251da37334a274b3450c9b9f1b5ee1a8a499b5505",
       "preconditionSha256": ""
     },
     {
@@ -694,28 +694,28 @@
       "packagePath": "ReShade32.dll",
       "installPath": "ReShade32.dll",
       "bytes": 4729344,
-      "sha256": "eee169349d8e8263e022b2542f99c6b259d5461aa693302863e9d8a8c2e84f77",
+      "sha256": "f127a36abffcd2e401c5771b32a5e3aa40da46bd8cf633008055e1d86818344d",
       "preconditionSha256": ""
     },
     {
       "packagePath": "ReShade64.dll",
       "installPath": "ReShade64.dll",
-      "bytes": 5944832,
-      "sha256": "00e5cef39842323dde373544d02d3be8e03fd3b253fb354ec981e241d1de52b1",
+      "bytes": 5945344,
+      "sha256": "f29813970e30918f7a20d74d4b8509be32bd6b96228918d55e0e911f0708c956",
       "preconditionSha256": ""
     },
     {
       "packagePath": "winmm.dll",
       "installPath": "winmm.dll",
-      "bytes": 27547648,
-      "sha256": "a7d77105c17c76db4a5864c40f197f4983b76eebe6ae68c556b617b01aaa5da6",
+      "bytes": 27554816,
+      "sha256": "49e7e1b33f8422bdcc75f7ff923da37253d4972b98aac399fbf6a88b6e31cd7f",
       "preconditionSha256": ""
     },
     {
       "packagePath": "OptiShadeData/BuildIdentity.json",
       "installPath": "OptiShadeData/BuildIdentity.json",
       "bytes": 3357,
-      "sha256": "5804d80d72400ac20f2b15a0383229f249d2f35f61886386063189cfec559ad1",
+      "sha256": "50e507272653beff371f99fa5f8efcacd867f0348d6ef5d8ed2608e8e06520a6",
       "preconditionSha256": ""
     },
     {
@@ -1058,6 +1058,6 @@
   "signature": {
     "algorithm": "Ed25519",
     "keyId": "optishade-release-2026",
-    "value": "psYjPyTqND+9br3O9ctuhrPbbt1g8JmEhHJeHoKFS9MnOoqDedIjbA0bQKp56Wvj6XDjLR20ZbfhKCrWSBkgBw=="
+    "value": "TZRJQnkNz/7gthjUwUy/jmur7f91TbXEtRT2SBW9lAQwtGxhuxQhaL2Pd6lzZ+p8iXyq03mxLXgLEnR6YslvCg=="
   }
 }
