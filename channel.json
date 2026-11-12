@@ -1,10 +1,10 @@
 {
   "schema": 1,
   "componentId": "OptiShade.Core",
-  "version": "1.0.102",
+  "version": "1.0.103",
   "channel": "stable",
-  "publishedUtc": "2026-11-12T03:22:58Z",
-  "sourceCommit": "f43b9601d5bf8ad88f6d3503dd50ea233e64fc9b",
+  "publishedUtc": "2026-11-12T10:29:20Z",
+  "sourceCommit": "a7cabe4a40a5a77ac171eddf066ab5a21e3efef6",
   "launcherRange": {
     "minInclusive": "1.0.0",
     "maxExclusive": "2.0.0"
@@ -13,16 +13,16 @@
   "dependencies": [],
   "package": {
     "branch": "core-stable",
-    "path": "packages/OptiShade.Core-1.0.102.tar.gz",
-    "bytes": 14301293,
-    "sha256": "9d46b6c16d0b8394c7e43f6d9579c8af639e431aa83eb3901f2b53f670ded7fb"
+    "path": "packages/OptiShade.Core-1.0.103.tar.gz",
+    "bytes": 14305530,
+    "sha256": "52dfe4e5520084bace1c10783c74caae9e838fd8b31858c9dbaed6bd08eca343"
   },
   "files": [
     {
       "packagePath": "files.json",
       "installPath": "files.json",
       "bytes": 25909,
-      "sha256": "dbbb49feb4ffec5263b2d9a7eb81cd761b1945d95ab578e2facee17e49b18169",
+      "sha256": "ab3ac301581d1d4cc80bfe08fd0ec392907b79f7b539569426c172d6a5ca37b8",
       "preconditionSha256": ""
     },
     {
@@ -707,15 +707,15 @@
     {
       "packagePath": "winmm.dll",
       "installPath": "winmm.dll",
-      "bytes": 27532800,
-      "sha256": "18b57e053163b0e445bd1a8f62ed5073b42035ceebcd1893d63a59f1a90fa622",
+      "bytes": 27547648,
+      "sha256": "a7d77105c17c76db4a5864c40f197f4983b76eebe6ae68c556b617b01aaa5da6",
       "preconditionSha256": ""
     },
     {
       "packagePath": "OptiShadeData/BuildIdentity.json",
       "installPath": "OptiShadeData/BuildIdentity.json",
       "bytes": 3357,
-      "sha256": "22a248a6f128bf9d7d585ceb2a11193b85aefdce41ecd8d51b01041a115d54a7",
+      "sha256": "5804d80d72400ac20f2b15a0383229f249d2f35f61886386063189cfec559ad1",
       "preconditionSha256": ""
     },
     {
@@ -1058,6 +1058,6 @@
   "signature": {
     "algorithm": "Ed25519",
     "keyId": "optishade-release-2026",
-    "value": "oA1sR7JWApYAZOVD4HwMZ9TzbMgWFVK9q1V2wp71kaIQln201ilJah9Ex+Xvk0nWAthITTZb+ha8o4yJWPvBBQ=="
+    "value": "psYjPyTqND+9br3O9ctuhrPbbt1g8JmEhHJeHoKFS9MnOoqDedIjbA0bQKp56Wvj6XDjLR20ZbfhKCrWSBkgBw=="
   }
 }

@@ -1,6 +1,13 @@
-# OptiShade Core 1.0.102
+# OptiShade Core 1.0.103
 
-Signed OptiShade Core package for the OptiShade launcher. The launcher reads [`channel.json`](channel.json), checks its signature, then downloads and verifies `packages/OptiShade.Core-1.0.102.tar.gz` and every file in it before installing.
+Signed OptiShade Core package for the OptiShade launcher. The launcher reads [`channel.json`](channel.json), checks its signature, then downloads and verifies `packages/OptiShade.Core-1.0.103.tar.gz` and every file in it before installing.
+
+Changes in 1.0.103:
+- Fixes "Upscaler failed to run: DLSS" and a black screen with DLSS Ultra Performance. DLSS now adjusts itself in a moment, with no error message.
+- Fixes MSFS 2024 crashing when entering VR while a VR add-on that runs its own DLSS (such as OFXR Bridge) is active.
+- OptiMFG on older NVIDIA cards uses OptiShade's own frame-generation backend again, as before 1.0.100, and no longer shows a black screen with frame generation on.
+- The OptiMFG page says when MSFS needs a restart because frame generation was switched on after the sim started.
+- Clearer X-Plane 12 Neural Rendering messages.
 
 Changes in 1.0.102:
 - Fixes a black screen with "Upscaler failed to run: DLSS" in MSFS when DLAA or dynamic resolution is used.
