@@ -1,6 +1,10 @@
-# OptiShade Core 1.0.101
+# OptiShade Core 1.0.102
 
-Signed OptiShade Core package for the OptiShade launcher. The launcher reads [`channel.json`](channel.json), checks its signature, then downloads and verifies `packages/OptiShade.Core-1.0.101.tar.gz` and every file in it before installing.
+Signed OptiShade Core package for the OptiShade launcher. The launcher reads [`channel.json`](channel.json), checks its signature, then downloads and verifies `packages/OptiShade.Core-1.0.102.tar.gz` and every file in it before installing.
+
+Changes in 1.0.102:
+- Fixes a black screen with "Upscaler failed to run: DLSS" in MSFS when DLAA or dynamic resolution is used.
+- OptiMFG: the frame-generation multiplier chosen in Performance > Frame generation applies straight away during a flight, without pausing. The page shows the multiplier running and the highest your graphics card allows.
 
 Changes in 1.0.101:
 - Fixes MSFS crashing a few minutes into a flight with frame generation on while the Steam overlay (or another overlay that hooks the game) is running. The overlay can stay on.
